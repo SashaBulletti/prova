@@ -32,9 +32,11 @@ Gli endpoint sono mappati in [`celsius/const.py`](celsius/const.py).
 
 ## Come provare il login
 
+Serve solo Python 3 (già presente sul Mac). Nessuna installazione.
+
 ```bash
-pip install -r requirements.txt
-python discover.py
+cd prova
+python3 discover.py
 ```
 
 Fa **solo letture** (non comanda i pannelli) e stampa cosa risponde il

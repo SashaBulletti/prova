@@ -4,14 +4,18 @@ Primo obiettivo: fare login e leggere case/pannelli. I comandi sono già
 mappati ma vanno confermati dal vivo. Ogni chiamata passa da _request(),
 che in modalità verbose stampa richiesta e risposta grezze: così vediamo
 i campi reali e correggiamo senza indovinare.
+
+Usa solo la libreria standard di Python (urllib): nessun pip, nessuna
+installazione. Basta Python 3 (già presente sul Mac come `python3`).
 """
 
 from __future__ import annotations
 
 import json
+import urllib.error
+import urllib.parse
+import urllib.request
 from typing import Any
-
-import requests
 
 from . import const
 
@@ -27,47 +31,61 @@ class CelsiusClient:
         self.verbose = verbose
         self.timeout = timeout
         self.token: str | None = None
-        self._session = requests.Session()
-        self._session.headers.update({
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-            # L'app è Flutter; non filtra per User-Agent, ma lo teniamo neutro.
-            "User-Agent": "CelsiusPanel/1.4.9 (custom-client)",
-        })
 
     # -- infrastruttura -----------------------------------------------------
     def _request(self, method: str, path: str, *, json_body: Any = None,
                  params: dict | None = None, auth: bool = True) -> Any:
         url = self.base_url + path
-        headers = {}
+        if params:
+            query = urllib.parse.urlencode(params)
+            url = f"{url}?{query}"
+
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "User-Agent": "CelsiusPanel/1.4.9 (custom-client)",
+        }
         if auth and self.token:
             headers["Authorization"] = f"Bearer {self.token}"
 
+        data = None
+        if json_body is not None:
+            data = json.dumps(json_body).encode("utf-8")
+
         if self.verbose:
             print(f"\n→ {method} {url}")
-            if params:
-                print(f"  query: {params}")
             if json_body is not None:
                 print(f"  body:  {json.dumps(json_body, ensure_ascii=False)}")
 
-        resp = self._session.request(
-            method, url, json=json_body, params=params,
-            headers=headers, timeout=self.timeout,
-        )
+        req = urllib.request.Request(url, data=data, headers=headers, method=method)
+        try:
+            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                status = resp.status
+                reason = resp.reason
+                body = resp.read().decode("utf-8", "replace")
+        except urllib.error.HTTPError as e:
+            # Il server ha risposto con un errore: leggiamo comunque il corpo,
+            # perché spesso spiega cosa manca (es. campi del login sbagliati).
+            status = e.code
+            reason = e.reason
+            body = e.read().decode("utf-8", "replace")
+            if self.verbose:
+                print(f"← {status} {reason}")
+                print(f"  {body[:2000]}")
+            raise CelsiusError(f"{method} {path} → {status}: {body[:300]}") from None
+        except urllib.error.URLError as e:
+            raise CelsiusError(f"{method} {path} → rete non raggiungibile: {e.reason}") from None
 
         if self.verbose:
-            print(f"← {resp.status_code} {resp.reason}")
-            print(f"  {resp.text[:2000]}")
+            print(f"← {status} {reason}")
+            print(f"  {body[:2000]}")
 
-        if resp.status_code >= 400:
-            raise CelsiusError(f"{method} {path} → {resp.status_code}: {resp.text[:300]}")
-
-        if not resp.text:
+        if not body:
             return None
         try:
-            return resp.json()
+            return json.loads(body)
         except ValueError:
-            return resp.text
+            return body
 
     # -- autenticazione -----------------------------------------------------
     def login(self, email: str, password: str) -> Any:
