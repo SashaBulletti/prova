@@ -89,13 +89,13 @@ class CelsiusClient:
 
     # -- autenticazione -----------------------------------------------------
     def login(self, email: str, password: str) -> Any:
-        """Prova il login. I nomi dei campi ('email'/'password') sono
-        un'ipotesi ragionevole: con verbose=True vediamo subito se il
-        server li accetta o chiede altro.
+        """Login confermato dal vivo: rotta /login-check, campo 'username'
+        (ci si mette l'email) + 'password'. Risposta attesa: un JSON con
+        il token. 401 = credenziali rifiutate (password sbagliata).
         """
         data = self._request(
-            "POST", const.LOGIN,
-            json_body={"email": email, "password": password},
+            "POST", const.LOGIN_CHECK,
+            json_body={"username": email, "password": password},
             auth=False,
         )
         token = self._extract_token(data)
