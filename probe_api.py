@@ -1,43 +1,57 @@
 #!/usr/bin/env python3
-"""Seconda sonda: a login fatto, cerca gli indirizzi giusti per i dati
-dei pannelli, per le credenziali MQTT e per i comandi.
+"""Terza sonda: stampa il CONTENUTO completo degli indirizzi che funzionano.
 
-Fa login (rotta confermata), prende la prima casa e il primo pannello dai
-tuoi dati veri, poi prova tanti indirizzi probabili e stampa un riepilogo.
-Le GET sono innocue (leggono). I comandi (POST on/off) NON vengono
-lanciati: li prova solo "a vuoto" per vedere se l'indirizzo esiste, ma per
-sicurezza di default sono DISATTIVATI (vedi PROVA_COMANDI in fondo).
+Login, poi scarica e mostra per intero:
+  - il dettaglio della casa (GET /buildings/<uuid>)
+  - il dettaglio del pannello, provando varie intestazioni "Accept"
+    (una di queste dovrebbe sbloccare il "formato non supportato")
 
-Solo libreria standard: `python3 probe_api.py`.
+Solo letture, niente comandi. Solo libreria standard: `python3 probe_api.py`.
 """
 
 import getpass
 import json
 import os
+import urllib.error
+import urllib.request
 
-from celsius import CelsiusClient, CelsiusError
+from celsius import CelsiusClient
+
+BASE = "https://crmapp.celsiuspanel.it/api"
 
 
-def probe(client: CelsiusClient, method: str, path: str, body=None) -> str:
+def raw_get(token: str, path: str, accept: str) -> None:
+    url = BASE + path
+    req = urllib.request.Request(url, method="GET", headers={
+        "Accept": accept,
+        "Authorization": f"Bearer {token}",
+        "User-Agent": "CelsiusPanel/1.4.9 (custom-client)",
+    })
     try:
-        client._request(method, path, json_body=body)
-        return "esiste"
-    except CelsiusError as e:
-        msg = str(e)
-        if "→ 404" in msg:
-            return "404"
-        return msg.split(": ", 1)[-1][:160]
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            status, body = resp.status, resp.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        status, body = e.code, e.read().decode("utf-8", "replace")
+    except urllib.error.URLError as e:
+        status, body = -1, f"(rete) {e.reason}"
+    print(f"\n--- GET {path}   [Accept: {accept}]  → {status}")
+    # Se è JSON, lo stampo indentato; altrimenti i primi caratteri.
+    try:
+        print(json.dumps(json.loads(body), indent=2, ensure_ascii=False)[:4000])
+    except ValueError:
+        print(body[:1500])
 
 
 def main() -> None:
     email = os.environ.get("CELSIUS_EMAIL") or input("Email Celsius: ").strip()
     password = os.environ.get("CELSIUS_PASSWORD") or getpass.getpass("Password: ")
 
-    client = CelsiusClient(verbose=False)
+    client = CelsiusClient()
     client.login(email, password)
     if not client.token:
         print("Login non riuscito.")
         return
+    token = client.token
     print("Login OK ✓")
 
     buildings = client.get_buildings()
@@ -46,50 +60,23 @@ def main() -> None:
     p = b["panels"][0]
     puuid = p["uuid"]
     pid = p.get("celsiusAppId")
-    ident = p.get("identifier")
-    print(f"Casa: {buuid}")
-    print(f"Pannello di prova: {puuid}  (celsiusAppId={pid}, identifier={ident})\n")
 
-    # Indirizzi da provare per LEGGERE i dati / dettagli del pannello.
-    get_candidates = [
-        f"/buildings/{buuid}",
-        f"/building/{buuid}",
-        f"/buildings/{buuid}/panels",
-        f"/building/{buuid}/panels",
-        f"/panels/{puuid}",
-        f"/panel/{puuid}",
-        f"/panel/{puuid}/settings",
-        f"/panel/{puuid}/stats",
-        f"/panel/{puuid}/details",
-        f"/panels/{pid}",
-        f"/panel/{pid}",
-        "/panel/settings?uuid=" + puuid,
-        "/panel/settings?panelUuid=" + puuid,
-        f"/user", "/users", "/me", "/profile", "/account",
-        "/app-version",
-    ]
-    print("===== LETTURA (GET) =====")
-    for path in get_candidates:
-        print(f"{probe(client, 'GET', path):>10}  GET {path}")
+    # 1) Dettaglio casa completo.
+    print("\n===== DETTAGLIO CASA =====")
+    raw_get(token, f"/buildings/{buuid}", "application/json")
 
-    # Credenziali MQTT (dati in tempo reale). Proviamo GET e POST, con e
-    # senza parametri.
-    print("\n===== MQTT =====")
-    mqtt_candidates = [
-        ("GET", "/mqtt-server", None),
-        ("POST", "/mqtt-server", {}),
-        ("POST", "/mqtt-server", {"buildingUuid": buuid}),
-        ("GET", "/mqtt", None),
-        ("POST", "/mqtt", {}),
-        ("GET", "/mqtt-credentials", None),
-        ("POST", "/mqtt-credentials", {}),
-        ("GET", "/iot", None),
-        ("GET", f"/mqtt-server/{buuid}", None),
-    ]
-    for method, path, body in mqtt_candidates:
-        print(f"{probe(client, method, path, body):>10}  {method} {path}")
+    # 2) Dettaglio pannello, provando Accept diversi.
+    print("\n===== DETTAGLIO PANNELLO (varie intestazioni) =====")
+    for accept in ("*/*", "application/json", "application/ld+json",
+                   "application/hal+json", "text/html"):
+        raw_get(token, f"/panels/{puuid}", accept)
 
-    print("\nIncolla tutto questo output in chat.")
+    # 3) Elenco pannelli della casa + pannello via id numerico.
+    print("\n===== ALTRI INDIRIZZI =====")
+    raw_get(token, f"/buildings/{buuid}/panels", "*/*")
+    raw_get(token, f"/panels/{pid}", "*/*")
+
+    print("\n\nIncolla tutto questo output in chat.")
 
 
 if __name__ == "__main__":
