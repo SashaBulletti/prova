@@ -5,8 +5,9 @@ it.celsiuspanel.celsius). I NOMI degli endpoint sono certi; il CONTENUTO
 esatto delle richieste va confermato dal vivo col primo login.
 """
 
-# Server REST principale (produzione).
-BASE_URL = "https://crmapp.celsiuspanel.it"
+# Server REST principale (produzione). L'app usa il prefisso /api:
+# la pagina web del gestionale sta sulla radice, l'API dell'app sotto /api.
+BASE_URL = "https://crmapp.celsiuspanel.it/api"
 
 # Server di sviluppo dell'agenzia, lasciato nell'app. Da non usare, solo nota.
 DEV_URL = "https://celsius.simbiosidev.it"
