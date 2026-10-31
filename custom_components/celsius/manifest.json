@@ -1,0 +1,11 @@
+{
+  "domain": "celsius",
+  "name": "Celsius Panel",
+  "codeowners": ["@SashaBulletti"],
+  "config_flow": true,
+  "documentation": "https://github.com/SashaBulletti/prova",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/SashaBulletti/prova/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

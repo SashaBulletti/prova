@@ -1,0 +1,28 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Celsius Panel",
+        "description": "Enter the email and password of your Celsius Panel account.",
+        "data": {
+          "email": "Email",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Wrong email or password.",
+      "cannot_connect": "Could not reach the Celsius server."
+    },
+    "abort": {
+      "already_configured": "This account is already configured."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "power": { "name": "Power" },
+      "humidity": { "name": "Humidity" },
+      "temp_ext": { "name": "Outside temperature" }
+    }
+  }
+}

@@ -51,14 +51,38 @@ python3 celsius_cli.py comfort camera 19
 La prima volta chiede email e password; poi salva il token in `.token`
 (non versionato) e non li richiede più finché è valido (~1 settimana).
 
+## Home Assistant
+
+In [`custom_components/celsius/`](custom_components/celsius) c'è
+l'integrazione per Home Assistant: ogni pannello diventa un **termostato**
+(climate) con modalità Spento/Manuale/Programmato, temperatura e umidità,
+più sensori di **consumo (W)**, umidità e temperatura esterna. Una volta
+dentro Home Assistant, i termostati si espongono ad Alexa e Google Home.
+
+### Installazione — con HACS (consigliata)
+
+1. HACS → menù in alto a destra → **Repository personalizzati**.
+2. Incolla `https://github.com/SashaBulletti/prova`, categoria **Integrazione**.
+3. Cerca **Celsius Panel**, installa, **riavvia** Home Assistant.
+4. Impostazioni → Dispositivi e servizi → **Aggiungi integrazione** →
+   *Celsius Panel* → inserisci email e password.
+
+### Installazione — manuale
+
+1. Copia la cartella `custom_components/celsius` dentro la cartella
+   `config` di Home Assistant (accanto a `configuration.yaml`).
+2. Riavvia Home Assistant.
+3. Aggiungi l'integrazione come sopra.
+
 ## A che punto siamo
 
 - [x] API mappata e login funzionante
 - [x] Lettura pannelli + dati in tempo reale
 - [x] Client Python e comando da terminale (on/off/auto/temperature)
 - [x] Funzioni "spegni tutto" / "accendi tutto"
-- [ ] Verifica dei comandi di scrittura sul pannello reale
-- [ ] Integrazione Home Assistant (ogni pannello = termostato)
+- [x] Comandi di scrittura verificati sul pannello reale
+- [x] Integrazione Home Assistant (ogni pannello = termostato + sensori)
+- [ ] Installazione in Home Assistant e verifica
 - [ ] Alexa / Google Home (via Home Assistant)
 - [ ] Taglio carichi quando si carica l'auto (anti–salto contatore)
 
