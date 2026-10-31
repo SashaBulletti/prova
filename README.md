@@ -5,40 +5,65 @@ App alternativa per gestire i pannelli riscaldanti **Celsius Panel**
 
 > Progetto personale per i propri pannelli. Non affiliato a Tesi Group / Celsius Panel.
 
-## Com'è fatto il sistema Celsius (quello che sappiamo)
+## Come funziona il sistema Celsius
 
-Ricavato dall'app ufficiale (Flutter, `it.celsiuspanel.celsius` v1.4.9):
+Ricavato e verificato analizzando l'app ufficiale (Flutter, v1.4.9):
 
-- **Server REST** `https://crmapp.celsiuspanel.it` — login (token JWT), lista
-  case e pannelli, comandi (on/off/auto, temperatura, programmi).
-- **MQTT su AWS IoT Core** (`...eu-west-1.amazonaws.com`) — dati in tempo reale:
-  temperatura interna/esterna, umidità, consumo in W, stato online/offline.
-  Le credenziali per il broker arrivano dall'endpoint `/mqtt-server`.
-- **Pannello = dispositivo ESP32** (probabile): in configurazione crea un
-  hotspot `CELSIUS_PANEL` e risponde su `192.168.4.1`.
+- **API REST** `https://crmapp.celsiuspanel.it/api` — è un backend
+  **API Platform** (Symfony, JSON-LD). Login con token JWT
+  (`POST /api/login-check`, campo `username` + `password`).
+- **Dati in tempo reale già nell'API**: `GET /api/buildings/<uuid>/panels`
+  restituisce ogni pannello con `lastMeasurement` (consumo in W, umidità,
+  temperatura interna ed esterna). Per leggere basta interrogare l'API, non
+  serve per forza MQTT.
+- **MQTT su AWS IoT Core** disponibile (`POST /api/public/mqtt-server`) per
+  gli aggiornamenti "push" istantanei — utile più avanti.
+- **Pannello = ESP32**: in configurazione crea l'hotspot `CELSIUS_PANEL` su
+  `192.168.4.1`; i MAC dei pannelli sono Espressif.
 
-Gli endpoint sono mappati in [`celsius/const.py`](celsius/const.py).
+Mappa completa degli endpoint in [`celsius/const.py`](celsius/const.py).
+
+### Comandi principali (tutti POST sotto `/api/panels/<uuid>/`)
+
+| Azione | Endpoint | Body |
+|---|---|---|
+| Accendi (manuale) | `mode-manual-on` | `{"setTemperature":"21"}` |
+| Spegni | `mode-manual-off` | `{}` |
+| Programmato (auto) | `mode-scheduled` | `{}` |
+| Comfort/antigelo/max | `update` | `{"comfortTemperature","minTemperature","maxTemperature"}` |
+| Programma settimanale | `set-scheduling` | calendario 7×24 |
+| Riavvia | `restart` | `{}` |
+
+## Uso (dal computer)
+
+Serve solo Python 3 (già sul Mac). Nessuna installazione.
+
+```bash
+python3 celsius_cli.py list            # mostra tutti i pannelli e i dati
+python3 celsius_cli.py on cucina 21    # accendi "cucina" a 21°
+python3 celsius_cli.py off bagno       # spegni "bagno"
+python3 celsius_cli.py auto salotto    # "salotto" in programmato
+python3 celsius_cli.py all-off         # spegni TUTTI
+python3 celsius_cli.py all-on 20       # accendi TUTTI a 20°
+python3 celsius_cli.py comfort camera 19
+```
+
+La prima volta chiede email e password; poi salva il token in `.token`
+(non versionato) e non li richiede più finché è valido (~1 settimana).
 
 ## A che punto siamo
 
-- [x] Mappati host ed endpoint dall'app
-- [x] Scheletro del client REST + script di scoperta
-- [ ] Confermare dal vivo login e formato dei dati (`discover.py`)
-- [ ] Comandi (on/off/auto, temperatura) verificati
-- [ ] Canale MQTT per i dati in tempo reale
+- [x] API mappata e login funzionante
+- [x] Lettura pannelli + dati in tempo reale
+- [x] Client Python e comando da terminale (on/off/auto/temperature)
+- [x] Funzioni "spegni tutto" / "accendi tutto"
+- [ ] Verifica dei comandi di scrittura sul pannello reale
 - [ ] Integrazione Home Assistant (ogni pannello = termostato)
-- [ ] Funzioni extra: "spegni/accendi tutto", stessa temperatura a tutti,
-      taglio carichi quando si carica l'auto (anti–salto contatore)
+- [ ] Alexa / Google Home (via Home Assistant)
+- [ ] Taglio carichi quando si carica l'auto (anti–salto contatore)
 
-## Come provare il login
+## Script di scoperta (storici)
 
-Serve solo Python 3 (già presente sul Mac). Nessuna installazione.
-
-```bash
-cd prova
-python3 discover.py
-```
-
-Fa **solo letture** (non comanda i pannelli) e stampa cosa risponde il
-server, così tariamo il client sui dati reali. Email e password non vengono
-salvate.
+`discover.py`, `probe_login.py`, `probe_api.py`, `show_api.py` sono gli
+strumenti usati per ricostruire l'API. Non servono all'uso normale, ma
+restano utili se l'app cambia.

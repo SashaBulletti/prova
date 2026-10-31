@@ -1,17 +1,16 @@
-"""Client per parlare con i server Celsius Panel.
+"""Client per i pannelli Celsius Panel.
 
-Primo obiettivo: fare login e leggere case/pannelli. I comandi sono già
-mappati ma vanno confermati dal vivo. Ogni chiamata passa da _request(),
-che in modalità verbose stampa richiesta e risposta grezze: così vediamo
-i campi reali e correggiamo senza indovinare.
+Parla con l'API ufficiale (API Platform / JSON-LD). Permette di leggere i
+pannelli e i loro dati in tempo reale (temperatura, umidità, consumo) e di
+comandarli (accendi/spegni/programmato, temperature).
 
-Usa solo la libreria standard di Python (urllib): nessun pip, nessuna
-installazione. Basta Python 3 (già presente sul Mac come `python3`).
+Solo libreria standard di Python (urllib): nessun pip.
 """
 
 from __future__ import annotations
 
 import json
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -21,125 +20,194 @@ from . import const
 
 
 class CelsiusError(Exception):
-    """Errore parlando col server Celsius."""
+    """Errore parlando con il server Celsius."""
+
+
+class Panel:
+    """Un pannello, con i suoi dati letti dall'API."""
+
+    def __init__(self, data: dict) -> None:
+        self.raw = data
+        self.uuid: str = data.get("uuid", "")
+        self.name: str = (data.get("name") or "").strip()
+        self.identifier: str = data.get("identifier", "")  # MAC
+        self.status: int = data.get("status", 0)
+        self.operation_mode: int = data.get("operationMode", 0)
+        self.set_temperature = _to_float(data.get("setTemperature"))
+        self.min_temperature = _to_float(data.get("minTemperature"))   # antigelo
+        self.max_temperature = _to_float(data.get("maxTemperature"))
+        self.comfort_temperature = _to_float(data.get("comfortTemperature"))
+        m = data.get("lastMeasurement") or {}
+        self.power = _to_float(m.get("power"))                 # Watt
+        self.humidity = _to_float(str(m.get("humidity", "")).replace("%", ""))
+        self.temp_int = _to_float(m.get("tempInt"))            # °C interna
+        self.temp_ext = _to_float(m.get("tempExt"))            # °C esterna
+
+    @property
+    def mode_label(self) -> str:
+        return const.OPERATION_MODE.get(self.operation_mode, f"?{self.operation_mode}")
+
+    @property
+    def is_heating(self) -> bool:
+        return bool(self.power and self.power > 0)
+
+    def __repr__(self) -> str:
+        return f"<Panel {self.name!r} {self.mode_label} int={self.temp_int} W={self.power}>"
 
 
 class CelsiusClient:
-    def __init__(self, base_url: str = const.BASE_URL, *, verbose: bool = False,
-                 timeout: int = 20) -> None:
+    def __init__(self, base_url: str = const.BASE_URL, *, timeout: int = 20) -> None:
         self.base_url = base_url.rstrip("/")
-        self.verbose = verbose
         self.timeout = timeout
         self.token: str | None = None
 
-    # -- infrastruttura -----------------------------------------------------
-    def _request(self, method: str, path: str, *, json_body: Any = None,
-                 params: dict | None = None, auth: bool = True) -> Any:
+    # -- rete ---------------------------------------------------------------
+    def _request(self, method: str, path: str, *, body: Any = None,
+                 auth: bool = True) -> Any:
         url = self.base_url + path
-        if params:
-            query = urllib.parse.urlencode(params)
-            url = f"{url}?{query}"
-
         headers = {
-            "Accept": "application/json",
-            "Content-Type": "application/json",
+            # */* fa sì che il server risponda sempre in JSON-LD (che è
+            # l'unico formato che accetta su alcuni endpoint).
+            "Accept": "application/json+ld, application/json, */*",
             "User-Agent": "CelsiusPanel/1.4.9 (custom-client)",
         }
         if auth and self.token:
             headers["Authorization"] = f"Bearer {self.token}"
 
         data = None
-        if json_body is not None:
-            data = json.dumps(json_body).encode("utf-8")
-
-        if self.verbose:
-            print(f"\n→ {method} {url}")
-            if json_body is not None:
-                print(f"  body:  {json.dumps(json_body, ensure_ascii=False)}")
+        if body is not None:
+            data = json.dumps(body).encode("utf-8")
+            # Il login vuole application/json; gli altri accettano ld+json.
+            headers["Content-Type"] = ("application/json" if path == const.LOGIN_CHECK
+                                       else "application/ld+json")
 
         req = urllib.request.Request(url, data=data, headers=headers, method=method)
         try:
             with urllib.request.urlopen(req, timeout=self.timeout) as resp:
-                status = resp.status
-                reason = resp.reason
-                body = resp.read().decode("utf-8", "replace")
+                text = resp.read().decode("utf-8", "replace")
         except urllib.error.HTTPError as e:
-            # Il server ha risposto con un errore: leggiamo comunque il corpo,
-            # perché spesso spiega cosa manca (es. campi del login sbagliati).
-            status = e.code
-            reason = e.reason
-            body = e.read().decode("utf-8", "replace")
-            if self.verbose:
-                print(f"← {status} {reason}")
-                print(f"  {body[:2000]}")
-            raise CelsiusError(f"{method} {path} → {status}: {body[:300]}") from None
+            text = e.read().decode("utf-8", "replace")
+            raise CelsiusError(f"{method} {path} → {e.code}: {text[:300]}") from None
         except urllib.error.URLError as e:
-            raise CelsiusError(f"{method} {path} → rete non raggiungibile: {e.reason}") from None
+            raise CelsiusError(f"{method} {path} → rete: {e.reason}") from None
 
-        if self.verbose:
-            print(f"← {status} {reason}")
-            print(f"  {body[:2000]}")
-
-        if not body:
+        if not text:
             return None
         try:
-            return json.loads(body)
+            return json.loads(text)
         except ValueError:
-            return body
+            return text
 
-    # -- autenticazione -----------------------------------------------------
-    def login(self, email: str, password: str) -> Any:
-        """Login confermato dal vivo: rotta /login-check, campo 'username'
-        (ci si mette l'email) + 'password'. Risposta attesa: un JSON con
-        il token. 401 = credenziali rifiutate (password sbagliata).
-        """
-        data = self._request(
-            "POST", const.LOGIN_CHECK,
-            json_body={"username": email, "password": password},
-            auth=False,
-        )
-        token = self._extract_token(data)
-        if token:
-            self.token = token
-        return data
+    # -- login --------------------------------------------------------------
+    def login(self, email: str, password: str) -> str:
+        data = self._request("POST", const.LOGIN_CHECK,
+                              body={"username": email, "password": password},
+                              auth=False)
+        token = data.get("token") if isinstance(data, dict) else None
+        if not token:
+            raise CelsiusError("Login riuscito ma nessun token nella risposta.")
+        self.token = token
+        return token
 
-    @staticmethod
-    def _extract_token(data: Any) -> str | None:
-        if not isinstance(data, dict):
-            return None
-        # Il token può stare in posti diversi; proviamo i nomi più comuni.
-        for key in ("token", "accessToken", "access_token", "jwt"):
-            if key in data and isinstance(data[key], str):
-                return data[key]
-        # A volte è annidato dentro "data" o "user".
-        for outer in ("data", "user", "result"):
-            inner = data.get(outer)
-            if isinstance(inner, dict):
-                t = CelsiusClient._extract_token(inner)
-                if t:
-                    return t
-        return None
+    def set_token(self, token: str) -> None:
+        self.token = token
+
+    def token_expiry(self) -> int | None:
+        """Scadenza del token (timestamp epoch), leggendola dal JWT."""
+        return _jwt_exp(self.token) if self.token else None
 
     # -- lettura ------------------------------------------------------------
-    def get_buildings(self) -> Any:
-        return self._request("GET", const.BUILDINGS)
+    def get_buildings(self) -> list[dict]:
+        data = self._request("GET", const.BUILDINGS)
+        return _as_list(data)
 
-    def get_panels(self) -> Any:
-        return self._request("GET", const.PANELS)
+    def get_panels(self, building_uuid: str) -> list[Panel]:
+        """Tutti i pannelli di una casa, con i dati in tempo reale."""
+        data = self._request("GET", const.building_panels(building_uuid))
+        panels = []
+        for b in _as_list(data):
+            for p in b.get("panels", []):
+                panels.append(Panel(p))
+        return panels
 
-    def get_panel_settings(self, panel_id: str) -> Any:
-        return self._request("GET", const.PANEL_SETTINGS, params={"panelId": panel_id})
+    def get_all_panels(self) -> list[Panel]:
+        """Tutti i pannelli di tutte le case."""
+        panels = []
+        for b in self.get_buildings():
+            panels.extend(self.get_panels(b["uuid"]))
+        return panels
 
-    def get_mqtt_server(self) -> Any:
-        """Credenziali per collegarsi al broker MQTT (dati in tempo reale)."""
-        return self._request("GET", const.MQTT_SERVER)
+    def get_panel(self, uuid: str) -> Panel:
+        return Panel(self._request("GET", const.panel(uuid)))
 
-    # -- comandi (DA CONFERMARE prima di usarli sul serio) ------------------
-    def turn_on(self, panel_id: str) -> Any:
-        return self._request("POST", const.MODE_MANUAL_ON, json_body={"panelId": panel_id})
+    # -- comandi ------------------------------------------------------------
+    def turn_on(self, uuid: str, temperature: float) -> Any:
+        """Accende in modalità MANUALE alla temperatura indicata."""
+        return self._request("POST", const.panel_manual_on(uuid),
+                              body={"setTemperature": _temp_str(temperature)})
 
-    def turn_off(self, panel_id: str) -> Any:
-        return self._request("POST", const.MODE_MANUAL_OFF, json_body={"panelId": panel_id})
+    def turn_off(self, uuid: str) -> Any:
+        return self._request("POST", const.panel_manual_off(uuid), body={})
 
-    def set_scheduled(self, panel_id: str) -> Any:
-        return self._request("POST", const.MODE_SCHEDULED, json_body={"panelId": panel_id})
+    def set_scheduled(self, uuid: str) -> Any:
+        """Mette il pannello in modalità PROGRAMMATA (segue il calendario)."""
+        return self._request("POST", const.panel_scheduled(uuid), body={})
+
+    def set_temperatures(self, uuid: str, *, comfort: float | None = None,
+                         antifreeze: float | None = None,
+                         maximum: float | None = None,
+                         name: str | None = None) -> Any:
+        """Imposta temperatura comfort, antigelo (min) e massima."""
+        body: dict[str, str] = {}
+        if name is not None:
+            body["name"] = name
+        if antifreeze is not None:
+            body["minTemperature"] = _temp_str(antifreeze)
+        if maximum is not None:
+            body["maxTemperature"] = _temp_str(maximum)
+        if comfort is not None:
+            body["comfortTemperature"] = _temp_str(comfort)
+        return self._request("POST", const.panel_update(uuid), body=body)
+
+    def restart(self, uuid: str) -> Any:
+        return self._request("POST", const.panel_restart(uuid), body={})
+
+
+# --- funzioni di supporto --------------------------------------------------
+def _to_float(v: Any) -> float | None:
+    if v is None or v == "":
+        return None
+    try:
+        return float(str(v).replace(",", "."))
+    except ValueError:
+        return None
+
+
+def _temp_str(v: float) -> str:
+    """Le temperature viaggiano come stringa: '20' o '20.5' (niente '.0')."""
+    if float(v).is_integer():
+        return str(int(v))
+    return str(v)
+
+
+def _as_list(data: Any) -> list[dict]:
+    """Normalizza: l'API a volte risponde con una lista semplice, a volte
+    con una collezione Hydra {"hydra:member": [...]}."""
+    if isinstance(data, list):
+        return data
+    if isinstance(data, dict):
+        if "hydra:member" in data:
+            return data["hydra:member"]
+        return [data]
+    return []
+
+
+def _jwt_exp(token: str) -> int | None:
+    try:
+        payload = token.split(".")[1]
+        payload += "=" * (-len(payload) % 4)  # padding base64
+        import base64
+        data = json.loads(base64.urlsafe_b64decode(payload))
+        return int(data.get("exp"))
+    except Exception:
+        return None
