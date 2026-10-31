@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Terza sonda: stampa il CONTENUTO completo degli indirizzi che funzionano.
+"""Quarta sonda: scarica il "manuale automatico" dell'API (OpenAPI).
 
-Login, poi scarica e mostra per intero:
-  - il dettaglio della casa (GET /buildings/<uuid>)
-  - il dettaglio del pannello, provando varie intestazioni "Accept"
-    (una di queste dovrebbe sbloccare il "formato non supportato")
+Il sistema e' API Platform: espone la lista completa di indirizzi, metodi
+(GET/POST/PUT/PATCH) e comandi. Qui la scarichiamo e stampiamo solo le
+parti utili (pannelli, modalita', temperatura, programmi, consumi, mqtt).
+Salva anche il file intero in openapi.json nella cartella, per riferimento.
 
-Solo letture, niente comandi. Solo libreria standard: `python3 probe_api.py`.
+Solo letture. Solo libreria standard: `python3 probe_api.py`.
 """
 
 import getpass
@@ -20,7 +20,7 @@ from celsius import CelsiusClient
 BASE = "https://crmapp.celsiuspanel.it/api"
 
 
-def raw_get(token: str, path: str, accept: str) -> None:
+def raw_get(token: str, path: str, accept: str = "*/*"):
     url = BASE + path
     req = urllib.request.Request(url, method="GET", headers={
         "Accept": accept,
@@ -28,18 +28,12 @@ def raw_get(token: str, path: str, accept: str) -> None:
         "User-Agent": "CelsiusPanel/1.4.9 (custom-client)",
     })
     try:
-        with urllib.request.urlopen(req, timeout=20) as resp:
-            status, body = resp.status, resp.read().decode("utf-8", "replace")
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return resp.status, resp.read().decode("utf-8", "replace")
     except urllib.error.HTTPError as e:
-        status, body = e.code, e.read().decode("utf-8", "replace")
+        return e.code, e.read().decode("utf-8", "replace")
     except urllib.error.URLError as e:
-        status, body = -1, f"(rete) {e.reason}"
-    print(f"\n--- GET {path}   [Accept: {accept}]  → {status}")
-    # Se è JSON, lo stampo indentato; altrimenti i primi caratteri.
-    try:
-        print(json.dumps(json.loads(body), indent=2, ensure_ascii=False)[:4000])
-    except ValueError:
-        print(body[:1500])
+        return -1, f"(rete) {e.reason}"
 
 
 def main() -> None:
@@ -54,29 +48,66 @@ def main() -> None:
     token = client.token
     print("Login OK ✓")
 
-    buildings = client.get_buildings()
-    b = buildings[0]
-    buuid = b["uuid"]
-    p = b["panels"][0]
-    puuid = p["uuid"]
-    pid = p.get("celsiusAppId")
+    # Proviamo i soliti indirizzi del "manuale automatico" di API Platform.
+    spec = None
+    for path in ("/docs.json", "/docs.jsonopenapi", "/docs", ".json", "/index.json"):
+        status, body = raw_get(token, path)
+        if status == 200 and body.strip().startswith("{"):
+            try:
+                data = json.loads(body)
+            except ValueError:
+                continue
+            if "paths" in data or "openapi" in data or "swagger" in data:
+                spec = data
+                print(f"Manuale trovato su: /api{path}")
+                break
 
-    # 1) Dettaglio casa completo.
-    print("\n===== DETTAGLIO CASA =====")
-    raw_get(token, f"/buildings/{buuid}", "application/json")
+    if not spec:
+        print("Manuale OpenAPI non trovato sugli indirizzi soliti.")
+        print("Provo l'elenco risorse (entrypoint)...")
+        status, body = raw_get(token, "")
+        print(f"\n--- GET /api → {status}")
+        print(body[:3000])
+        return
 
-    # 2) Dettaglio pannello, provando Accept diversi.
-    print("\n===== DETTAGLIO PANNELLO (varie intestazioni) =====")
-    for accept in ("*/*", "application/json", "application/ld+json",
-                   "application/hal+json", "text/html"):
-        raw_get(token, f"/panels/{puuid}", accept)
+    # Salva il file intero.
+    with open("openapi.json", "w") as f:
+        json.dump(spec, f, indent=2, ensure_ascii=False)
+    print("Salvato openapi.json (completo).\n")
 
-    # 3) Elenco pannelli della casa + pannello via id numerico.
-    print("\n===== ALTRI INDIRIZZI =====")
-    raw_get(token, f"/buildings/{buuid}/panels", "*/*")
-    raw_get(token, f"/panels/{pid}", "*/*")
+    paths = spec.get("paths", {})
+    print(f"===== TUTTI GLI INDIRIZZI ({len(paths)}) =====")
+    for p in sorted(paths):
+        methods = ",".join(sorted(m.upper() for m in paths[p] if m.lower() in
+                   ("get", "post", "put", "patch", "delete")))
+        print(f"  {methods:<20} {p}")
 
-    print("\n\nIncolla tutto questo output in chat.")
+    # Cerca le parole chiave che ci interessano.
+    print("\n===== INDIRIZZI INTERESSANTI (modalita'/temp/mqtt/consumi) =====")
+    kw = ("mode", "mqtt", "scheduling", "measurement", "temperature",
+          "manual", "restart", "firmware", "stat")
+    for p in sorted(paths):
+        if any(k in p.lower() for k in kw):
+            for m, info in paths[p].items():
+                if m.lower() in ("get", "post", "put", "patch", "delete"):
+                    summary = (info.get("summary") or
+                               info.get("description") or "")[:70]
+                    print(f"  {m.upper():<7} {p}   {summary}")
+
+    # Schema del Panel: quali campi si possono scrivere.
+    schemas = spec.get("components", {}).get("schemas", {})
+    for name in schemas:
+        if name.lower() in ("panel", "panel-write", "panel.jsonld",
+                             "panel-panel.write"):
+            print(f"\n===== SCHEMA {name} =====")
+            props = schemas[name].get("properties", {})
+            for prop, meta in props.items():
+                t = meta.get("type", meta.get("$ref", "?"))
+                ro = " (sola lettura)" if meta.get("readOnly") else ""
+                print(f"  {prop}: {t}{ro}")
+
+    print("\nIncolla in chat la parte 'TUTTI GLI INDIRIZZI' e "
+          "'INDIRIZZI INTERESSANTI'. (openapi.json resta sul tuo Mac.)")
 
 
 if __name__ == "__main__":
