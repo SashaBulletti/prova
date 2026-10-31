@@ -148,7 +148,7 @@ def main() -> None:
 
     devices = call({"type": "config/device_registry/list"})
     areas = call({"type": "config/area_registry/list"})
-    area_id = {a["name"].lower(): a["id"] for a in areas}
+    area_id = {a["name"].lower(): a["area_id"] for a in areas}
 
     # Solo i dispositivi dell'integrazione Celsius.
     celsius = [d for d in devices
