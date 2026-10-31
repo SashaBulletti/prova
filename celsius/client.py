@@ -77,9 +77,10 @@ class CelsiusClient:
         data = None
         if body is not None:
             data = json.dumps(body).encode("utf-8")
-            # Il login vuole application/json; gli altri accettano ld+json.
+            # Il login vuole application/json; gli altri vogliono il formato
+            # (non standard) 'application/json+ld' usato da questo server.
             headers["Content-Type"] = ("application/json" if path == const.LOGIN_CHECK
-                                       else "application/ld+json")
+                                       else "application/json+ld")
 
         req = urllib.request.Request(url, data=data, headers=headers, method=method)
         try:
