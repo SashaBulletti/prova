@@ -5,12 +5,15 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../services/voice.dart';
 import '../store_scope.dart';
 import '../theme.dart';
-import 'glass.dart';
 
 /// Apre il foglio "Ti ascolto…" e restituisce le parole capite.
 Future<String?> listenForWords(BuildContext context) async {
   HapticFeedback.lightImpact();
-  final result = await showGlassSheet<String>(context, builder: (_) => const _VoiceSheet());
+  final result = await showModalBottomSheet<String>(
+    context: context,
+    isScrollControlled: true,
+    builder: (_) => const _VoiceSheet(),
+  );
   return (result == null || result.trim().isEmpty) ? null : result.trim();
 }
 
@@ -94,8 +97,8 @@ class _VoiceSheetState extends State<_VoiceSheet> with SingleTickerProviderState
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              _failed ? '' : (words.isEmpty ? s.listening : ''),
-              style: theme.textTheme.titleLarge,
+              _failed ? '🎤' : (words.isEmpty ? s.listening : ''),
+              style: theme.textTheme.headlineSmall,
             ),
             const SizedBox(height: 20),
             GestureDetector(
@@ -178,7 +181,7 @@ class _VoiceSheetState extends State<_VoiceSheet> with SingleTickerProviderState
                     Chip(
                       key: ValueKey('$i-${words[i]}'),
                       label: Text(words[i], style: theme.textTheme.titleMedium),
-                      backgroundColor: Colors.white.withValues(alpha: 0.10),
+                      backgroundColor: TrovoColors.surfaceHigher,
                     )
                         .animate()
                         .fadeIn(duration: Motion.of(context, 200))

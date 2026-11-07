@@ -1,7 +1,5 @@
 import 'dart:math';
 
-import 'room_icons.dart';
-
 /// Struttura: Stanza → Scaffale → Piano → Oggetto.
 
 final _rng = Random();
@@ -229,16 +227,13 @@ class Shelf {
 }
 
 class Room {
-  Room({String? id, required this.name, String icon = 'house', List<Shelf>? shelves})
+  Room({String? id, required this.name, this.emoji = '🏠', List<Shelf>? shelves})
       : id = id ?? newId(),
-        icon = normalizeRoomIcon(icon),
         shelves = shelves ?? [];
 
   final String id;
   String name;
-
-  /// Chiave dell'icona a linea (vedi room_icons.dart).
-  String icon;
+  String emoji;
   final List<Shelf> shelves;
 
   int get itemCount => shelves.fold(0, (sum, s) => sum + s.itemCount);
@@ -246,14 +241,14 @@ class Room {
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
-        'icon': icon,
+        'emoji': emoji,
         'shelves': shelves.map((s) => s.toJson()).toList(),
       };
 
   factory Room.fromJson(Map<String, dynamic> j) => Room(
         id: j['id'] as String?,
         name: (j['name'] as String?) ?? '',
-        icon: (j['icon'] as String?) ?? (j['emoji'] as String?) ?? 'house',
+        emoji: (j['emoji'] as String?) ?? '🏠',
         shelves: ((j['shelves'] as List?) ?? [])
             .map((e) => Shelf.fromJson(Map<String, dynamic>.from(e as Map)))
             .toList(),

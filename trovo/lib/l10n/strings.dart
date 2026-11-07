@@ -35,15 +35,7 @@ class S {
   String get name => _t('Nome', 'Name');
 
   // Ricerca e voce
-  String get searchHint => _t('Cerca un oggetto', 'Search for something');
-  String get homeTab => _t('Casa', 'Home');
-  String get searchTab => _t('Cerca', 'Search');
-  String roomsCount(int n) => n == 1 ? _t('1 stanza', '1 room') : _t('$n stanze', '$n rooms');
-  String get solidGlass => _t('Vetro solido', 'Solid glass');
-  String get solidGlassSub => _t(
-      'Toglie le trasparenze: utile se lo sfondo ti distrae.',
-      'Removes the see-through effect: useful if the background distracts you.');
-  String get appearance => _t('Aspetto', 'Appearance');
+  String get searchHint => _t('Cosa cerchi?', 'What are you looking for?');
   String get searchByVoice => _t('Cerca a voce', 'Search by voice');
   String get listening => _t('Ti ascolto…', 'Listening…');
   String get sayItemName => _t("Di' il nome di una cosa", 'Say the name of something');
@@ -200,7 +192,6 @@ class S {
   String get print => _t('Stampa', 'Print');
   String get saveOrShare => _t('Salva o condividi', 'Save or share');
   String get jar => _t('Barattolo', 'Jar');
-  String labelsCount(int n) => n == 1 ? _t('1 etichetta', '1 label') : _t('$n etichette', '$n labels');
   String get nothingToPrint => _t('Non c\'è niente da stampare qui.', 'Nothing to print here.');
 
   // Foto che aggiorna

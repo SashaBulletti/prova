@@ -10,7 +10,6 @@ import '../scan_codes.dart';
 import '../store_scope.dart';
 import '../theme.dart';
 import 'common.dart';
-import 'glass.dart';
 
 /// "Aggiorna con una foto": fotografi un piano, Trovo legge tutti i QR
 /// (posti e barattoli) e sposta le cose al posto giusto. Niente AI:
@@ -87,7 +86,12 @@ Future<void> runPhotoUpdate(BuildContext context) async {
     return;
   }
 
-  final ok = await showGlassSheet<bool>(context, builder: (ctx) => _ConfirmMoves(plan: plan));
+  final ok = await showModalBottomSheet<bool>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    builder: (ctx) => _ConfirmMoves(plan: plan),
+  );
   if (ok == true && context.mounted) {
     store.applyPhotoMoves(plan.moves);
     HapticFeedback.mediumImpact();
@@ -147,7 +151,11 @@ class _ConfirmMoves extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            PrimaryButton(onPressed: () => Navigator.pop(context, true), label: s.confirm),
+            FilledButton.icon(
+              onPressed: () => Navigator.pop(context, true),
+              icon: const Icon(Icons.check_rounded),
+              label: Text(s.confirm),
+            ),
             const SizedBox(height: 8),
             TextButton(onPressed: () => Navigator.pop(context, false), child: Text(s.cancel)),
           ],

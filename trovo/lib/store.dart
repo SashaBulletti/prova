@@ -26,9 +26,6 @@ class PantryStore extends ChangeNotifier {
   bool speakResults = true;
   bool keepAdding = false;
 
-  /// "Vetro solido": niente trasparenze, per chi si distrae con lo sfondo.
-  bool solidGlass = false;
-
   static Future<PantryStore> load({required String defaultRoomName}) async {
     SharedPreferences? prefs;
     try {
@@ -52,11 +49,10 @@ class PantryStore extends ChangeNotifier {
         store.localeCode = s['locale'] as String?;
         store.speakResults = (s['speakResults'] as bool?) ?? true;
         store.keepAdding = (s['keepAdding'] as bool?) ?? false;
-        store.solidGlass = (s['solidGlass'] as bool?) ?? false;
       } catch (_) {}
     }
     if (store.rooms.isEmpty) {
-      store.rooms.add(Room(name: defaultRoomName, icon: 'pantry'));
+      store.rooms.add(Room(name: defaultRoomName, emoji: '🥫'));
     }
     return store;
   }
@@ -66,7 +62,7 @@ class PantryStore extends ChangeNotifier {
   factory PantryStore.memory({List<Room>? rooms}) {
     final s = PantryStore._(null);
     if (rooms != null) s.rooms.addAll(rooms);
-    if (s.rooms.isEmpty) s.rooms.add(Room(name: 'Dispensa', icon: 'pantry'));
+    if (s.rooms.isEmpty) s.rooms.add(Room(name: 'Dispensa', emoji: '🥫'));
     return s;
   }
 
@@ -102,7 +98,6 @@ class PantryStore extends ChangeNotifier {
         'locale': localeCode,
         'speakResults': speakResults,
         'keepAdding': keepAdding,
-        'solidGlass': solidGlass,
       }),
     );
   }
@@ -123,17 +118,17 @@ class PantryStore extends ChangeNotifier {
     _changed();
   }
 
-  Room addRoom(String name, String icon) {
-    final room = Room(name: name.trim(), icon: icon);
+  Room addRoom(String name, String emoji) {
+    final room = Room(name: name.trim(), emoji: emoji);
     rooms.add(room);
     _selectedRoomId = room.id;
     _changed();
     return room;
   }
 
-  void updateRoom(Room room, {String? name, String? icon}) {
+  void updateRoom(Room room, {String? name, String? emoji}) {
     if (name != null && name.trim().isNotEmpty) room.name = name.trim();
-    if (icon != null) room.icon = icon;
+    if (emoji != null) room.emoji = emoji;
     _changed();
   }
 
@@ -525,11 +520,6 @@ class PantryStore extends ChangeNotifier {
 
   void setSpeakResults(bool value) {
     speakResults = value;
-    _changed();
-  }
-
-  void setSolidGlass(bool value) {
-    solidGlass = value;
     _changed();
   }
 

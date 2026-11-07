@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trovo/app.dart';
 import 'package:trovo/emoji_guess.dart';
-import 'package:trovo/icons.dart';
 import 'package:trovo/models.dart';
 import 'package:trovo/scan_codes.dart';
 import 'package:trovo/search.dart';
@@ -89,7 +88,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Trovo'), findsOneWidget);
     expect(find.text('Scaffale Blu'), findsOneWidget);
-    expect(find.byIcon(PIcons.microphoneFill), findsWidgets);
+    expect(find.byIcon(Icons.mic_rounded), findsWidgets);
   });
 
   group('Posti', () {
@@ -161,12 +160,6 @@ void main() {
       expect(bottom.slots[2], ceci.id);
       expect(top.items.contains(ceci), isFalse);
       expect(bottom.items.contains(ceci), isTrue);
-    });
-
-    test('le emoji delle stanze diventano icone', () {
-      expect(Room.fromJson({'name': 'Dispensa', 'emoji': '🥫'}).icon, 'pantry');
-      expect(Room.fromJson({'name': 'Garage', 'emoji': '🚗'}).icon, 'garage');
-      expect(Room.fromJson({'name': 'Bagno', 'icon': 'bathroom'}).icon, 'bathroom');
     });
 
     test('i dati della versione 1 diventano posti da sinistra', () {

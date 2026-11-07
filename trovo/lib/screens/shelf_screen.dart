@@ -3,15 +3,12 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../icons.dart';
 
 import '../models.dart';
-import '../room_icons.dart';
 import '../store_scope.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/fly.dart';
-import '../widgets/glass.dart';
 import '../widgets/labels_sheet.dart';
 import '../widgets/photo_update.dart';
 import '../widgets/sheets.dart';
@@ -44,8 +41,7 @@ class ShelfScreen extends StatefulWidget {
   State<ShelfScreen> createState() => _ShelfScreenState();
 }
 
-class _ShelfScreenState extends State<ShelfScreen>
-    with SingleTickerProviderStateMixin {
+class _ShelfScreenState extends State<ShelfScreen> with SingleTickerProviderStateMixin {
   late final AnimationController _faro = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 2100),
@@ -113,12 +109,7 @@ class _ShelfScreenState extends State<ShelfScreen>
       await Future.delayed(delay);
       final ctx = _levelKeys[level.id]?.currentContext;
       if (ctx != null && ctx.mounted) {
-        Scrollable.ensureVisible(
-          ctx,
-          alignment: 0.5,
-          duration: scroll,
-          curve: Curves.easeOutCubic,
-        );
+        Scrollable.ensureVisible(ctx, alignment: 0.5, duration: scroll, curve: Curves.easeOutCubic);
       }
     });
   }
@@ -126,47 +117,24 @@ class _ShelfScreenState extends State<ShelfScreen>
   void _addAt(Room room, Shelf shelf, Level level, int index, int pos) {
     showAddItemSheet(
       context,
-      target: LevelRef(
-        room: room,
-        shelf: shelf,
-        level: level,
-        levelIndex: index,
-      ),
+      target: LevelRef(room: room, shelf: shelf, level: level, levelIndex: index),
       position: pos,
       onAdded: (item, where, from) {
         final key = _levelKeys[where.level.id];
-        if (key != null) {
-          flyEmoji(context, emoji: item.emoji, from: from, to: centerOf(key));
-        }
+        if (key != null) flyEmoji(context, emoji: item.emoji, from: from, to: centerOf(key));
       },
     );
   }
 
   Future<void> _removeSlot(Level level, int pos) async {
     final s = context.s;
-    final ok = await confirmDialog(
-      context,
-      s.removeSlotConfirm(pos + 1),
-      confirmLabel: s.remove,
-    );
+    final ok = await confirmDialog(context, s.removeSlotConfirm(pos + 1), confirmLabel: s.remove);
     if (!ok || !mounted) return;
     context.store.removeSlot(level, pos);
   }
 
-  Future<void> _editItem(
-    Room room,
-    Shelf shelf,
-    Level level,
-    int index,
-    Item item,
-  ) async {
-    final loc = ItemLocation(
-      room: room,
-      shelf: shelf,
-      level: level,
-      levelIndex: index,
-      item: item,
-    );
+  Future<void> _editItem(Room room, Shelf shelf, Level level, int index, Item item) async {
+    final loc = ItemLocation(room: room, shelf: shelf, level: level, levelIndex: index, item: item);
     final result = await showEditItemSheet(context, loc);
     if (!mounted) return;
     final s = context.s;
@@ -190,13 +158,7 @@ class _ShelfScreenState extends State<ShelfScreen>
 
   void _onHover(DragPayload p, Level to, int pos) {
     final start = _startFor(p, to, pos);
-    final ok = context.store.moveItemTo(
-      p.item,
-      p.level,
-      to,
-      start,
-      dryRun: true,
-    );
+    final ok = context.store.moveItemTo(p.item, p.level, to, start, dryRun: true);
     final next = DropHover(levelId: to.id, start: start, span: p.span, ok: ok);
     if (next != _hover) {
       HapticFeedback.selectionClick();
@@ -231,244 +193,154 @@ class _ShelfScreenState extends State<ShelfScreen>
     final store = context.store;
     final room = store.roomOf(shelf);
 
-    return AuroraBackground(
-      tint: TrovoColors.shelf(shelf.colorIndex),
-      child: Scaffold(
-        appBar: AppBar(
-          leadingWidth: 64,
-          leading: Padding(
-            padding: const EdgeInsets.only(left: 12),
-            child: Center(
-              child: GlassIconButton(
-                icon: PIcons.arrowLeft,
-                tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-                onPressed: () => Navigator.of(context).maybePop(),
-              ),
-            ),
-          ),
-          title: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ColorDot(color: TrovoColors.shelf(shelf.colorIndex), size: 9),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(shelf.name, overflow: TextOverflow.ellipsis),
-              ),
-            ],
-          ),
-          actions: [
-            GlassIconButton(
-              icon: PIcons.camera,
-              tooltip: s.photoUpdate,
-              onPressed: () => runPhotoUpdate(context),
-            ),
-            PopupMenuButton<String>(
-              icon: const Icon(
-                PIcons.dotsThreeVertical,
-                size: 24,
-              ),
-              onSelected: (v) async {
-                if (v == 'edit') {
-                  final r = await showEditShelfSheet(context, room, shelf);
-                  if (r == ShelfEditResult.deleted && context.mounted) {
-                    Navigator.of(context).pop();
-                  }
-                } else if (v == 'labels') {
-                  showLabelsSheet(context, shelf: shelf);
-                } else if (v == 'photo') {
-                  runPhotoUpdate(context);
-                }
-              },
-              itemBuilder: (_) => [
-                PopupMenuItem(
-                  value: 'labels',
-                  child: ListTile(
-                    leading: const Icon(PIcons.qrCode),
-                    title: Text(s.labels),
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'photo',
-                  child: ListTile(
-                    leading: const Icon(PIcons.camera),
-                    title: Text(s.photoUpdate),
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'edit',
-                  child: ListTile(
-                    leading: const Icon(PIcons.pencilSimple),
-                    title: Text(s.edit),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(width: 4),
+    return Scaffold(
+      appBar: AppBar(
+        titleSpacing: 0,
+        title: Row(
+          children: [
+            ColorDot(color: TrovoColors.shelf(shelf.colorIndex), size: 16),
+            const SizedBox(width: 10),
+            Flexible(child: Text(shelf.name, overflow: TextOverflow.ellipsis)),
           ],
         ),
-        body: AnimatedBuilder(
-          animation: _faro,
-          builder: (context, _) {
-            final glow = _glow;
-            var y = _capHeight;
-            final rows = <Widget>[];
-            for (var i = 0; i < shelf.levels.length; i++) {
-              final level = shelf.levels[i];
-              final isHi = level.id == widget.highlightLevelId;
-              final glowPositions = !isHi
-                  ? const <int>{}
-                  : widget.highlightItemId != null
-                  ? level.positionsOf(widget.highlightItemId!).toSet()
-                  : {if (widget.highlightSlot != null) widget.highlightSlot!};
-              Widget row = Level3DRow(
-                key: _keyFor(level.id),
-                shelf: shelf,
-                level: level,
-                number: shelf.levelNumber(i),
-                yOffset: y,
-                glow: isHi ? glow : 0,
-                glowPositions: glowPositions,
-                pulseItemId: isHi ? widget.highlightItemId : null,
-                hover: _hover,
-                dimmed: glow > 0 && widget.highlightLevelId != null && !isHi,
-                onTapEmpty: (pos) => _addAt(room, shelf, level, i, pos),
-                onLongPressEmpty: (pos) => _removeSlot(level, pos),
-                onTapItem: (item) => _editItem(room, shelf, level, i, item),
-                onAddSlot: () => store.addSlot(level),
-                onOpenLevel: () {
-                  if (isHi) _faro.reset();
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => LevelScreen(levelId: level.id),
-                    ),
-                  );
-                },
-                onHover: (p, pos) => _onHover(p, level, pos),
-                onHoverEnd: () {
-                  if (_hover?.levelId == level.id) {
-                    setState(() => _hover = null);
-                  }
-                },
-                onDrop: (p, pos) => _onDrop(p, level, pos),
-              );
-              if (_justAdded.contains(level.id)) {
-                row = row
-                    .animate(onComplete: (_) => _justAdded.remove(level.id))
-                    .fadeIn(duration: Motion.of(context, 200))
-                    .slideX(
-                      begin: 1.0,
-                      curve: Curves.easeOutBack,
-                      duration: Motion.of(context, 480),
-                    );
+        actions: [
+          IconButton(
+            tooltip: s.photoUpdate,
+            iconSize: 26,
+            onPressed: () => runPhotoUpdate(context),
+            icon: const Icon(Icons.photo_camera_rounded),
+          ),
+          PopupMenuButton<String>(
+            iconSize: 26,
+            onSelected: (v) async {
+              if (v == 'edit') {
+                final r = await showEditShelfSheet(context, room, shelf);
+                if (r == ShelfEditResult.deleted && context.mounted) Navigator.of(context).pop();
+              } else if (v == 'labels') {
+                showLabelsSheet(context, shelf: shelf);
+              } else if (v == 'photo') {
+                runPhotoUpdate(context);
               }
-              rows.add(KeyedSubtree(key: ValueKey(level.id), child: row));
-              y += 140;
+            },
+            itemBuilder: (_) => [
+              PopupMenuItem(value: 'labels', child: ListTile(leading: const Icon(Icons.qr_code_2_rounded), title: Text(s.labels))),
+              PopupMenuItem(value: 'photo', child: ListTile(leading: const Icon(Icons.photo_camera_rounded), title: Text(s.photoUpdate))),
+              PopupMenuItem(value: 'edit', child: ListTile(leading: const Icon(Icons.edit_rounded), title: Text(s.edit))),
+            ],
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
+      body: AnimatedBuilder(
+        animation: _faro,
+        builder: (context, _) {
+          final glow = _glow;
+          var y = _capHeight;
+          final rows = <Widget>[];
+          for (var i = 0; i < shelf.levels.length; i++) {
+            final level = shelf.levels[i];
+            final isHi = level.id == widget.highlightLevelId;
+            final glowPositions = !isHi
+                ? const <int>{}
+                : widget.highlightItemId != null
+                    ? level.positionsOf(widget.highlightItemId!).toSet()
+                    : {if (widget.highlightSlot != null) widget.highlightSlot!};
+            Widget row = Level3DRow(
+              key: _keyFor(level.id),
+              shelf: shelf,
+              level: level,
+              number: shelf.levelNumber(i),
+              yOffset: y,
+              glow: isHi ? glow : 0,
+              glowPositions: glowPositions,
+              pulseItemId: isHi ? widget.highlightItemId : null,
+              hover: _hover,
+              onTapEmpty: (pos) => _addAt(room, shelf, level, i, pos),
+              onLongPressEmpty: (pos) => _removeSlot(level, pos),
+              onTapItem: (item) => _editItem(room, shelf, level, i, item),
+              onAddSlot: () => store.addSlot(level),
+              onOpenLevel: () {
+                if (isHi) _faro.reset();
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => LevelScreen(levelId: level.id)));
+              },
+              onHover: (p, pos) => _onHover(p, level, pos),
+              onHoverEnd: () {
+                if (_hover?.levelId == level.id) setState(() => _hover = null);
+              },
+              onDrop: (p, pos) => _onDrop(p, level, pos),
+            );
+            if (_justAdded.contains(level.id)) {
+              row = row
+                  .animate(onComplete: (_) => _justAdded.remove(level.id))
+                  .fadeIn(duration: Motion.of(context, 200))
+                  .slideX(begin: 1.0, curve: Curves.easeOutBack, duration: Motion.of(context, 480));
             }
+            rows.add(KeyedSubtree(key: ValueKey(level.id), child: row));
+            y += 140;
+          }
 
-            const sideGutters = EdgeInsets.only(
-              left: LevelGeometry.tagW,
-              right: LevelGeometry.addW,
-            );
-            return CustomScrollView(
-              slivers: [
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
-                  sliver: SliverToBoxAdapter(
-                    child: Row(
+          const sideGutters = EdgeInsets.only(left: LevelGeometry.tagW, right: LevelGeometry.addW);
+          return CustomScrollView(
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
+                sliver: SliverToBoxAdapter(
+                  child: Text(
+                    '${room.emoji} ${room.name} · ${s.levelsCount(shelf.levels.length)} · ${s.itemsCount(shelf.itemCount)}',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+                sliver: SliverToBoxAdapter(
+                  child: Text('👆 ${s.dragToMove}', style: theme.textTheme.bodySmall),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                sliver: SliverToBoxAdapter(
+                  child: AnimatedSize(
+                    duration: Motion.of(context, 320),
+                    curve: Curves.easeOutCubic,
+                    alignment: Alignment.topCenter,
+                    child: Column(
                       children: [
-                        Icon(
-                          roomIcon(room.icon),
-                          size: 16,
-                          color: TrovoColors.textMuted,
+                        Padding(
+                          padding: sideGutters,
+                          child: SizedBox(
+                            height: _capHeight,
+                            width: double.infinity,
+                            child: CustomPaint(painter: ShelfCapPainter(uprightWidth: LevelGeometry.uprightW)),
+                          ),
                         ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            '${room.name} · ${s.levelsCount(shelf.levels.length)} · ${s.itemsCount(shelf.itemCount)}',
-                            style: theme.textTheme.bodySmall,
+                        ...rows,
+                        Padding(
+                          padding: sideGutters,
+                          child: SizedBox(
+                            height: 26,
+                            width: double.infinity,
+                            child: CustomPaint(painter: ShelfFeetPainter(yOffset: y, uprightWidth: LevelGeometry.uprightW)),
                           ),
                         ),
                       ],
                     ),
                   ),
                 ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
-                  sliver: SliverToBoxAdapter(
-                    child: Row(
-                      children: [
-                        const Icon(
-                          PIcons.handGrabbing,
-                          size: 16,
-                          color: TrovoColors.textFaint,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          s.dragToMove,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: TrovoColors.textFaint,
-                          ),
-                        ),
-                      ],
-                    ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
+                sliver: SliverToBoxAdapter(
+                  child: OutlinedButton.icon(
+                    onPressed: shelf.levels.length >= 30 ? null : () => _addLevel(shelf),
+                    icon: const Icon(Icons.add_rounded),
+                    label: Text(s.addLevel),
                   ),
                 ),
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  sliver: SliverToBoxAdapter(
-                    child: AnimatedSize(
-                      duration: Motion.of(context, 320),
-                      curve: Curves.easeOutCubic,
-                      alignment: Alignment.topCenter,
-                      child: Column(
-                        children: [
-                          Padding(
-                            padding: sideGutters,
-                            child: SizedBox(
-                              height: _capHeight,
-                              width: double.infinity,
-                              child: CustomPaint(
-                                painter: ShelfCapPainter(
-                                  uprightWidth: LevelGeometry.uprightW,
-                                ),
-                              ),
-                            ),
-                          ),
-                          ...rows,
-                          Padding(
-                            padding: sideGutters,
-                            child: SizedBox(
-                              height: 26,
-                              width: double.infinity,
-                              child: CustomPaint(
-                                painter: ShelfFeetPainter(
-                                  yOffset: y,
-                                  uprightWidth: LevelGeometry.uprightW,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
-                  sliver: SliverToBoxAdapter(
-                    child: OutlinedButton.icon(
-                      onPressed: shelf.levels.length >= 30
-                          ? null
-                          : () => _addLevel(shelf),
-                      icon: const Icon(PIcons.plus),
-                      label: Text(s.addLevel),
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

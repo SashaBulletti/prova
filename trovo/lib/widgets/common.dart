@@ -1,17 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../icons.dart';
 
 import '../models.dart';
-import '../room_icons.dart';
 import '../store_scope.dart';
 import '../theme.dart';
-import 'glass.dart';
 
-/// Numero del piano: pallino nel colore del piano + numero scuro.
-/// Colore e numero insieme: due indizi, funziona anche per chi è daltonico.
+/// Etichetta del piano: colore + numero grande (mai solo il colore,
+/// così funziona anche per chi è daltonico).
 class LevelTag extends StatelessWidget {
-  const LevelTag({super.key, required this.number, required this.color, this.size = 28, this.glow = 0});
+  const LevelTag({super.key, required this.number, required this.color, this.size = 36, this.glow = 0});
 
   final int number;
   final Color color;
@@ -22,19 +19,16 @@ class LevelTag extends StatelessWidget {
   Widget build(BuildContext context) {
     final bg = Color.lerp(color, TrovoColors.found, glow)!;
     return Container(
-      constraints: BoxConstraints(minWidth: size),
+      constraints: BoxConstraints(minWidth: size * 1.15),
       height: size,
-      padding: EdgeInsets.symmetric(horizontal: number > 9 ? size * 0.18 : 0),
+      padding: EdgeInsets.symmetric(horizontal: size * 0.22),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(size / 2),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color.lerp(bg, Colors.white, 0.18)!, bg],
-        ),
+        borderRadius: BorderRadius.circular(size * 0.3),
         boxShadow: [
-          BoxShadow(color: bg.withValues(alpha: 0.35 + 0.3 * glow), blurRadius: 10 + 14 * glow),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.35), blurRadius: 4, offset: const Offset(0, 2)),
+          if (glow > 0)
+            BoxShadow(color: TrovoColors.found.withValues(alpha: 0.6 * glow), blurRadius: 18 * glow),
         ],
       ),
       child: Center(
@@ -43,11 +37,10 @@ class LevelTag extends StatelessWidget {
           '$number',
           style: TextStyle(
             fontFamily: TrovoTheme.fontFamily,
-            fontWeight: FontWeight.w700,
-            fontSize: size * 0.5,
+            fontWeight: FontWeight.w800,
+            fontSize: size * 0.58,
             height: 1,
-            fontFeatures: const [FontFeature.tabularFigures()],
-            color: TrovoColors.background,
+            color: TrovoColors.onColor(bg),
           ),
         ),
       ),
@@ -56,7 +49,7 @@ class LevelTag extends StatelessWidget {
 }
 
 class ColorDot extends StatelessWidget {
-  const ColorDot({super.key, required this.color, this.size = 10});
+  const ColorDot({super.key, required this.color, this.size = 14});
   final Color color;
   final double size;
 
@@ -67,126 +60,75 @@ class ColorDot extends StatelessWidget {
         decoration: BoxDecoration(
           color: color,
           shape: BoxShape.circle,
-          boxShadow: [BoxShadow(color: color.withValues(alpha: 0.6), blurRadius: size)],
+          border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 1.5),
         ),
       );
 }
 
-/// Un oggetto come tessera di vetro con l'emoji.
+/// Oggetto disegnato come un adesivo sul piano.
 class ItemSticker extends StatelessWidget {
-  const ItemSticker({super.key, required this.item, this.size = 54, this.tint, this.glow = 0, this.showQuantity = true});
+  const ItemSticker({super.key, required this.item, this.size = 54, this.tilt = 0, this.glow = 0});
 
   final Item item;
   final double size;
-  final Color? tint;
+  final double tilt;
   final double glow;
-  final bool showQuantity;
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        GlassTile(size: size, tint: tint, glow: glow, emoji: item.emoji),
-        if (showQuantity && item.quantity > 1)
-          Positioned(right: -5, top: -5, child: QuantityBadge(quantity: item.quantity)),
-      ],
-    );
-  }
-}
-
-/// Tessera di vetro 3D: tinta leggera, riflesso in alto, ombra di contatto.
-class GlassTile extends StatelessWidget {
-  const GlassTile({super.key, required this.size, required this.emoji, this.tint, this.glow = 0, this.darken = 0});
-
-  final double size;
-  final String emoji;
-  final Color? tint;
-  final double glow;
-  final double darken;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = tint ?? Colors.white;
-    final radius = size * 0.24;
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(radius),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color.alphaBlend(t.withValues(alpha: 0.20), const Color(0xFF232733)),
-            Color.alphaBlend(t.withValues(alpha: 0.08), const Color(0xFF171A21)),
-          ],
-        ),
-        border: Border.all(
-          color: Color.lerp(Colors.white.withValues(alpha: 0.18), TrovoColors.found, glow)!,
-          width: glow > 0 ? 2 : 1,
-        ),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.45), blurRadius: 8, offset: Offset(0, size * 0.08)),
-          if (glow > 0) BoxShadow(color: TrovoColors.found.withValues(alpha: 0.55 * glow), blurRadius: 24 * glow),
+    return Transform.rotate(
+      angle: tilt,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            width: size,
+            height: size,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: TrovoColors.surfaceHigher,
+              borderRadius: BorderRadius.circular(size * 0.28),
+              border: Border.all(
+                color: Color.lerp(Colors.white.withValues(alpha: 0.85), TrovoColors.found, glow)!,
+                width: 2 + glow * 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withValues(alpha: 0.45), blurRadius: 6, offset: const Offset(0, 3)),
+                if (glow > 0)
+                  BoxShadow(color: TrovoColors.found.withValues(alpha: 0.75 * glow), blurRadius: 22 * glow, spreadRadius: 2 * glow),
+              ],
+            ),
+            child: Text(item.emoji, style: TextStyle(fontSize: size * 0.52, height: 1.1)),
+          ),
+          if (item.quantity > 1)
+            Positioned(
+              right: -6,
+              top: -6,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: TrovoColors.primary,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: TrovoColors.background, width: 2),
+                ),
+                child: Text(
+                  '${item.quantity}',
+                  style: const TextStyle(
+                    fontFamily: TrovoTheme.fontFamily,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                    color: TrovoColors.onPrimary,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
-      foregroundDecoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(radius),
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.white.withValues(alpha: 0.14),
-            Colors.white.withValues(alpha: 0.0),
-            Colors.black.withValues(alpha: darken),
-          ],
-          stops: const [0, 0.45, 1],
-        ),
-      ),
-      alignment: Alignment.center,
-      child: Opacity(
-        opacity: (1 - darken * 0.9).clamp(0.3, 1.0),
-        child: Text(emoji, style: TextStyle(fontSize: size * 0.56, height: 1.1)),
-      ),
     );
   }
 }
 
-class QuantityBadge extends StatelessWidget {
-  const QuantityBadge({super.key, required this.quantity});
-  final int quantity;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(minWidth: 22),
-      height: 22,
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      decoration: BoxDecoration(
-        color: TrovoColors.background.withValues(alpha: 0.78),
-        borderRadius: BorderRadius.circular(11),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
-      ),
-      child: Center(
-        widthFactor: 1,
-        child: Text(
-          '$quantity',
-          style: const TextStyle(
-            fontFamily: TrovoTheme.fontFamily,
-            fontWeight: FontWeight.w700,
-            fontSize: 13,
-            height: 1,
-            fontFeatures: [FontFeature.tabularFigures()],
-            color: TrovoColors.text,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Riga "Dispensa › • Scaffale Blu › (3) · Posto 2".
+/// Riga "🥫 Dispensa › ● Scaffale Blu › [3]".
 class LocationLine extends StatelessWidget {
   const LocationLine({
     super.key,
@@ -209,25 +151,28 @@ class LocationLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final level = shelf.levels[levelIndex];
-    const sep = Padding(
-      padding: EdgeInsets.symmetric(horizontal: 4),
-      child: Icon(PIcons.caretRight, size: 14, color: TrovoColors.textFaint),
+    final sep = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Icon(Icons.chevron_right_rounded, size: 18, color: theme.colorScheme.onSurfaceVariant),
     );
     return Wrap(
       crossAxisAlignment: WrapCrossAlignment.center,
       runSpacing: 4,
       children: [
         if (showRoom) ...[
-          Icon(roomIcon(room.icon), size: 16, color: TrovoColors.textMuted),
-          const SizedBox(width: 4),
-          Text(room.name, style: theme.textTheme.bodySmall),
+          Text('${room.emoji} ${room.name}', style: theme.textTheme.bodySmall),
           sep,
         ],
-        ColorDot(color: TrovoColors.shelf(shelf.colorIndex), size: 8),
+        ColorDot(color: TrovoColors.shelf(shelf.colorIndex), size: 12),
         const SizedBox(width: 6),
         Text(shelf.name, style: theme.textTheme.bodySmall?.copyWith(color: TrovoColors.text)),
         sep,
-        LevelTag(number: shelf.levelNumber(levelIndex), color: TrovoColors.level(level.colorIndex), size: 22),
+        // Il colore del piano resta visibile: è un aiuto per ricordare.
+        LevelTag(
+          number: shelf.levelNumber(levelIndex),
+          color: TrovoColors.level(level.colorIndex),
+          size: 24,
+        ),
         if (position != null && position! > 0) ...[
           const SizedBox(width: 6),
           Text(context.s.slot(position!), style: theme.textTheme.bodySmall?.copyWith(color: TrovoColors.text)),
@@ -248,56 +193,56 @@ class QuantityStepper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = big ? 52.0 : 44.0;
-    Widget btn(IconData icon, bool enabled, int delta) => Opacity(
-          opacity: enabled ? 1 : 0.35,
-          child: GlassIconButton(
-            icon: icon,
-            size: size,
+    final size = big ? 56.0 : 44.0;
+    Widget btn(IconData icon, bool enabled, int delta) => SizedBox(
+          width: size,
+          height: size,
+          child: IconButton.filledTonal(
             onPressed: enabled
                 ? () {
                     HapticFeedback.selectionClick();
                     onChanged(value + delta);
                   }
                 : null,
+            icon: Icon(icon, size: big ? 28 : 22),
+            style: IconButton.styleFrom(
+              backgroundColor: TrovoColors.surfaceHigher,
+              foregroundColor: TrovoColors.text,
+            ),
           ),
         );
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        btn(PIcons.minus, value > min, -1),
+        btn(Icons.remove_rounded, value > min, -1),
         SizedBox(
-          width: big ? 60 : 44,
+          width: big ? 64 : 44,
           child: AnimatedSwitcher(
             duration: Motion.of(context, 180),
-            transitionBuilder: (child, anim) => FadeTransition(
-              opacity: anim,
-              child: ScaleTransition(scale: Tween(begin: 0.8, end: 1.0).animate(anim), child: child),
-            ),
+            transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
             child: Text(
               '$value',
               key: ValueKey(value),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: TrovoTheme.fontFamily,
-                fontWeight: FontWeight.w700,
-                fontSize: big ? 28 : 20,
-                fontFeatures: const [FontFeature.tabularFigures()],
+                fontWeight: FontWeight.w800,
+                fontSize: big ? 32 : 22,
                 color: TrovoColors.text,
               ),
             ),
           ),
         ),
-        btn(PIcons.plus, value < max, 1),
+        btn(Icons.add_rounded, value < max, 1),
       ],
     );
   }
 }
 
 class EmptyState extends StatelessWidget {
-  const EmptyState({super.key, required this.icon, required this.title, required this.body, this.action});
+  const EmptyState({super.key, required this.art, required this.title, required this.body, this.action});
 
-  final IconData icon;
+  final Widget art;
   final String title;
   final String body;
   final Widget? action;
@@ -310,11 +255,13 @@ class EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          GlassBadgeIcon(icon: icon),
-          const SizedBox(height: 22),
+          art,
+          const SizedBox(height: 20),
           Text(title, style: theme.textTheme.headlineSmall, textAlign: TextAlign.center),
           const SizedBox(height: 8),
-          Text(body, style: theme.textTheme.bodyLarge?.copyWith(color: TrovoColors.textMuted), textAlign: TextAlign.center),
+          Text(body,
+              style: theme.textTheme.bodyLarge?.copyWith(color: TrovoColors.textMuted),
+              textAlign: TextAlign.center),
           if (action != null) ...[const SizedBox(height: 24), action!],
         ],
       ),
@@ -322,33 +269,16 @@ class EmptyState extends StatelessWidget {
   }
 }
 
-/// Titolo di sezione (es. "Colore", "Quanti piani?").
-class SectionLabel extends StatelessWidget {
-  const SectionLabel(this.text, {super.key});
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 10, top: 6),
-        child: Text(text, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: TrovoColors.textMuted)),
-      );
-}
-
 Future<bool> confirmDialog(BuildContext context, String message, {String? confirmLabel, bool danger = true}) async {
   final s = context.s;
   final result = await showDialog<bool>(
     context: context,
-    barrierColor: Colors.black.withValues(alpha: 0.45),
     builder: (ctx) => AlertDialog(
-      content: Text(message, style: Theme.of(ctx).textTheme.titleSmall),
+      content: Text(message, style: Theme.of(ctx).textTheme.titleMedium),
       actions: [
-        TextButton(
-          style: TextButton.styleFrom(foregroundColor: TrovoColors.textMuted),
-          onPressed: () => Navigator.pop(ctx, false),
-          child: Text(s.cancel),
-        ),
-        TextButton(
-          style: TextButton.styleFrom(foregroundColor: danger ? TrovoColors.danger : TrovoColors.primaryOnGlass),
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(s.cancel)),
+        FilledButton(
+          style: danger ? FilledButton.styleFrom(backgroundColor: TrovoColors.danger, foregroundColor: Colors.black) : null,
           onPressed: () => Navigator.pop(ctx, true),
           child: Text(confirmLabel ?? s.delete),
         ),
@@ -375,7 +305,7 @@ Future<String?> textPrompt(BuildContext context, {required String title, String 
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx), child: Text(s.cancel)),
-        TextButton(
+        FilledButton(
           onPressed: () {
             final v = controller.text.trim();
             Navigator.pop(ctx, v.isEmpty ? null : v);
@@ -388,8 +318,7 @@ Future<String?> textPrompt(BuildContext context, {required String title, String 
 }
 
 void showToast(BuildContext context, String message, {String? actionLabel, VoidCallback? onAction}) {
-  final messenger = ScaffoldMessenger.maybeOf(context);
-  if (messenger == null) return;
+  final messenger = ScaffoldMessenger.of(context);
   messenger.hideCurrentSnackBar();
   messenger.showSnackBar(SnackBar(
     content: Text(message),
