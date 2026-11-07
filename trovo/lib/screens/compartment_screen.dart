@@ -8,6 +8,7 @@ import '../models.dart';
 import '../store_scope.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/labels_sheet.dart';
 import '../widgets/sheets.dart';
 import '../widgets/shelf3d.dart' show DragPayload;
 
@@ -79,6 +80,15 @@ class _CompartmentScreenState extends State<CompartmentScreen> with SingleTicker
 
     return Scaffold(
       appBar: AppBar(
+        actions: [
+          IconButton(
+            tooltip: s.labels,
+            iconSize: 26,
+            onPressed: () => showLabelsSheet(context, shelf: ref.shelf, level: level),
+            icon: const Icon(Icons.qr_code_2_rounded),
+          ),
+          const SizedBox(width: 4),
+        ],
         titleSpacing: 0,
         title: Row(
           children: [

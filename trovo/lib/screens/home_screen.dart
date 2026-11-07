@@ -9,6 +9,7 @@ import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/furniture_art.dart';
 import '../widgets/house_map.dart';
+import '../widgets/labels_sheet.dart';
 import '../widgets/new_furniture_sheet.dart';
 import '../widgets/sheets.dart';
 import '../widgets/shelf_art.dart';
@@ -92,6 +93,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           Text(s.tagline, style: theme.textTheme.bodySmall),
                         ],
                       ),
+                    ),
+                    IconButton(
+                      tooltip: s.labels,
+                      iconSize: 28,
+                      onPressed: () => showLabelsSheet(context, room: room),
+                      icon: const Icon(Icons.qr_code_2_rounded),
                     ),
                     IconButton(
                       tooltip: s.settings,

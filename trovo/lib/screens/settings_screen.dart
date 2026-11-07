@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import '../store_scope.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/labels_sheet.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -95,6 +96,13 @@ class SettingsScreen extends StatelessWidget {
             title: Text(s.importBackup),
             subtitle: Text(s.importBackupSub),
             onTap: () => _import(context),
+          ),
+          section(s.labels),
+          ListTile(
+            leading: const Icon(Icons.qr_code_2_rounded, size: 30),
+            title: Text(s.labels),
+            subtitle: Text(s.labelsHint),
+            onTap: () => showLabelsSheet(context),
           ),
           section(s.aboutTitle),
           ListTile(

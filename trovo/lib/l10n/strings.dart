@@ -207,6 +207,11 @@ class S {
   String get print => _t('Stampa', 'Print');
   String get saveOrShare => _t('Salva o condividi', 'Save or share');
   String get jar => _t('Barattolo', 'Jar');
+  String get whatToPrint => _t('Cosa vuoi stampare?', 'What do you want to print?');
+  String get wholeHouse => _t('Tutta la casa', 'The whole house');
+  String get labelsThis => _t('Questo scomparto', 'This section');
+  String labelsCount(int n) => n == 1 ? _t('1 etichetta', '1 label') : _t('$n etichette', '$n labels');
+  String sheetsCount(int n) => n == 1 ? _t('1 foglio A4', '1 A4 sheet') : _t('$n fogli A4', '$n A4 sheets');
   String get nothingToPrint => _t('Non c\'è niente da stampare qui.', 'Nothing to print here.');
 
   // Foto che aggiorna
@@ -312,8 +317,8 @@ class S {
   String get restore => _t('Ripristina', 'Restore');
   String get aboutTitle => _t('Informazioni', 'About');
   String get aboutBody => _t(
-      'Trovo 1.0 · I tuoi dati restano solo su questo telefono.',
-      'Trovo 1.0 · Your data stays on this phone only.');
+      'Trovo 1.4 · I tuoi dati restano solo su questo telefono.',
+      'Trovo 1.4 · Your data stays on this phone only.');
 }
 
 class _SDelegate extends LocalizationsDelegate<S> {
