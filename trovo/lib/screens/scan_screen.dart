@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import '../icons.dart';
 
 import '../scan_codes.dart';
 import '../services/product_lookup.dart';
 import '../store_scope.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/glass.dart';
 import '../widgets/photo_update.dart';
 import '../widgets/sheets.dart';
 import 'shelf_screen.dart';
@@ -110,8 +112,8 @@ class _ScanScreenState extends State<ScanScreen> {
     // Non c'è: proponi di aggiungerlo, con il nome preso da Open Food Facts.
     await _controller.stop();
     if (!mounted) return;
-    final add = await showModalBottomSheet<bool>(
-      context: context,
+    final add = await showGlassSheet<bool>(
+      context,
       builder: (ctx) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
@@ -119,15 +121,11 @@ class _ScanScreenState extends State<ScanScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('🤔', style: TextStyle(fontSize: 48), textAlign: TextAlign.center),
-              const SizedBox(height: 8),
+              const Center(child: GlassBadgeIcon(icon: PIcons.package, size: 72)),
+              const SizedBox(height: 14),
               Text(s.productNotHere, style: Theme.of(ctx).textTheme.titleMedium, textAlign: TextAlign.center),
               const SizedBox(height: 20),
-              FilledButton.icon(
-                onPressed: () => Navigator.pop(ctx, true),
-                icon: const Icon(Icons.add_rounded),
-                label: Text(s.addIt),
-              ),
+              PrimaryButton(onPressed: () => Navigator.pop(ctx, true), icon: PIcons.plusBold, label: s.addIt),
             ],
           ),
         ),
@@ -167,7 +165,7 @@ class _ScanScreenState extends State<ScanScreen> {
           IconButton(
             iconSize: 28,
             onPressed: () => _controller.toggleTorch(),
-            icon: const Icon(Icons.flashlight_on_rounded),
+            icon: const Icon(PIcons.flashlight),
           ),
         ],
       ),
@@ -192,8 +190,9 @@ class _ScanScreenState extends State<ScanScreen> {
                 width: 260,
                 height: 260,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(28),
-                  border: Border.all(color: TrovoColors.primary, width: 4),
+                  borderRadius: BorderRadius.circular(32),
+                  border: Border.all(color: TrovoColors.primaryOnGlass.withValues(alpha: 0.9), width: 3),
+                  boxShadow: [BoxShadow(color: TrovoColors.primary.withValues(alpha: 0.4), blurRadius: 24)],
                 ),
               ),
             ),
@@ -207,12 +206,9 @@ class _ScanScreenState extends State<ScanScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Container(
+                  GlassBar(
+                    radius: 20,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.6),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
                     child: Text(
                       widget.pickOnly ? s.scanBarcodeHint : s.scanHint,
                       style: theme.textTheme.titleSmall,
@@ -221,15 +217,15 @@ class _ScanScreenState extends State<ScanScreen> {
                   ),
                   if (!widget.pickOnly) ...[
                     const SizedBox(height: 14),
-                    FilledButton.icon(
+                    PrimaryButton(
                       onPressed: () async {
                         await _controller.stop();
                         if (!context.mounted) return;
                         await runPhotoUpdate(context);
                         if (mounted) await _controller.start();
                       },
-                      icon: const Icon(Icons.photo_camera_rounded),
-                      label: Text(s.photoUpdate),
+                      icon: PIcons.cameraBold,
+                      label: s.photoUpdate,
                     ),
                   ],
                 ],

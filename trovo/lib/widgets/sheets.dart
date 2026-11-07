@@ -2,26 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../icons.dart';
+
 import '../emoji_guess.dart';
+import '../room_icons.dart';
 import '../screens/scan_screen.dart';
 import '../services/product_lookup.dart';
 import '../models.dart';
 import '../store_scope.dart';
 import '../theme.dart';
 import 'common.dart';
+import 'glass.dart';
 import 'fly.dart';
 import 'shelf_art.dart';
 import 'voice_sheet.dart';
 
-Future<T?> _sheet<T>(BuildContext context, Widget child) => showModalBottomSheet<T>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
-        child: child,
-      ),
-    );
+Future<T?> _sheet<T>(BuildContext context, Widget child) => showGlassSheet<T>(context, builder: (_) => child);
 
 class _SheetTitle extends StatelessWidget {
   const _SheetTitle(this.text);
@@ -80,7 +76,7 @@ class _ShelfColorPicker extends StatelessWidget {
                       ? [BoxShadow(color: TrovoColors.shelf(i).withValues(alpha: 0.6), blurRadius: 14)]
                       : null,
                 ),
-                child: i == value ? const Icon(Icons.check_rounded, color: Colors.white, size: 26) : null,
+                child: i == value ? const Icon(PIcons.checkBold, color: Colors.white, size: 26) : null,
               ),
             ),
           ),
@@ -209,11 +205,7 @@ class _NewShelfSheetState extends State<_NewShelfSheet> {
             onSubmitted: (_) => _create(),
           ),
           const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: _create,
-            icon: const Icon(Icons.check_rounded),
-            label: Text(s.create),
-          ),
+          PrimaryButton(onPressed: _create, icon: PIcons.checkBold, label: s.create),
         ],
       ),
     );
@@ -386,12 +378,12 @@ class _EditShelfSheetState extends State<_EditShelfSheet> {
             ),
           ),
           const SizedBox(height: 28),
-          FilledButton(
+          PrimaryButton(
+            label: s.save,
             onPressed: () {
               context.store.updateShelf(widget.shelf, name: _name.text, colorIndex: _color, numberFromTop: _fromTop);
               Navigator.pop(context, ShelfEditResult.saved);
             },
-            child: Text(s.save),
           ),
           const SizedBox(height: 12),
           TextButton.icon(
@@ -402,7 +394,7 @@ class _EditShelfSheetState extends State<_EditShelfSheet> {
               context.store.deleteShelf(widget.room, widget.shelf);
               Navigator.pop(context, ShelfEditResult.deleted);
             },
-            icon: const Icon(Icons.delete_outline_rounded),
+            icon: const Icon(PIcons.trash),
             label: Text(s.delete),
           ),
         ],
@@ -426,7 +418,7 @@ class _RoomSheet extends StatefulWidget {
 
 class _RoomSheetState extends State<_RoomSheet> {
   late final TextEditingController _name = TextEditingController(text: widget.room?.name ?? '');
-  late String _emoji = widget.room?.emoji ?? '🏠';
+  late String _icon = widget.room?.icon ?? 'house';
 
   @override
   void dispose() {
@@ -440,9 +432,9 @@ class _RoomSheetState extends State<_RoomSheet> {
     final store = context.store;
     HapticFeedback.mediumImpact();
     if (widget.room == null) {
-      Navigator.pop(context, store.addRoom(name, _emoji));
+      Navigator.pop(context, store.addRoom(name, _icon));
     } else {
-      store.updateRoom(widget.room!, name: name, emoji: _emoji);
+      store.updateRoom(widget.room!, name: name, icon: _icon);
       Navigator.pop(context, widget.room);
     }
   }
@@ -474,11 +466,11 @@ class _RoomSheetState extends State<_RoomSheet> {
             spacing: 10,
             runSpacing: 10,
             children: [
-              for (final e in roomEmojis)
+              for (final key in roomIconKeys)
                 GestureDetector(
                   onTap: () {
                     HapticFeedback.selectionClick();
-                    setState(() => _emoji = e);
+                    setState(() => _icon = key);
                   },
                   child: AnimatedContainer(
                     duration: Motion.of(context, 180),
@@ -486,20 +478,24 @@ class _RoomSheetState extends State<_RoomSheet> {
                     height: 54,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: e == _emoji ? TrovoColors.primary.withValues(alpha: 0.25) : TrovoColors.surfaceHigh,
+                      color: key == _icon ? TrovoColors.primary.withValues(alpha: 0.22) : Colors.white.withValues(alpha: 0.06),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: e == _emoji ? TrovoColors.primary : Colors.transparent, width: 2),
+                      border: Border.all(
+                        color: key == _icon ? TrovoColors.primaryOnGlass : Colors.white.withValues(alpha: 0.10),
+                        width: key == _icon ? 1.5 : 1,
+                      ),
                     ),
-                    child: Text(e, style: const TextStyle(fontSize: 28)),
+                    child: Icon(
+                      roomIcon(key),
+                      size: 26,
+                      color: key == _icon ? TrovoColors.primaryOnGlass : TrovoColors.textMuted,
+                    ),
                   ),
                 ),
             ],
           ),
           const SizedBox(height: 28),
-          FilledButton(
-            onPressed: _name.text.trim().isEmpty ? null : _save,
-            child: Text(editing ? s.save : s.create),
-          ),
+          PrimaryButton(onPressed: _name.text.trim().isEmpty ? null : _save, label: editing ? s.save : s.create),
           if (editing) ...[
             const SizedBox(height: 12),
             TextButton.icon(
@@ -515,7 +511,7 @@ class _RoomSheetState extends State<_RoomSheet> {
                 store.deleteRoom(widget.room!);
                 Navigator.pop(context);
               },
-              icon: const Icon(Icons.delete_outline_rounded),
+              icon: const Icon(PIcons.trash),
               label: Text(s.delete),
             ),
           ],
@@ -527,16 +523,11 @@ class _RoomSheetState extends State<_RoomSheet> {
 
 // ───────────────────────────────────────── Scegli il piano
 
-Future<LevelRef?> showLevelPicker(BuildContext context, {String? currentLevelId}) =>
-    showModalBottomSheet<LevelRef>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.7,
-        maxChildSize: 0.95,
-        builder: (ctx, controller) => _LevelPicker(controller: controller, currentLevelId: currentLevelId),
+Future<LevelRef?> showLevelPicker(BuildContext context, {String? currentLevelId}) => showGlassSheet<LevelRef>(
+      context,
+      builder: (ctx) => SizedBox(
+        height: MediaQuery.sizeOf(ctx).height * 0.72,
+        child: _LevelPicker(controller: ScrollController(), currentLevelId: currentLevelId),
       ),
     );
 
@@ -559,12 +550,18 @@ class _LevelPicker extends StatelessWidget {
           if (room.shelves.isNotEmpty) ...[
             Padding(
               padding: const EdgeInsets.only(top: 8, bottom: 8),
-              child: Text('${room.emoji} ${room.name}', style: theme.textTheme.titleMedium),
+              child: Row(children: [
+                Icon(roomIcon(room.icon), size: 20, color: TrovoColors.textMuted),
+                const SizedBox(width: 8),
+                Text(room.name, style: theme.textTheme.titleMedium),
+              ]),
             ),
             for (final shelf in room.shelves)
-              Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: Padding(
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: GlassCard(
+                  radius: 20,
+                  shadow: false,
                   padding: const EdgeInsets.all(14),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -630,15 +627,11 @@ class _LevelChoice extends StatelessWidget {
 
 // ───────────────────────────────────────── Emoji
 
-Future<String?> showEmojiPicker(BuildContext context, String current) => showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (ctx) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.6,
-        maxChildSize: 0.9,
-        builder: (ctx, controller) => Padding(
+Future<String?> showEmojiPicker(BuildContext context, String current) => showGlassSheet<String>(
+      context,
+      builder: (ctx) => SizedBox(
+        height: MediaQuery.sizeOf(ctx).height * 0.6,
+        child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -646,7 +639,7 @@ Future<String?> showEmojiPicker(BuildContext context, String current) => showMod
               _SheetTitle(ctx.s.chooseIcon),
               Expanded(
                 child: GridView.builder(
-                  controller: controller,
+                  padding: const EdgeInsets.only(bottom: 24),
                   gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                     maxCrossAxisExtent: 64,
                     mainAxisSpacing: 8,
@@ -661,8 +654,11 @@ Future<String?> showEmojiPicker(BuildContext context, String current) => showMod
                       child: Container(
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: e == current ? TrovoColors.primary.withValues(alpha: 0.25) : TrovoColors.surfaceHigh,
+                          color: e == current ? TrovoColors.primary.withValues(alpha: 0.22) : Colors.white.withValues(alpha: 0.06),
                           borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: e == current ? TrovoColors.primaryOnGlass : Colors.white.withValues(alpha: 0.08),
+                          ),
                         ),
                         child: Text(e, style: const TextStyle(fontSize: 30)),
                       ),
@@ -871,7 +867,7 @@ class _AddItemSheetState extends State<_AddItemSheet> {
                             position: (_position ?? target.level.slots.indexOf(null)) + 1,
                           ),
                   ),
-                  const Icon(Icons.edit_location_alt_rounded, color: TrovoColors.textMuted),
+                  const Icon(PIcons.mapPin, color: TrovoColors.textMuted),
                 ],
               ),
             ),
@@ -891,9 +887,9 @@ class _AddItemSheetState extends State<_AddItemSheet> {
                   height: 64,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: TrovoColors.surfaceHigher,
+                    color: Colors.white.withValues(alpha: 0.07),
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 2),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
                   ),
                   child: AnimatedSwitcher(
                     duration: Motion.of(context, 220),
@@ -924,7 +920,7 @@ class _AddItemSheetState extends State<_AddItemSheet> {
             onPressed: _looking ? null : _scanBarcode,
             icon: _looking
                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.5))
-                : const Icon(Icons.qr_code_scanner_rounded),
+                : const Icon(PIcons.barcode),
             label: Text(_looking ? s.lookingUp : (_barcode == null ? s.scanBarcode : '${s.scanBarcode} ✓')),
           ),
           const SizedBox(height: 18),
@@ -957,11 +953,11 @@ class _AddItemSheetState extends State<_AddItemSheet> {
                   ),
           ),
           const SizedBox(height: 8),
-          FilledButton.icon(
+          PrimaryButton(
             key: _addKey,
             onPressed: _name.text.trim().isEmpty ? null : _add,
-            icon: const Icon(Icons.add_rounded),
-            label: Text(s.add),
+            icon: PIcons.plusBold,
+            label: s.add,
           ),
           if (store.keepAdding && _addedCount > 0) ...[
             const SizedBox(height: 8),
@@ -1038,9 +1034,9 @@ class _EditItemSheetState extends State<_EditItemSheet> {
                   height: 64,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: TrovoColors.surfaceHigher,
+                    color: Colors.white.withValues(alpha: 0.07),
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 2),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
                   ),
                   child: Text(_emoji, style: const TextStyle(fontSize: 34)),
                 ),
@@ -1087,13 +1083,12 @@ class _EditItemSheetState extends State<_EditItemSheet> {
             decoration: InputDecoration(hintText: s.note),
           ),
           const SizedBox(height: 24),
-          FilledButton(
+          PrimaryButton(
+            label: s.save,
             onPressed: () {
               _save();
-              HapticFeedback.lightImpact();
               Navigator.pop(context, ItemEditResult.saved);
             },
-            child: Text(s.save),
           ),
           const SizedBox(height: 12),
           Row(
@@ -1108,7 +1103,7 @@ class _EditItemSheetState extends State<_EditItemSheet> {
                     HapticFeedback.mediumImpact();
                     Navigator.pop(context, ItemEditResult.moved);
                   },
-                  icon: const Icon(Icons.open_with_rounded),
+                  icon: const Icon(PIcons.arrowsOutCardinal),
                   label: Text(s.moveTo),
                 ),
               ),
@@ -1120,7 +1115,7 @@ class _EditItemSheetState extends State<_EditItemSheet> {
                     side: const BorderSide(color: TrovoColors.danger, width: 1.5),
                   ),
                   onPressed: () => Navigator.pop(context, ItemEditResult.usedUp),
-                  icon: const Icon(Icons.check_circle_outline_rounded),
+                  icon: const Icon(PIcons.checkCircle),
                   label: Text(s.usedUp),
                 ),
               ),

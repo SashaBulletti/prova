@@ -2,11 +2,14 @@ import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../icons.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../store_scope.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/glass.dart';
+import '../widgets/labels_sheet.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -50,59 +53,108 @@ class SettingsScreen extends StatelessWidget {
     final theme = Theme.of(context);
 
     Widget section(String title) => Padding(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
-          child: Text(title, style: theme.textTheme.titleSmall?.copyWith(color: TrovoColors.primary)),
+          padding: const EdgeInsets.fromLTRB(24, 26, 24, 10),
+          child: Text(title, style: theme.textTheme.labelMedium?.copyWith(color: TrovoColors.textMuted)),
         );
 
-    Widget langTile(String? code, String label, String flag) => RadioListTile<String?>(
-          value: code,
-          title: Text('$flag  $label'),
+    Widget group(List<Widget> children) => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: GlassCard(
+            radius: 22,
+            shadow: false,
+            child: Column(children: children),
+          ),
         );
 
-    return Scaffold(
-      appBar: AppBar(title: Text(s.settings)),
-      body: ListView(
-        padding: const EdgeInsets.only(bottom: 40),
-        children: [
-          section(s.language),
-          RadioGroup<String?>(
-            groupValue: store.localeCode,
-            onChanged: store.setLocale,
-            child: Column(
-              children: [
-                langTile(null, s.languageSystem, '📱'),
-                langTile('it', 'Italiano', '🇮🇹'),
-                langTile('en', 'English', '🇬🇧'),
-              ],
+    Widget langTile(String? code, String label) => RadioListTile<String?>(value: code, title: Text(label));
+
+    return AuroraBackground(
+      child: Scaffold(
+        appBar: AppBar(
+          leadingWidth: 64,
+          leading: Padding(
+            padding: const EdgeInsets.only(left: 12),
+            child: Center(
+              child: GlassIconButton(
+                icon: PIcons.arrowLeft,
+                onPressed: () => Navigator.of(context).maybePop(),
+              ),
             ),
           ),
-          section('🎤 ${s.searchByVoice}'),
-          SwitchListTile(
-            value: store.speakResults,
-            onChanged: store.setSpeakResults,
-            title: Text(s.speakResults),
-            subtitle: Text(s.speakResultsSub),
-          ),
-          section(s.backup),
-          ListTile(
-            leading: const Icon(Icons.upload_file_rounded, size: 30),
-            title: Text(s.exportBackup),
-            subtitle: Text(s.exportBackupSub),
-            onTap: () => _export(context),
-          ),
-          ListTile(
-            leading: const Icon(Icons.settings_backup_restore_rounded, size: 30),
-            title: Text(s.importBackup),
-            subtitle: Text(s.importBackupSub),
-            onTap: () => _import(context),
-          ),
-          section(s.aboutTitle),
-          ListTile(
-            leading: const Text('🔦', style: TextStyle(fontSize: 26)),
-            title: Text(s.tagline),
-            subtitle: Text(s.aboutBody),
-          ),
-        ],
+          title: Text(s.settings),
+        ),
+        body: ListView(
+          padding: const EdgeInsets.only(bottom: 40),
+          children: [
+            section(s.language),
+            group([
+              RadioGroup<String?>(
+                groupValue: store.localeCode,
+                onChanged: store.setLocale,
+                child: Column(
+                  children: [
+                    langTile(null, s.languageSystem),
+                    langTile('it', 'Italiano'),
+                    langTile('en', 'English'),
+                  ],
+                ),
+              ),
+            ]),
+            section(s.searchByVoice),
+            group([
+              SwitchListTile(
+                value: store.speakResults,
+                onChanged: store.setSpeakResults,
+                secondary: const Icon(PIcons.speakerHigh),
+                title: Text(s.speakResults),
+                subtitle: Text(s.speakResultsSub),
+              ),
+            ]),
+            section(s.appearance),
+            group([
+              SwitchListTile(
+                value: store.solidGlass,
+                onChanged: store.setSolidGlass,
+                secondary: const Icon(PIcons.squaresFour),
+                title: Text(s.solidGlass),
+                subtitle: Text(s.solidGlassSub),
+              ),
+            ]),
+            section(s.backup),
+            group([
+              ListTile(
+                leading: const Icon(PIcons.downloadSimple, size: 26),
+                title: Text(s.exportBackup),
+                subtitle: Text(s.exportBackupSub),
+                onTap: () => _export(context),
+              ),
+              Divider(height: 1, indent: 16, endIndent: 16, color: Colors.white.withValues(alpha: 0.08)),
+              ListTile(
+                leading: const Icon(PIcons.arrowCounterClockwise, size: 26),
+                title: Text(s.importBackup),
+                subtitle: Text(s.importBackupSub),
+                onTap: () => _import(context),
+              ),
+            ]),
+            section(s.labels),
+            group([
+              ListTile(
+                leading: const Icon(PIcons.qrCode, size: 26),
+                title: Text(s.labels),
+                subtitle: Text(s.labelsHint),
+                onTap: () => showLabelsSheet(context),
+              ),
+            ]),
+            section(s.aboutTitle),
+            group([
+              ListTile(
+                leading: const Icon(PIcons.info, size: 26),
+                title: Text(s.tagline),
+                subtitle: Text(s.aboutBody),
+              ),
+            ]),
+          ],
+        ),
       ),
     );
   }

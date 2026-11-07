@@ -2,8 +2,8 @@ import 'dart:math' as math;
 
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../icons.dart';
 
 import '../models.dart';
 import '../search.dart';
@@ -11,21 +11,25 @@ import '../services/voice.dart';
 import '../store_scope.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/glass.dart';
 import '../widgets/sheets.dart';
 import '../widgets/shelf_art.dart';
 import '../widgets/voice_sheet.dart';
 import 'shelf_screen.dart';
 
-/// "Dov'è…?": scrivi o parla, e Trovo ti mostra lo scaffale e il piano.
+/// "Dov'è…?": scrivi o parla, e Trovo ti mostra il mobile, il piano e il posto.
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({super.key, this.startWithVoice = false});
+  const SearchScreen({super.key, this.startWithVoice = false, this.embedded = false});
   final bool startWithVoice;
 
+  /// true: è una scheda della barra in basso (niente tasto indietro).
+  final bool embedded;
+
   @override
-  State<SearchScreen> createState() => _SearchScreenState();
+  State<SearchScreen> createState() => SearchScreenState();
 }
 
-class _SearchScreenState extends State<SearchScreen> {
+class SearchScreenState extends State<SearchScreen> {
   final _controller = TextEditingController();
   final _focus = FocusNode();
   String _query = '';
@@ -33,14 +37,12 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (widget.startWithVoice) {
-        _voice();
-      } else {
-        _focus.requestFocus();
-      }
-    });
+    if (!widget.embedded) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        widget.startWithVoice ? startVoice() : focusField();
+      });
+    }
   }
 
   @override
@@ -51,7 +53,9 @@ class _SearchScreenState extends State<SearchScreen> {
     super.dispose();
   }
 
-  Future<void> _voice() async {
+  void focusField() => _focus.requestFocus();
+
+  Future<void> startVoice() async {
     _focus.unfocus();
     final words = await listenForWords(context);
     if (words == null || !mounted) return;
@@ -87,23 +91,20 @@ class _SearchScreenState extends State<SearchScreen> {
     final results = store.search(_query);
     final showRecent = normalize(_query).isEmpty;
     final recent = showRecent ? store.recentItems() : const <ItemLocation>[];
+    final bottomPad = widget.embedded ? 120.0 : 32.0;
 
     Widget body;
     if (showRecent) {
       body = recent.isEmpty
           ? Center(
-              child: EmptyState(
-                art: const Text('🔎', style: TextStyle(fontSize: 64)),
-                title: s.searchStart,
-                body: s.nothingYet,
-              ),
+              child: EmptyState(icon: PIcons.magnifyingGlass, title: s.searchStart, body: s.nothingYet),
             )
           : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+              padding: EdgeInsets.fromLTRB(16, 4, 16, bottomPad),
               children: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(4, 4, 4, 12),
-                  child: Text(s.recent, style: theme.textTheme.titleSmall?.copyWith(color: TrovoColors.textMuted)),
+                  child: Text(s.recent, style: theme.textTheme.labelMedium?.copyWith(color: TrovoColors.textMuted)),
                 ),
                 for (var i = 0; i < recent.length; i++)
                   Padding(
@@ -112,32 +113,34 @@ class _SearchScreenState extends State<SearchScreen> {
                       location: recent[i],
                       highlight: false,
                       onSpeak: () => _speakLocation(recent[i]),
-                    ).animate().fadeIn(delay: Motion.of(context, 40 * i), duration: Motion.of(context, 220)),
+                    ).animate().fadeIn(delay: Motion.of(context, 30 * math.min(i, 6)), duration: Motion.of(context, 180)),
                   ),
               ],
             );
     } else if (results.isEmpty) {
       body = Center(
         child: SingleChildScrollView(
+          padding: EdgeInsets.only(bottom: bottomPad),
           child: EmptyState(
-            art: const Text('🤷', style: TextStyle(fontSize: 64))
-                .animate()
-                .shake(hz: 3, duration: Motion.of(context, 500)),
+            icon: PIcons.question,
             title: s.notFoundTitle,
             body: s.notFoundBody,
             action: store.allLevels().isEmpty
                 ? null
-                : FilledButton.icon(
-                    onPressed: () => showAddItemSheet(context, initialName: _query.trim()),
-                    icon: const Icon(Icons.add_rounded),
-                    label: Text('${s.add} "${_query.trim()}"'),
+                : SizedBox(
+                    width: 260,
+                    child: PrimaryButton(
+                      icon: PIcons.plusBold,
+                      label: '${s.add} "${_query.trim()}"',
+                      onPressed: () => showAddItemSheet(context, initialName: _query.trim()),
+                    ),
                   ),
           ),
         ),
       );
     } else {
       body = ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        padding: EdgeInsets.fromLTRB(16, 4, 16, bottomPad),
         itemCount: results.length,
         itemBuilder: (context, i) => Padding(
           padding: const EdgeInsets.only(bottom: 10),
@@ -148,77 +151,96 @@ class _SearchScreenState extends State<SearchScreen> {
             onSpeak: () => _speakLocation(results[i].location),
           )
               .animate()
-              .fadeIn(delay: Motion.of(context, 40 * math.min(i, 8)), duration: Motion.of(context, 200))
-              .slideY(begin: 0.1, curve: Curves.easeOutCubic, duration: Motion.of(context, 260)),
+              .fadeIn(delay: Motion.of(context, 30 * math.min(i, 6)), duration: Motion.of(context, 180))
+              .moveY(begin: 8, end: 0, curve: Motion.standard, duration: Motion.of(context, 300)),
         ),
       );
     }
 
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
+    final page = SafeArea(
+      bottom: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (widget.embedded)
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 12, 16, 8),
-              child: Row(
-                children: [
-                  IconButton(
-                    iconSize: 28,
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+              child: Text(s.searchTab, style: theme.textTheme.displaySmall),
+            ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(widget.embedded ? 16 : 8, 14, 16, 10),
+            child: Row(
+              children: [
+                if (!widget.embedded) ...[
+                  GlassIconButton(
+                    icon: PIcons.arrowLeft,
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back_rounded),
                   ),
-                  Expanded(
-                    child: Hero(
-                      tag: 'search-bar',
-                      child: Material(
-                        color: TrovoColors.surfaceHigh,
-                        borderRadius: BorderRadius.circular(22),
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.search_rounded, size: 28, color: TrovoColors.textMuted),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: TextField(
-                                  controller: _controller,
-                                  focusNode: _focus,
-                                  style: theme.textTheme.titleMedium,
-                                  textInputAction: TextInputAction.search,
-                                  decoration: InputDecoration(
-                                    hintText: s.searchHint,
-                                    filled: false,
-                                    border: InputBorder.none,
-                                    focusedBorder: InputBorder.none,
-                                    contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                                  ),
-                                  onChanged: (v) => setState(() => _query = v),
-                                ),
+                  const SizedBox(width: 10),
+                ],
+                Expanded(
+                  child: SizedBox(
+                    height: 52,
+                    child: GlassCard(
+                      radius: 26,
+                      padding: const EdgeInsets.fromLTRB(16, 0, 7, 0),
+                      child: Row(
+                        children: [
+                          Icon(PIcons.magnifyingGlass, size: 22, color: TrovoColors.text.withValues(alpha: 0.6)),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextField(
+                              controller: _controller,
+                              focusNode: _focus,
+                              style: theme.textTheme.bodyLarge,
+                              textInputAction: TextInputAction.search,
+                              decoration: InputDecoration(
+                                hintText: s.searchHint,
+                                filled: false,
+                                border: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                                contentPadding: const EdgeInsets.symmetric(vertical: 14),
                               ),
-                              if (_query.isNotEmpty)
-                                IconButton(
-                                  onPressed: () {
-                                    _controller.clear();
-                                    setState(() => _query = '');
-                                    _focus.requestFocus();
-                                  },
-                                  icon: const Icon(Icons.close_rounded),
-                                ),
-                              MicButton(onPressed: _voice, size: 48),
-                            ],
+                              onChanged: (v) => setState(() => _query = v),
+                            ),
                           ),
-                        ),
+                          if (_query.isNotEmpty)
+                            IconButton(
+                              onPressed: () {
+                                _controller.clear();
+                                setState(() => _query = '');
+                                _focus.requestFocus();
+                              },
+                              icon: const Icon(PIcons.x, size: 20),
+                            ),
+                          GestureDetector(
+                            onTap: startVoice,
+                            child: Container(
+                              width: 38,
+                              height: 38,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: TrovoColors.primary.withValues(alpha: 0.18),
+                              ),
+                              child: const Icon(PIcons.microphoneFill, size: 20, color: TrovoColors.primaryOnGlass),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            Expanded(child: body),
-          ],
-        ),
+          ),
+          Expanded(child: body),
+        ],
       ),
     );
+
+    if (widget.embedded) return page;
+    return AuroraBackground(child: Scaffold(body: page));
   }
 }
 
@@ -255,74 +277,66 @@ class _ResultTileState extends State<_ResultTile> with SingleTickerProviderState
     final loc = widget.location;
     final theme = Theme.of(context);
     final shelf = loc.shelf;
+    final tint = TrovoColors.level(loc.level.colorIndex);
 
-    Widget closed(VoidCallback open) => Material(
-          color: TrovoColors.surface,
-          borderRadius: BorderRadius.circular(20),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(20),
-            onTap: () {
-              HapticFeedback.selectionClick();
-              open();
-            },
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 4, 12),
-              child: AnimatedBuilder(
-                animation: _pulse,
-                builder: (context, _) {
-                  // Nei "recenti" il piano è acceso fisso; nei risultati pulsa 3 volte.
-                  final glow = !widget.highlight
+    Widget closed(VoidCallback open) => GlassCard(
+          radius: 22,
+          onTap: open,
+          padding: const EdgeInsets.fromLTRB(12, 12, 4, 12),
+          child: AnimatedBuilder(
+            animation: _pulse,
+            builder: (context, _) {
+              // Nei "recenti" il piano è acceso fisso; nei risultati pulsa 3 volte.
+              final glow = !widget.highlight
+                  ? 1.0
+                  : (Motion.reduced(context) || _pulse.isCompleted
                       ? 1.0
-                      : (Motion.reduced(context) || _pulse.isCompleted
-                          ? 1.0
-                          : 0.4 + 0.6 * math.cos(_pulse.value * 3 * math.pi).abs());
-                  return Row(
-                    children: [
-                      ItemSticker(item: loc.item, size: 56),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(loc.item.name, style: theme.textTheme.titleMedium, maxLines: 2, overflow: TextOverflow.ellipsis),
-                            const SizedBox(height: 6),
-                            LocationLine(room: loc.room, shelf: shelf, levelIndex: loc.levelIndex, position: loc.positionNumber),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      MiniShelf(
-                        width: 46,
-                        height: 64,
-                        levelColors: [for (final l in shelf.levels) TrovoColors.level(l.colorIndex)],
-                        slots: shelfSlots(shelf.levels.map((l) => l.slots)),
-                        highlightIndex: loc.levelIndex,
-                        highlightPositions: loc.level.positionsOf(loc.item.id).toSet(),
-                        glow: glow,
-                      ),
-                      IconButton(
-                        tooltip: context.s.readAloud,
-                        onPressed: widget.onSpeak,
-                        icon: const Icon(Icons.volume_up_rounded, size: 26),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
+                      : 0.4 + 0.6 * math.cos(_pulse.value * 3 * math.pi).abs());
+              return Row(
+                children: [
+                  ItemSticker(item: loc.item, size: 54, tint: tint),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(loc.item.name, style: theme.textTheme.titleSmall, maxLines: 2, overflow: TextOverflow.ellipsis),
+                        const SizedBox(height: 6),
+                        LocationLine(room: loc.room, shelf: shelf, levelIndex: loc.levelIndex, position: loc.positionNumber),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  MiniShelf(
+                    width: 44,
+                    height: 62,
+                    levelColors: [for (final l in shelf.levels) TrovoColors.level(l.colorIndex)],
+                    slots: shelfSlots(shelf.levels.map((l) => l.slots)),
+                    highlightIndex: loc.levelIndex,
+                    highlightPositions: loc.level.positionsOf(loc.item.id).toSet(),
+                    glow: glow,
+                  ),
+                  IconButton(
+                    tooltip: context.s.readAloud,
+                    onPressed: widget.onSpeak,
+                    icon: const Icon(PIcons.speakerHigh, size: 22, color: TrovoColors.textMuted),
+                  ),
+                ],
+              );
+            },
           ),
         );
 
-    // Tocca: lo scaffale si apre e parte il "Faro" sul piano giusto.
+    // Tocca: lo scaffale si apre e parte il "Faro" sul posto giusto.
     return OpenContainer(
       tappable: false,
-      transitionDuration: Motion.of(context, 450),
-      closedColor: TrovoColors.surface,
+      transitionDuration: Motion.of(context, 420),
+      closedColor: Colors.transparent,
       openColor: TrovoColors.background,
       middleColor: TrovoColors.background,
       closedElevation: 0,
       openElevation: 0,
-      closedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      closedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
       closedBuilder: (context, open) => closed(open),
       openBuilder: (context, _) => ShelfScreen(
         shelfId: shelf.id,

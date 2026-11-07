@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'l10n/strings.dart';
-import 'screens/home_screen.dart';
+import 'screens/root_shell.dart';
 import 'store.dart';
 import 'store_scope.dart';
 import 'theme.dart';
+import 'widgets/glass.dart';
 
 class TrovoApp extends StatefulWidget {
   const TrovoApp({super.key, required this.store});
@@ -22,6 +23,7 @@ class _TrovoAppState extends State<TrovoApp> {
   @override
   void initState() {
     super.initState();
+    GlassStyle.solid.value = widget.store.solidGlass;
     widget.store.addListener(_onStore);
     // Salva subito quando l'app va in background.
     _lifecycle = AppLifecycleListener(
@@ -31,6 +33,7 @@ class _TrovoAppState extends State<TrovoApp> {
   }
 
   void _onStore() {
+    GlassStyle.solid.value = widget.store.solidGlass;
     if (widget.store.localeCode != _locale) {
       setState(() => _locale = widget.store.localeCode);
     }
@@ -65,7 +68,7 @@ class _TrovoAppState extends State<TrovoApp> {
           if (device?.languageCode == 'it') return const Locale('it');
           return const Locale('en');
         },
-        home: const HomeScreen(),
+        home: const RootShell(),
       ),
     );
   }

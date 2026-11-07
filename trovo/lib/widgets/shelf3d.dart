@@ -3,12 +3,13 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../icons.dart';
 
 import '../models.dart';
 import '../store_scope.dart';
 import '../theme.dart';
 import 'common.dart';
-import 'shelf_art.dart' show paintUpright;
+import 'shelf_art.dart' show paintUpright, paintGlassBoard;
 
 /// Quello che si trascina: un oggetto con tutti i suoi posti.
 class DragPayload {
@@ -48,24 +49,25 @@ class LevelGeometry {
     colW = math.max(natural, minColW);
     contentW = colW * slotCount;
     scrolls = contentW > colsW + 0.5;
-    unit = (colW * 0.8).clamp(16.0, 52.0);
-    step = unit * 0.25;
-    floorDepth = unit * 0.3 + 6;
-    height = math.max(118.0, top + unit + (maxVisible - 1) * step + floorDepth + lipH + 6);
-    floorFrontY = height - lipH;
+    unit = (colW * 0.8).clamp(16.0, 50.0);
+    step = unit * 0.18;
+    floorDepth = unit * 0.32 + 6;
+    height = math.max(124.0, top + unit + (maxVisible - 1) * step + floorDepth + edgeH + labelH + 4);
+    floorFrontY = height - edgeH - labelH;
     floorBackY = floorFrontY - floorDepth;
   }
 
-  static const tagW = 42.0;
+  static const tagW = 40.0;
   static const addW = 40.0;
-  static const uprightW = 14.0;
+  static const uprightW = 8.0;
   static const pad = 6.0;
   static const minColW = 26.0;
-  static const lipH = 20.0;
-  static const top = 8.0;
+  static const edgeH = 6.0;
+  static const labelH = 18.0;
+  static const top = 10.0;
 
-  /// Quante unità si vedono in fila, una dietro l'altra.
-  static const maxVisible = 6;
+  /// Quante confezioni si vedono in fila, una dietro l'altra.
+  static const maxVisible = 5;
 
   late final double frameW;
   late final double colsW;
@@ -87,8 +89,8 @@ List<int> splitQuantity(int quantity, int span) {
   return [for (var c = 0; c < span; c++) base + (c < rest ? 1 : 0)];
 }
 
-/// Un piano dello scaffale visto in 3D: posti da sinistra a destra,
-/// e in ogni posto le cose in fila, una dietro l'altra.
+/// Un piano dello scaffale in 3D: posti da sinistra a destra,
+/// e in ogni posto le confezioni in fila, una dietro l'altra.
 class Level3DRow extends StatelessWidget {
   const Level3DRow({
     super.key,
@@ -108,6 +110,7 @@ class Level3DRow extends StatelessWidget {
     this.glowPositions = const {},
     this.pulseItemId,
     this.hover,
+    this.dimmed = false,
   });
 
   final Shelf shelf;
@@ -118,6 +121,9 @@ class Level3DRow extends StatelessWidget {
   final Set<int> glowPositions;
   final String? pulseItemId;
   final DropHover? hover;
+
+  /// Durante il "Faro" gli altri piani si abbassano di luce.
+  final bool dimmed;
 
   final void Function(int pos) onTapEmpty;
   final void Function(int pos) onLongPressEmpty;
@@ -132,84 +138,92 @@ class Level3DRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = TrovoColors.level(level.colorIndex);
     final s = context.s;
-    return LayoutBuilder(builder: (context, c) {
-      final g = LevelGeometry(c.maxWidth, level.slotCount);
-      final columns = _Columns(row: this, g: g, color: color);
-      return SizedBox(
-        height: g.height,
-        child: Row(
-          children: [
-            // Etichetta del piano: toccala per aprire la lista.
-            SizedBox(
-              width: LevelGeometry.tagW,
-              child: Align(
-                alignment: Alignment(0, (g.floorFrontY + 10) / g.height * 2 - 1),
-                child: Semantics(
-                  button: true,
-                  label: '${s.level(number)}, ${s.itemsCount(level.items.length)}',
-                  child: GestureDetector(
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      onOpenLevel();
-                    },
-                    child: LevelTag(number: number, color: color, size: 32, glow: glow),
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(
-              width: g.frameW,
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: CustomPaint(
-                      painter: _FramePainter(g: g, color: color, yOffset: yOffset, glow: glow),
-                    ),
-                  ),
-                  Positioned(
-                    left: LevelGeometry.uprightW + LevelGeometry.pad,
-                    right: LevelGeometry.uprightW + LevelGeometry.pad,
-                    top: 0,
-                    bottom: 0,
-                    child: g.scrolls
-                        ? SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: SizedBox(width: g.contentW, child: columns),
-                          )
-                        : columns,
-                  ),
-                ],
-              ),
-            ),
-            // + : aggiunge un posto in fondo al piano.
-            SizedBox(
-              width: LevelGeometry.addW,
-              child: Center(
-                child: Tooltip(
-                  message: s.addSlot,
-                  child: Material(
-                    color: color.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(14),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(14),
+    return AnimatedOpacity(
+      opacity: dimmed ? 0.4 : 1,
+      duration: Motion.of(context, 300),
+      child: LayoutBuilder(builder: (context, c) {
+        final g = LevelGeometry(c.maxWidth, level.slotCount);
+        final columns = _Columns(row: this, g: g, color: color);
+        return SizedBox(
+          height: g.height,
+          child: Row(
+            children: [
+              // Numero del piano: toccalo per aprire la lista.
+              SizedBox(
+                width: LevelGeometry.tagW,
+                child: Align(
+                  alignment: Alignment(0, (g.floorFrontY + 3) / g.height * 2 - 1),
+                  child: Semantics(
+                    button: true,
+                    label: '${s.level(number)}, ${s.itemsCount(level.items.length)}',
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
                       onTap: () {
-                        HapticFeedback.mediumImpact();
-                        onAddSlot();
+                        HapticFeedback.selectionClick();
+                        onOpenLevel();
                       },
-                      child: SizedBox(
-                        width: 34,
-                        height: math.min(64, g.height - 30),
-                        child: Icon(Icons.add_rounded, color: color, size: 26),
+                      child: Padding(
+                        padding: const EdgeInsets.all(6),
+                        child: LevelTag(number: number, color: color, size: 28, glow: glow),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
-      );
-    });
+              SizedBox(
+                width: g.frameW,
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: CustomPaint(painter: _FramePainter(g: g, color: color, yOffset: yOffset, glow: glow)),
+                    ),
+                    Positioned(
+                      left: LevelGeometry.uprightW + LevelGeometry.pad,
+                      right: LevelGeometry.uprightW + LevelGeometry.pad,
+                      top: 0,
+                      bottom: 0,
+                      child: g.scrolls
+                          ? SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: SizedBox(width: g.contentW, child: columns),
+                            )
+                          : columns,
+                    ),
+                  ],
+                ),
+              ),
+              // + : aggiunge un posto in fondo al piano.
+              SizedBox(
+                width: LevelGeometry.addW,
+                child: Align(
+                  alignment: Alignment(0, (g.floorFrontY - g.unit * 0.5) / g.height * 2 - 1),
+                  child: Tooltip(
+                    message: s.addSlot,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        onAddSlot();
+                      },
+                      child: Container(
+                        width: 30,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(15),
+                          color: Colors.white.withValues(alpha: 0.05),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+                        ),
+                        child: const Icon(PIcons.plus, size: 18, color: TrovoColors.textMuted),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }),
+    );
   }
 }
 
@@ -223,12 +237,11 @@ class _Columns extends StatelessWidget {
   Widget build(BuildContext context) {
     final level = row.level;
     final children = <Widget>[];
-    final duration = Motion.of(context, 280);
+    final duration = Motion.of(context, 300);
 
-    // Linee del pavimento: si vede dove finisce un posto e inizia l'altro.
     children.add(Positioned.fill(
       child: CustomPaint(
-        painter: _FloorGridPainter(
+        painter: _FloorPainter(
           g: g,
           count: level.slotCount,
           glowPositions: row.glowPositions,
@@ -238,38 +251,42 @@ class _Columns extends StatelessWidget {
       ),
     ));
 
-    // Numeri dei posti sul bordo: uguali a quelli delle etichette QR.
-    for (var pos = 0; pos < level.slotCount; pos++) {
-      children.add(Positioned(
-        left: pos * g.colW,
-        width: g.colW,
-        top: g.floorFrontY + 2,
-        height: LevelGeometry.lipH - 4,
+    for (final block in level.blocks) {
+      final left = block.start * g.colW;
+      final width = block.span * g.colW;
+      // Etichetta sotto il bordo: nome dell'oggetto, o numero del posto libero.
+      children.add(AnimatedPositioned(
+        key: ValueKey('label-${block.item?.id ?? 'e${block.start}'}'),
+        duration: duration,
+        curve: Motion.standard,
+        left: left,
+        width: width,
+        top: g.floorFrontY + LevelGeometry.edgeH + 2,
+        height: LevelGeometry.labelH - 2,
         child: IgnorePointer(
           child: Center(
             child: Text(
-              '${pos + 1}',
+              block.isEmpty ? '${block.start + 1}' : block.item!.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontFamily: TrovoTheme.fontFamily,
-                fontWeight: FontWeight.w800,
-                fontSize: 11,
-                height: 1,
-                color: TrovoColors.onColor(color).withValues(alpha: 0.75),
+                fontWeight: FontWeight.w600,
+                fontSize: block.isEmpty ? 11 : (width >= 64 ? 13 : 11.5),
+                height: 1.1,
+                fontFeatures: const [FontFeature.tabularFigures()],
+                color: block.isEmpty ? TrovoColors.textFaint : TrovoColors.text.withValues(alpha: 0.9),
               ),
             ),
           ),
         ),
       ));
-    }
 
-    for (final block in level.blocks) {
-      final left = block.start * g.colW;
-      final width = block.span * g.colW;
       if (block.isEmpty) {
         children.add(AnimatedPositioned(
           key: ValueKey('empty-${block.start}'),
           duration: duration,
-          curve: Curves.easeOutCubic,
+          curve: Motion.standard,
           left: left,
           width: width,
           top: 0,
@@ -288,13 +305,14 @@ class _Columns extends StatelessWidget {
           item: item,
           span: block.span,
           g: g,
+          tint: color,
           glow: glowing,
           pulse: item.id == row.pulseItemId ? row.glow : 0,
         );
         children.add(AnimatedPositioned(
           key: ValueKey('item-${item.id}'),
           duration: duration,
-          curve: Curves.easeOutCubic,
+          curve: Motion.standard,
           left: left,
           width: width,
           top: 0,
@@ -311,7 +329,7 @@ class _Columns extends StatelessWidget {
       }
     }
 
-    // Bersagli per il trascinamento, sopra a tutto ma "trasparenti" ai tocchi.
+    // Bersagli per il trascinamento: sopra a tutto ma "trasparenti" ai tocchi.
     for (var pos = 0; pos < level.slotCount; pos++) {
       children.add(Positioned(
         left: pos * g.colW,
@@ -335,6 +353,7 @@ class _Columns extends StatelessWidget {
   }
 }
 
+/// Posto libero: un incavo con il + al centro.
 class _EmptySlot extends StatelessWidget {
   const _EmptySlot({required this.g, required this.glow, required this.onTap, required this.onLongPress});
   final LevelGeometry g;
@@ -344,7 +363,7 @@ class _EmptySlot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = g.unit * 0.92;
+    final size = g.unit * 0.9;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () {
@@ -361,20 +380,29 @@ class _EmptySlot extends StatelessWidget {
         child: Align(
           alignment: Alignment.bottomCenter,
           child: Padding(
-            padding: EdgeInsets.only(bottom: 3),
-            child: CustomPaint(
-              painter: _DashedBoxPainter(
-                color: Color.lerp(TrovoColors.metalDark, TrovoColors.found, glow)!,
-                radius: size * 0.24,
-              ),
-              child: SizedBox(
-                width: size,
-                height: size,
-                child: Icon(
-                  Icons.add_rounded,
-                  size: size * 0.5,
-                  color: Color.lerp(TrovoColors.metal, TrovoColors.found, glow),
+            padding: const EdgeInsets.only(bottom: 3),
+            child: Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(size * 0.24),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.black.withValues(alpha: 0.32), Colors.black.withValues(alpha: 0.12)],
                 ),
+                border: Border.all(
+                  color: Color.lerp(Colors.white.withValues(alpha: 0.10), TrovoColors.found, glow)!,
+                  width: glow > 0 ? 2 : 1,
+                ),
+                boxShadow: glow > 0
+                    ? [BoxShadow(color: TrovoColors.found.withValues(alpha: 0.5 * glow), blurRadius: 20 * glow)]
+                    : null,
+              ),
+              child: Icon(
+                PIcons.plus,
+                size: size * 0.4,
+                color: Color.lerp(Colors.white.withValues(alpha: 0.35), TrovoColors.found, glow),
               ),
             ),
           ),
@@ -419,17 +447,17 @@ class _DraggableBlockState extends State<_DraggableBlock> {
         hapticFeedbackOnStart: true,
         dragAnchorStrategy: pointerDragAnchorStrategy,
         feedback: Transform.translate(
-          offset: Offset(-(_grab + 0.5) * g.colW, -g.floorFrontY * 0.75),
+          offset: Offset(-(_grab + 0.5) * g.colW, -g.floorFrontY * 0.8),
           child: Material(
             type: MaterialType.transparency,
             child: SizedBox(
               width: widget.span * g.colW,
               height: g.floorFrontY,
-              child: Transform.scale(scale: 1.08, child: Opacity(opacity: 0.92, child: widget.visual)),
+              child: Transform.scale(scale: 1.08, child: widget.visual),
             ),
           ),
         ),
-        childWhenDragging: Opacity(opacity: 0.25, child: widget.visual),
+        childWhenDragging: Opacity(opacity: 0.2, child: widget.visual),
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () {
@@ -447,25 +475,27 @@ class _DraggableBlockState extends State<_DraggableBlock> {
   }
 }
 
-/// Le unità di un oggetto in fila, dalla più lontana alla più vicina.
+/// Le confezioni di un oggetto in fila, dalla più lontana alla più vicina.
 class _BlockVisual extends StatelessWidget {
-  const _BlockVisual({required this.item, required this.span, required this.g, required this.glow, required this.pulse});
+  const _BlockVisual({
+    required this.item,
+    required this.span,
+    required this.g,
+    required this.tint,
+    required this.glow,
+    required this.pulse,
+  });
 
   final Item item;
   final int span;
   final LevelGeometry g;
+  final Color tint;
   final double glow;
   final double pulse;
 
   @override
   Widget build(BuildContext context) {
     final perColumn = splitQuantity(item.quantity, span);
-    final width = span * g.colW;
-    final showName = width >= 38;
-    // Il nome sta subito sopra la fila più alta.
-    final tallest = math.min(perColumn.reduce(math.max), LevelGeometry.maxVisible);
-    final stackTop = 3 + (tallest - 1) * g.step + g.unit * (1 - 0.075 * (tallest - 1));
-    final nameBottom = math.min(stackTop + 3, g.floorFrontY - 18);
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -475,55 +505,13 @@ class _BlockVisual extends StatelessWidget {
             width: g.colW,
             top: 0,
             bottom: 0,
-            child: _Column(item: item, count: perColumn[c], g: g, glow: glow, pulse: c == 0 ? pulse : 0),
-          ),
-        if (showName)
-          Positioned(
-            left: 1,
-            right: 1,
-            bottom: nameBottom,
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                decoration: BoxDecoration(
-                  color: TrovoColors.background.withValues(alpha: 0.72),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  item.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: TrovoTheme.fontFamily,
-                    fontWeight: FontWeight.w700,
-                    fontSize: width >= 70 ? 13 : 11,
-                    color: TrovoColors.text,
-                  ),
-                ),
-              ),
-            ),
+            child: _Column(item: item, count: perColumn[c], g: g, tint: tint, glow: glow, pulse: c == 0 ? pulse : 0),
           ),
         if (item.quantity > 1)
           Positioned(
-            right: 0,
-            bottom: g.unit * 0.85,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-              decoration: BoxDecoration(
-                color: TrovoColors.primary,
-                borderRadius: BorderRadius.circular(9),
-                border: Border.all(color: TrovoColors.background, width: 1.5),
-              ),
-              child: Text(
-                '${item.quantity}',
-                style: const TextStyle(
-                  fontFamily: TrovoTheme.fontFamily,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 12,
-                  color: TrovoColors.onPrimary,
-                ),
-              ),
-            ),
+            right: math.max(0, (g.colW - g.unit) / 2 - 6),
+            bottom: g.unit - 8,
+            child: QuantityBadge(quantity: item.quantity),
           ),
       ],
     );
@@ -531,11 +519,12 @@ class _BlockVisual extends StatelessWidget {
 }
 
 class _Column extends StatelessWidget {
-  const _Column({required this.item, required this.count, required this.g, required this.glow, required this.pulse});
+  const _Column({required this.item, required this.count, required this.g, required this.tint, required this.glow, required this.pulse});
 
   final Item item;
   final int count;
   final LevelGeometry g;
+  final Color tint;
   final double glow;
   final double pulse;
 
@@ -544,33 +533,58 @@ class _Column extends StatelessWidget {
     final visible = math.min(count, LevelGeometry.maxVisible);
     final extra = count - visible;
     final units = <Widget>[];
-    // Disegna dal fondo verso davanti, così quella davanti copre le altre.
+    // Ombra di contatto sotto la fila.
+    units.add(Positioned(
+      bottom: 0,
+      left: (g.colW - g.unit) / 2,
+      child: Container(
+        width: g.unit,
+        height: 6,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(6),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 6)],
+        ),
+      ),
+    ));
+    // Dal fondo verso davanti: quella davanti copre le altre.
     for (var j = visible - 1; j >= 0; j--) {
-      final scale = 1 - 0.075 * j;
+      final scale = math.pow(0.92, j).toDouble();
       final size = g.unit * scale;
-      final darken = 0.13 * j;
       units.add(Positioned(
         bottom: 3 + j * g.step,
         left: (g.colW - size) / 2,
         child: Transform.scale(
-          scale: j == 0 ? 1 + 0.16 * pulse : 1,
-          child: _Unit(item: item, size: size, darken: darken, glow: j == 0 ? glow : glow * 0.5),
+          scale: j == 0 ? 1 + 0.14 * pulse : 1,
+          child: GlassTile(
+            size: size,
+            emoji: item.emoji,
+            tint: tint,
+            darken: 0.18 * j,
+            glow: j == 0 ? glow : 0,
+          ),
         ),
       ));
     }
     if (extra > 0) {
       units.add(Positioned(
-        bottom: 3 + visible * g.step + g.unit * 0.55,
+        bottom: 3 + visible * g.step + g.unit * 0.62,
         left: 0,
         right: 0,
         child: Center(
-          child: Text(
-            '+$extra',
-            style: const TextStyle(
-              fontFamily: TrovoTheme.fontFamily,
-              fontWeight: FontWeight.w800,
-              fontSize: 12,
-              color: TrovoColors.textMuted,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '+$extra',
+              style: const TextStyle(
+                fontFamily: TrovoTheme.fontFamily,
+                fontWeight: FontWeight.w700,
+                fontSize: 11,
+                color: TrovoColors.textMuted,
+              ),
             ),
           ),
         ),
@@ -580,44 +594,7 @@ class _Column extends StatelessWidget {
   }
 }
 
-/// Una singola confezione: adesivo con l'emoji.
-class _Unit extends StatelessWidget {
-  const _Unit({required this.item, required this.size, required this.darken, required this.glow});
-  final Item item;
-  final double size;
-  final double darken;
-  final double glow;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      alignment: Alignment.center,
-      foregroundDecoration: darken > 0
-          ? BoxDecoration(
-              color: Colors.black.withValues(alpha: darken),
-              borderRadius: BorderRadius.circular(size * 0.26),
-            )
-          : null,
-      decoration: BoxDecoration(
-        color: TrovoColors.surfaceHigher,
-        borderRadius: BorderRadius.circular(size * 0.26),
-        border: Border.all(
-          color: Color.lerp(Colors.white.withValues(alpha: 0.85), TrovoColors.found, glow)!,
-          width: size > 30 ? 2 : 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 4, offset: const Offset(0, 2)),
-          if (glow > 0) BoxShadow(color: TrovoColors.found.withValues(alpha: 0.7 * glow), blurRadius: 16 * glow),
-        ],
-      ),
-      child: Text(item.emoji, style: TextStyle(fontSize: size * 0.55, height: 1.1)),
-    );
-  }
-}
-
-/// Cornice del piano: fondo, pavimento in prospettiva, bordo colorato, montanti.
+/// Cornice del piano: luce dall'alto, ripiano in vetro fumé, bordo luminoso, montanti.
 class _FramePainter extends CustomPainter {
   _FramePainter({required this.g, required this.color, required this.yOffset, required this.glow});
   final LevelGeometry g;
@@ -628,61 +605,40 @@ class _FramePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     const uw = LevelGeometry.uprightW;
-    final inner = Rect.fromLTRB(uw, 0, size.width - uw, g.floorBackY);
+    final inner = Rect.fromLTRB(uw, 0, size.width - uw, g.floorFrontY);
 
-    // Parete di fondo.
+    // Luce morbida dall'alto (una sola luce, da in alto a sinistra).
     canvas.drawRect(
       inner,
       Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color.lerp(TrovoColors.background, color, 0.03)!,
-            Color.lerp(const Color(0xFF1A1D23), color, 0.08)!,
-          ],
+        ..shader = RadialGradient(
+          center: const Alignment(-0.4, -1.2),
+          radius: 1.3,
+          colors: [Colors.white.withValues(alpha: 0.05), Colors.white.withValues(alpha: 0)],
         ).createShader(inner),
     );
-
-    // Pavimento visto un po' dall'alto: più stretto dietro, più largo davanti.
-    const inset = 10.0;
-    final floor = Path()
-      ..moveTo(uw + inset, g.floorBackY)
-      ..lineTo(size.width - uw - inset, g.floorBackY)
-      ..lineTo(size.width - uw + 2, g.floorFrontY)
-      ..lineTo(uw - 2, g.floorFrontY)
-      ..close();
-    canvas.drawPath(
-      floor,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF2E333D), Color(0xFF4A5160)],
-        ).createShader(Rect.fromLTRB(0, g.floorBackY, size.width, g.floorFrontY)),
-    );
-
     if (glow > 0) {
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(Rect.fromLTRB(uw + 2, 2, size.width - uw - 2, g.floorFrontY), const Radius.circular(10)),
+      canvas.drawRect(
+        inner,
         Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2
-          ..color = TrovoColors.found.withValues(alpha: 0.55 * glow),
+          ..shader = RadialGradient(
+            center: Alignment.bottomCenter,
+            radius: 1.1,
+            colors: [TrovoColors.found.withValues(alpha: 0.10 * glow), TrovoColors.found.withValues(alpha: 0)],
+          ).createShader(inner),
       );
     }
 
-    // Bordo frontale nel colore del piano.
-    final lip = Rect.fromLTWH(uw - 6, g.floorFrontY, size.width - 2 * uw + 12, LevelGeometry.lipH);
-    final lipColor = Color.lerp(color, TrovoColors.found, glow * 0.6)!;
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(lip, const Radius.circular(5)),
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [lipColor, Color.lerp(lipColor, Colors.black, 0.22)!],
-        ).createShader(lip),
+    paintGlassBoard(
+      canvas,
+      left: uw - 2,
+      right: size.width - uw + 2,
+      backY: g.floorBackY,
+      frontY: g.floorFrontY,
+      edgeH: LevelGeometry.edgeH,
+      color: color,
+      glow: glow * 0.6,
+      ledH: LevelGeometry.labelH + 6,
     );
 
     paintUpright(canvas, Rect.fromLTWH(0, 0, uw, size.height), holeOffset: yOffset);
@@ -694,9 +650,9 @@ class _FramePainter extends CustomPainter {
       old.color != color || old.glow != glow || old.yOffset != yOffset || old.g.height != g.height;
 }
 
-/// Righe del pavimento tra un posto e l'altro, e i colori della "calamita".
-class _FloorGridPainter extends CustomPainter {
-  _FloorGridPainter({required this.g, required this.count, required this.glowPositions, required this.glow, this.hover});
+/// Divisioni del ripiano tra un posto e l'altro, la "calamita" e il cono di luce del Faro.
+class _FloorPainter extends CustomPainter {
+  _FloorPainter({required this.g, required this.count, required this.glowPositions, required this.glow, this.hover});
   final LevelGeometry g;
   final int count;
   final Set<int> glowPositions;
@@ -706,31 +662,51 @@ class _FloorGridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final cx = size.width / 2;
-    // Punto di fuga: le righe convergono un poco verso il fondo.
-    double backX(double x) => cx + (x - cx) * 0.94;
+    double backX(double x) => cx + (x - cx) * 0.95;
 
     final h = hover;
     for (var pos = 0; pos < count; pos++) {
       final l = pos * g.colW;
       final r = l + g.colW;
       final cell = Path()
-        ..moveTo(backX(l), g.floorBackY)
-        ..lineTo(backX(r), g.floorBackY)
-        ..lineTo(r, g.floorFrontY)
-        ..lineTo(l, g.floorFrontY)
+        ..moveTo(backX(l) + 1, g.floorBackY)
+        ..lineTo(backX(r) - 1, g.floorBackY)
+        ..lineTo(r - 1, g.floorFrontY)
+        ..lineTo(l + 1, g.floorFrontY)
         ..close();
-      Color? fill;
       if (h != null && pos >= h.start && pos < h.start + h.span) {
-        fill = (h.ok ? TrovoColors.primary : TrovoColors.danger).withValues(alpha: 0.45);
+        final c = h.ok ? TrovoColors.primary : TrovoColors.danger;
+        canvas.drawPath(cell, Paint()..color = c.withValues(alpha: 0.40));
+        canvas.drawPath(
+          cell,
+          Paint()
+            ..color = c.withValues(alpha: 0.5)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+        );
       } else if (glow > 0 && glowPositions.contains(pos)) {
-        fill = TrovoColors.found.withValues(alpha: 0.5 * glow);
+        // Cono di luce dall'alto sul posto trovato.
+        final cone = Path()
+          ..moveTo(l + g.colW * 0.35, 0)
+          ..lineTo(r - g.colW * 0.35, 0)
+          ..lineTo(r, g.floorFrontY)
+          ..lineTo(l, g.floorFrontY)
+          ..close();
+        canvas.drawPath(
+          cone,
+          Paint()
+            ..shader = LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [TrovoColors.found.withValues(alpha: 0), TrovoColors.found.withValues(alpha: 0.22 * glow)],
+            ).createShader(Rect.fromLTRB(l, 0, r, g.floorFrontY)),
+        );
+        canvas.drawPath(cell, Paint()..color = TrovoColors.found.withValues(alpha: 0.35 * glow));
       }
-      if (fill != null) canvas.drawPath(cell, Paint()..color = fill);
     }
 
     final line = Paint()
-      ..color = Colors.black.withValues(alpha: 0.28)
-      ..strokeWidth = 1.2;
+      ..color = Colors.white.withValues(alpha: 0.07)
+      ..strokeWidth = 1;
     for (var pos = 1; pos < count; pos++) {
       final x = pos * g.colW;
       canvas.drawLine(Offset(backX(x), g.floorBackY), Offset(x, g.floorFrontY), line);
@@ -738,32 +714,6 @@ class _FloorGridPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_FloorGridPainter old) =>
+  bool shouldRepaint(_FloorPainter old) =>
       old.count != count || old.glow != glow || old.hover != hover || old.g.colW != g.colW || !setEquals(old.glowPositions, glowPositions);
-}
-
-class _DashedBoxPainter extends CustomPainter {
-  _DashedBoxPainter({required this.color, required this.radius});
-  final Color color;
-  final double radius;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rrect = RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(radius));
-    final path = Path()..addRRect(rrect);
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..color = color;
-    for (final metric in path.computeMetrics()) {
-      var d = 0.0;
-      while (d < metric.length) {
-        canvas.drawPath(metric.extractPath(d, math.min(d + 6, metric.length)), paint);
-        d += 10;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DashedBoxPainter old) => old.color != color || old.radius != radius;
 }

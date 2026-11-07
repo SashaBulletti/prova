@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../icons.dart';
 import 'package:printing/printing.dart';
 
 import '../models.dart';
@@ -7,14 +8,11 @@ import '../services/labels_pdf.dart';
 import '../store_scope.dart';
 import '../theme.dart';
 import 'common.dart';
+import 'glass.dart';
 
 /// Foglio per stampare le etichette QR di uno scaffale (o di tutta la casa).
-Future<void> showLabelsSheet(BuildContext context, {Shelf? shelf}) => showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => _LabelsSheet(shelf: shelf),
-    );
+Future<void> showLabelsSheet(BuildContext context, {Shelf? shelf}) =>
+    showGlassSheet<void>(context, builder: (_) => _LabelsSheet(shelf: shelf));
 
 enum _Kind { slots, items }
 
@@ -101,20 +99,18 @@ class _LabelsSheetState extends State<_LabelsSheet> {
     final theme = Theme.of(context);
     final count = _entries().length;
 
-    Widget option(_Kind kind, IconData icon, String title, String sub) => Card(
-          color: _kind == kind ? TrovoColors.primary.withValues(alpha: 0.16) : TrovoColors.surfaceHigh,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-            side: BorderSide(color: _kind == kind ? TrovoColors.primary : Colors.transparent, width: 2),
-          ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(18),
-            onTap: () => setState(() => _kind = kind),
-            child: Padding(
+    Widget option(_Kind kind, IconData icon, String title, String sub) => GlassCard(
+          radius: 20,
+          shadow: false,
+          tint: _kind == kind ? TrovoColors.primary : null,
+          tintAlpha: 0.16,
+          borderColor: _kind == kind ? TrovoColors.primaryOnGlass : null,
+          onTap: () => setState(() => _kind = kind),
+          child: Padding(
               padding: const EdgeInsets.all(14),
               child: Row(
                 children: [
-                  Icon(icon, size: 34, color: _kind == kind ? TrovoColors.primary : TrovoColors.textMuted),
+                  Icon(icon, size: 30, color: _kind == kind ? TrovoColors.primaryOnGlass : TrovoColors.textMuted),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
@@ -129,7 +125,6 @@ class _LabelsSheetState extends State<_LabelsSheet> {
                 ],
               ),
             ),
-          ),
         );
 
     return SafeArea(
@@ -142,23 +137,22 @@ class _LabelsSheetState extends State<_LabelsSheet> {
             const SizedBox(height: 4),
             Text(s.labelsHint, style: theme.textTheme.bodySmall),
             const SizedBox(height: 16),
-            option(_Kind.slots, Icons.view_week_rounded, s.labelsSlots, s.labelsSlotsSub),
+            option(_Kind.slots, PIcons.qrCode, s.labelsSlots, s.labelsSlotsSub),
             const SizedBox(height: 10),
-            option(_Kind.items, Icons.local_drink_rounded, s.labelsItems, s.labelsItemsSub),
+            option(_Kind.items, PIcons.jar, s.labelsItems, s.labelsItemsSub),
             const SizedBox(height: 16),
-            Text('🏷️  $count', style: theme.textTheme.titleMedium, textAlign: TextAlign.center),
+            Text(s.labelsCount(count), style: theme.textTheme.titleSmall, textAlign: TextAlign.center),
             const SizedBox(height: 12),
-            FilledButton.icon(
-              onPressed: _busy ? null : () => _go(print: true),
-              icon: _busy
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.5))
-                  : const Icon(Icons.print_rounded),
-              label: Text(s.print),
+            PrimaryButton(
+              busy: _busy,
+              onPressed: () => _go(print: true),
+              icon: PIcons.printerBold,
+              label: s.print,
             ),
             const SizedBox(height: 10),
             OutlinedButton.icon(
               onPressed: _busy ? null : () => _go(print: false),
-              icon: const Icon(Icons.download_rounded),
+              icon: const Icon(PIcons.downloadSimple),
               label: Text(s.saveOrShare),
             ),
           ],

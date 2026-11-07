@@ -2,31 +2,24 @@ import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../icons.dart';
 
 import '../models.dart';
+import '../room_icons.dart';
 import '../store_scope.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/glass.dart';
 import '../widgets/sheets.dart';
 import '../widgets/shelf_art.dart';
-import '../widgets/voice_sheet.dart';
-import 'scan_screen.dart';
-import 'search_screen.dart';
 import 'settings_screen.dart';
 import 'shelf_screen.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, required this.onSearch, required this.onVoice});
 
-  void _openSearch(BuildContext context, {bool voice = false}) {
-    HapticFeedback.selectionClick();
-    Navigator.of(context).push(PageRouteBuilder(
-      transitionDuration: Motion.of(context, 320),
-      reverseTransitionDuration: Motion.of(context, 260),
-      pageBuilder: (_, _, _) => SearchScreen(startWithVoice: voice),
-      transitionsBuilder: (_, anim, _, child) => FadeTransition(opacity: anim, child: child),
-    ));
-  }
+  final VoidCallback onSearch;
+  final VoidCallback onVoice;
 
   Future<void> _newShelf(BuildContext context) async {
     final store = context.store;
@@ -42,181 +35,160 @@ class HomeScreen extends StatelessWidget {
     final s = context.s;
     final theme = Theme.of(context);
     final room = store.selectedRoom;
+    final totalItems = store.rooms.fold<int>(0, (sum, r) => sum + r.itemCount);
 
-    return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _newShelf(context),
-        icon: const Icon(Icons.add_rounded, size: 28),
-        label: Text(s.newShelf),
-      ).animate().scale(delay: Motion.of(context, 300), curve: Curves.easeOutBack, duration: Motion.of(context, 400)),
-      body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 12, 0),
-              sliver: SliverToBoxAdapter(
-                child: Row(
-                  children: [
-                    const _Logo(),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(s.appName, style: theme.textTheme.headlineMedium),
-                          Text(s.tagline, style: theme.textTheme.bodySmall),
-                        ],
-                      ),
+    return SafeArea(
+      bottom: false,
+      child: CustomScrollView(
+        slivers: [
+          // Titolo grande stile iOS.
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 16, 0),
+            sliver: SliverToBoxAdapter(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(s.appName, style: theme.textTheme.displaySmall),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${s.roomsCount(store.rooms.length)} · ${s.itemsCount(totalItems)}',
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ],
                     ),
-                    IconButton(
-                      tooltip: s.settings,
-                      iconSize: 28,
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                      ),
-                      icon: const Icon(Icons.settings_rounded),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-              sliver: SliverToBoxAdapter(
-                child: _SearchBar(
-                  onTap: () => _openSearch(context),
-                  onMic: () => _openSearch(context, voice: true),
-                  onScan: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const ScanScreen()),
                   ),
-                ),
+                  GlassIconButton(
+                    icon: PIcons.gearSix,
+                    tooltip: s.settings,
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SliverToBoxAdapter(child: _RoomBar()),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-              sliver: SliverToBoxAdapter(
-                child: Text(
-                  '${room.emoji}  ${s.shelvesCount(room.shelves.length)} · ${s.itemsCount(room.itemCount)}',
-                  style: theme.textTheme.bodySmall,
-                ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 6),
+            sliver: SliverToBoxAdapter(child: _SearchCapsule(onTap: onSearch, onMic: onVoice)),
+          ),
+          const SliverToBoxAdapter(child: _RoomBar()),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+            sliver: SliverToBoxAdapter(
+              child: Row(
+                children: [
+                  Icon(roomIcon(room.icon), size: 20, color: TrovoColors.textMuted),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(room.name, style: theme.textTheme.titleMedium)),
+                  Text(
+                    '${s.shelvesCount(room.shelves.length)} · ${s.itemsCount(room.itemCount)}',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
               ),
             ),
-            if (room.shelves.isEmpty)
-              SliverFillRemaining(
-                hasScrollBody: false,
+          ),
+          if (room.shelves.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 100),
                 child: Center(
                   child: EmptyState(
-                    art: const _EmptyShelfArt(),
+                    icon: PIcons.lockers,
                     title: s.emptyRoomTitle,
                     body: s.emptyRoomBody,
-                    action: FilledButton.icon(
-                      onPressed: () => _newShelf(context),
-                      icon: const Icon(Icons.add_rounded),
-                      label: Text(s.newShelf),
+                    action: SizedBox(
+                      width: 240,
+                      child: PrimaryButton(
+                        label: s.newShelf,
+                        icon: PIcons.plusBold,
+                        onPressed: () => _newShelf(context),
+                      ),
                     ),
                   ),
                 ),
-              )
-            else
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
-                sliver: SliverGrid(
-                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                    maxCrossAxisExtent: 260,
-                    mainAxisSpacing: 14,
-                    crossAxisSpacing: 14,
-                    childAspectRatio: 0.72,
-                  ),
-                  delegate: SliverChildBuilderDelegate(
-                    (context, i) => _DraggableShelfCard(
-                      key: ValueKey(room.shelves[i].id),
-                      room: room,
-                      index: i,
-                    )
+              ),
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
+              sliver: SliverGrid(
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 260,
+                  mainAxisSpacing: 14,
+                  crossAxisSpacing: 14,
+                  childAspectRatio: 0.74,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, i) {
+                    final Widget card = i < room.shelves.length
+                        ? _DraggableShelfCard(key: ValueKey(room.shelves[i].id), room: room, index: i)
+                        : _AddCard(label: s.newShelf, onTap: () => _newShelf(context));
+                    return card
                         .animate()
-                        .fadeIn(delay: Motion.of(context, 50 * i), duration: Motion.of(context, 260))
-                        .slideY(begin: 0.15, curve: Curves.easeOutCubic, duration: Motion.of(context, 320)),
-                    childCount: room.shelves.length,
-                  ),
+                        .fadeIn(delay: Motion.of(context, 30 * i.clamp(0, 6)), duration: Motion.of(context, 180))
+                        .moveY(begin: 10, end: 0, curve: Motion.standard, duration: Motion.of(context, 350));
+                  },
+                  childCount: room.shelves.length + 1,
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
 }
 
-class _Logo extends StatelessWidget {
-  const _Logo();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 48,
-      height: 48,
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: TrovoColors.surfaceHigh,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: CustomPaint(
-        painter: MiniShelfPainter(
-          levelColors: [TrovoColors.level(3), TrovoColors.level(0), TrovoColors.level(2)],
-          slots: const [
-            [true, true, false],
-            [true, true, true],
-            [true, false, false],
-          ],
-          highlightIndex: 1,
-          glow: 1,
-        ),
-      ),
-    );
-  }
-}
-
-class _SearchBar extends StatelessWidget {
-  const _SearchBar({required this.onTap, required this.onMic, required this.onScan});
+class _SearchCapsule extends StatelessWidget {
+  const _SearchCapsule({required this.onTap, required this.onMic});
   final VoidCallback onTap;
   final VoidCallback onMic;
-  final VoidCallback onScan;
 
   @override
   Widget build(BuildContext context) {
     final s = context.s;
-    return Hero(
-      tag: 'search-bar',
-      child: Material(
-        color: TrovoColors.surfaceHigh,
-        borderRadius: BorderRadius.circular(22),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(22),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 8, 8),
-            child: Row(
-              children: [
-                const Icon(Icons.search_rounded, size: 30, color: TrovoColors.textMuted),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    s.searchHint,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(color: TrovoColors.textMuted),
-                  ),
-                ),
-                IconButton(
-                  tooltip: s.scan,
-                  iconSize: 30,
-                  onPressed: onScan,
-                  icon: const Icon(Icons.qr_code_scanner_rounded, color: TrovoColors.text),
-                ),
-                const SizedBox(width: 4),
-                MicButton(onPressed: onMic, size: 52),
-              ],
+    return SizedBox(
+      height: 52,
+      child: GlassCard(
+        radius: 26,
+        onTap: onTap,
+        padding: const EdgeInsets.fromLTRB(18, 0, 8, 0),
+        child: Row(
+          children: [
+            Icon(PIcons.magnifyingGlass, size: 22, color: TrovoColors.text.withValues(alpha: 0.6)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                s.searchHint,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: TrovoColors.textMuted),
+              ),
             ),
-          ),
+            Semantics(
+              button: true,
+              label: s.searchByVoice,
+              child: GestureDetector(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  onMic();
+                },
+                child: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: TrovoColors.primary.withValues(alpha: 0.18),
+                  ),
+                  child: const Icon(PIcons.microphoneFill, size: 20, color: TrovoColors.primaryOnGlass),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -229,43 +201,102 @@ class _RoomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.s;
-    final st = context.watchStore;
-    final selected = st.selectedRoom;
+    final store = context.watchStore;
+    final selected = store.selectedRoom;
     return SizedBox(
-      height: 64,
+      height: 60,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         children: [
-          for (final room in st.rooms)
+          for (final room in store.rooms)
             Padding(
-              padding: const EdgeInsets.only(right: 10),
-              child: GestureDetector(
+              padding: const EdgeInsets.only(right: 8),
+              child: _RoomChip(
+                icon: roomIcon(room.icon),
+                label: room.name,
+                count: room.itemCount,
+                selected: room.id == selected.id,
+                onTap: () => store.selectRoom(room),
                 onLongPress: () {
                   HapticFeedback.mediumImpact();
                   showRoomSheet(context, room: room);
                 },
-                child: ChoiceChip(
-                  selected: room.id == selected.id,
-                  showCheckmark: false,
-                  onSelected: (_) {
-                    HapticFeedback.selectionClick();
-                    st.selectRoom(room);
-                  },
-                  avatar: Text(room.emoji, style: const TextStyle(fontSize: 20)),
-                  label: Text(room.name),
-                  labelStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: room.id == selected.id ? TrovoColors.onPrimary : TrovoColors.text,
-                      ),
-                ),
               ),
             ),
-          ActionChip(
-            avatar: const Icon(Icons.add_rounded, size: 22),
-            label: Text(s.room),
-            onPressed: () => showRoomSheet(context),
+          _RoomChip(
+            icon: PIcons.plus,
+            label: s.room,
+            selected: false,
+            onTap: () => showRoomSheet(context),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _RoomChip extends StatelessWidget {
+  const _RoomChip({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    this.count,
+    this.onLongPress,
+  });
+
+  final IconData icon;
+  final String label;
+  final int? count;
+  final bool selected;
+  final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: Motion.of(context, 220),
+      curve: Motion.snappy,
+      height: 40,
+      child: GlassCard(
+        radius: 20,
+        shadow: false,
+        tint: selected ? TrovoColors.primary : null,
+        tintAlpha: 0.20,
+        borderColor: selected ? TrovoColors.primaryOnGlass.withValues(alpha: 0.7) : null,
+        onTap: onTap,
+        onLongPress: onLongPress,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 18, color: selected ? TrovoColors.primaryOnGlass : TrovoColors.textMuted),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: TrovoTheme.fontFamily,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: selected ? TrovoColors.text : TrovoColors.textMuted,
+              ),
+            ),
+            if (count != null && count! > 0) ...[
+              const SizedBox(width: 6),
+              Text(
+                '$count',
+                style: TextStyle(
+                  fontFamily: TrovoTheme.fontFamily,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                  color: selected ? TrovoColors.primaryOnGlass : TrovoColors.textFaint,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -305,35 +336,25 @@ class _DraggableShelfCardState extends State<_DraggableShelfCard> {
           context.store.moveShelf(widget.room, d.data, widget.index);
         },
         builder: (context, candidates, _) => AnimatedScale(
-          scale: _hovered ? 1.05 : 1,
-          duration: Motion.of(context, 180),
-          curve: Curves.easeOutBack,
-          child: AnimatedContainer(
-            duration: Motion.of(context, 180),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: _hovered ? TrovoColors.primary : Colors.transparent, width: 2.5),
-            ),
-            child: LongPressDraggable<int>(
-              data: widget.index,
-              hapticFeedbackOnStart: true,
-              feedback: SizedBox(
-                width: constraints.maxWidth,
-                height: constraints.maxHeight,
-                child: Transform.rotate(
-                  angle: 0.04,
-                  child: Material(
-                    color: Colors.transparent,
-                    elevation: 12,
-                    shadowColor: Colors.black,
-                    borderRadius: BorderRadius.circular(20),
-                    child: _ShelfCard(room: widget.room, shelf: shelf, interactive: false),
-                  ),
+          scale: _hovered ? 1.04 : 1,
+          duration: Motion.of(context, 220),
+          curve: Motion.snappy,
+          child: LongPressDraggable<int>(
+            data: widget.index,
+            hapticFeedbackOnStart: true,
+            feedback: SizedBox(
+              width: constraints.maxWidth,
+              height: constraints.maxHeight,
+              child: Transform.rotate(
+                angle: 0.03,
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: _ShelfCard(room: widget.room, shelf: shelf, interactive: false),
                 ),
               ),
-              childWhenDragging: Opacity(opacity: 0.25, child: card),
-              child: card,
             ),
+            childWhenDragging: Opacity(opacity: 0.25, child: card),
+            child: card,
           ),
         ),
       ),
@@ -353,57 +374,41 @@ class _ShelfCard extends StatelessWidget {
     final theme = Theme.of(context);
     final shelfColor = TrovoColors.shelf(shelf.colorIndex);
 
-    Widget closed(VoidCallback? open) => Material(
-          color: TrovoColors.surface,
-          borderRadius: BorderRadius.circular(20),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(20),
-            onTap: open == null
-                ? null
-                : () {
-                    HapticFeedback.selectionClick();
-                    open();
-                  },
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Center(
-                      child: LayoutBuilder(
-                        builder: (context, c) => MiniShelf(
-                          width: c.maxWidth * 0.82,
-                          height: c.maxHeight,
-                          levelColors: [for (final l in shelf.levels) TrovoColors.level(l.colorIndex)],
-                          slots: shelfSlots(shelf.levels.map((l) => l.slots)),
-                        ),
-                      ),
+    Widget closed(VoidCallback? open) => GlassCard(
+          radius: 24,
+          onTap: open,
+          padding: const EdgeInsets.fromLTRB(14, 16, 14, 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Center(
+                  child: LayoutBuilder(
+                    builder: (context, c) => MiniShelf(
+                      width: c.maxWidth * 0.78,
+                      height: c.maxHeight,
+                      levelColors: [for (final l in shelf.levels) TrovoColors.level(l.colorIndex)],
+                      slots: shelfSlots(shelf.levels.map((l) => l.slots)),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      ColorDot(color: shelfColor, size: 14),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          shelf.name,
-                          style: theme.textTheme.titleSmall,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${s.levelsCount(shelf.levels.length)} · ${s.itemsCount(shelf.itemCount)}',
-                    style: theme.textTheme.bodySmall,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  ColorDot(color: shelfColor, size: 9),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(shelf.name, style: theme.textTheme.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
                   ),
                 ],
               ),
-            ),
+              const SizedBox(height: 2),
+              Text(
+                '${s.levelsCount(shelf.levels.length)} · ${s.itemsCount(shelf.itemCount)}',
+                style: theme.textTheme.bodySmall?.copyWith(fontSize: 14),
+              ),
+            ],
           ),
         );
 
@@ -413,31 +418,46 @@ class _ShelfCard extends StatelessWidget {
     return OpenContainer(
       tappable: false,
       transitionDuration: Motion.of(context, 420),
-      closedColor: TrovoColors.surface,
+      closedColor: Colors.transparent,
       openColor: TrovoColors.background,
       middleColor: TrovoColors.background,
       closedElevation: 0,
       openElevation: 0,
-      closedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      closedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       closedBuilder: (context, open) => closed(open),
       openBuilder: (context, _) => ShelfScreen(shelfId: shelf.id),
     );
   }
 }
 
-class _EmptyShelfArt extends StatelessWidget {
-  const _EmptyShelfArt();
+/// Ultima scheda della griglia: aggiungi un mobile.
+class _AddCard extends StatelessWidget {
+  const _AddCard({required this.label, required this.onTap});
+  final String label;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return MiniShelf(
-      width: 120,
-      height: 140,
-      levelColors: [for (var i = 0; i < 4; i++) TrovoColors.level(i).withValues(alpha: 0.5)],
-      slots: const [[], [], [], []],
-    )
-        .animate()
-        .fadeIn(duration: Motion.of(context, 400))
-        .moveY(begin: 12, end: 0, duration: Motion.of(context, 500), curve: Curves.easeOutBack);
+    return GlassCard(
+      radius: 24,
+      shadow: false,
+      onTap: onTap,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: TrovoColors.primary.withValues(alpha: 0.16),
+            ),
+            child: const Icon(PIcons.plus, color: TrovoColors.primaryOnGlass, size: 26),
+          ),
+          const SizedBox(height: 12),
+          Text(label, style: Theme.of(context).textTheme.titleSmall?.copyWith(color: TrovoColors.textMuted)),
+        ],
+      ),
+    );
   }
 }
