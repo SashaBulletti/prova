@@ -10,6 +10,7 @@ import '../widgets/common.dart';
 import '../widgets/sheets.dart';
 import '../widgets/shelf_art.dart';
 import '../widgets/voice_sheet.dart';
+import 'scan_screen.dart';
 import 'search_screen.dart';
 import 'settings_screen.dart';
 import 'shelf_screen.dart';
@@ -85,6 +86,9 @@ class HomeScreen extends StatelessWidget {
                 child: _SearchBar(
                   onTap: () => _openSearch(context),
                   onMic: () => _openSearch(context, voice: true),
+                  onScan: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ScanScreen()),
+                  ),
                 ),
               ),
             ),
@@ -160,7 +164,11 @@ class _Logo extends StatelessWidget {
       child: CustomPaint(
         painter: MiniShelfPainter(
           levelColors: [TrovoColors.level(3), TrovoColors.level(0), TrovoColors.level(2)],
-          itemCounts: const [2, 3, 1],
+          slots: const [
+            [true, true, false],
+            [true, true, true],
+            [true, false, false],
+          ],
           highlightIndex: 1,
           glow: 1,
         ),
@@ -170,9 +178,10 @@ class _Logo extends StatelessWidget {
 }
 
 class _SearchBar extends StatelessWidget {
-  const _SearchBar({required this.onTap, required this.onMic});
+  const _SearchBar({required this.onTap, required this.onMic, required this.onScan});
   final VoidCallback onTap;
   final VoidCallback onMic;
+  final VoidCallback onScan;
 
   @override
   Widget build(BuildContext context) {
@@ -197,6 +206,13 @@ class _SearchBar extends StatelessWidget {
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(color: TrovoColors.textMuted),
                   ),
                 ),
+                IconButton(
+                  tooltip: s.scan,
+                  iconSize: 30,
+                  onPressed: onScan,
+                  icon: const Icon(Icons.qr_code_scanner_rounded, color: TrovoColors.text),
+                ),
+                const SizedBox(width: 4),
                 MicButton(onPressed: onMic, size: 52),
               ],
             ),
@@ -360,7 +376,7 @@ class _ShelfCard extends StatelessWidget {
                           width: c.maxWidth * 0.82,
                           height: c.maxHeight,
                           levelColors: [for (final l in shelf.levels) TrovoColors.level(l.colorIndex)],
-                          itemCounts: [for (final l in shelf.levels) l.items.length],
+                          slots: shelfSlots(shelf.levels.map((l) => l.slots)),
                         ),
                       ),
                     ),
@@ -418,7 +434,7 @@ class _EmptyShelfArt extends StatelessWidget {
       width: 120,
       height: 140,
       levelColors: [for (var i = 0; i < 4; i++) TrovoColors.level(i).withValues(alpha: 0.5)],
-      itemCounts: const [0, 0, 0, 0],
+      slots: const [[], [], [], []],
     )
         .animate()
         .fadeIn(duration: Motion.of(context, 400))

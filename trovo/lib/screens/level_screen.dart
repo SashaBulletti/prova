@@ -50,13 +50,13 @@ class _LevelScreenState extends State<LevelScreen> {
   void _usedUp(Level level, Item item) {
     final store = context.store;
     final s = context.s;
-    final index = store.removeItem(level, item);
+    final positions = store.removeItem(level, item);
     HapticFeedback.mediumImpact();
     showToast(
       context,
       '${item.emoji} ${s.removed(item.name)}',
       actionLabel: s.undo,
-      onAction: () => store.insertItem(level, item, index),
+      onAction: () => store.restoreItem(level, item, positions),
     );
   }
 
@@ -119,6 +119,14 @@ class _LevelScreenState extends State<LevelScreen> {
     }
   }
 
+  Future<void> _deleteLevel(LevelRef ref) async {
+    final s = context.s;
+    final ok = await confirmDialog(context, s.deleteLevelConfirm(ref.levelNumber, ref.level.items.length));
+    if (!ok || !mounted) return;
+    Navigator.of(context).pop();
+    context.store.deleteLevel(ref.shelf, ref.level);
+  }
+
   @override
   Widget build(BuildContext context) {
     final store = context.watchStore;
@@ -146,6 +154,14 @@ class _LevelScreenState extends State<LevelScreen> {
           SliverAppBar(
             pinned: true,
             expandedHeight: 200,
+            actions: [
+              IconButton(
+                tooltip: s.deleteLevel,
+                iconSize: 26,
+                onPressed: () => _deleteLevel(ref),
+                icon: const Icon(Icons.delete_outline_rounded),
+              ),
+            ],
             backgroundColor: TrovoColors.background,
             flexibleSpace: FlexibleSpaceBar(
               titlePadding: const EdgeInsetsDirectional.only(start: 56, bottom: 14, end: 16),
@@ -224,6 +240,7 @@ class _LevelScreenState extends State<LevelScreen> {
                   Widget row = _ItemRow(
                     key: ValueKey(item.id),
                     item: item,
+                    position: level.positionOf(item.id) + 1,
                     emojiKey: _emojiKey(item.id),
                     onTap: () => _edit(ref, item),
                     onUsedUp: () => _usedUp(level, item),
@@ -338,6 +355,7 @@ class _ItemRow extends StatelessWidget {
   const _ItemRow({
     super.key,
     required this.item,
+    required this.position,
     required this.emojiKey,
     required this.onTap,
     required this.onUsedUp,
@@ -345,6 +363,7 @@ class _ItemRow extends StatelessWidget {
   });
 
   final Item item;
+  final int position;
   final GlobalKey emojiKey;
   final VoidCallback onTap;
   final VoidCallback onUsedUp;
@@ -388,6 +407,7 @@ class _ItemRow extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(item.name, style: theme.textTheme.titleMedium, maxLines: 2, overflow: TextOverflow.ellipsis),
+                      Text(s.slot(position), style: theme.textTheme.bodySmall),
                       if (item.note.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(top: 2),

@@ -49,9 +49,9 @@ class S {
   String get notFoundBody => _t("Forse non l'hai ancora aggiunto.", "Maybe you haven't added it yet.");
   String notFoundSpeech(String q) => _t('Non trovo $q.', "I can't find $q.");
   String get readAloud => _t('Leggi ad alta voce', 'Read aloud');
-  String foundSpeech(String item, String room, String shelf, int level) => _t(
-      '$item: $room, $shelf, piano $level.',
-      '$item: $room, $shelf, level $level.');
+  String foundSpeech(String item, String room, String shelf, int level, int position) => _t(
+      '$item: $room, $shelf, piano $level, posto $position.',
+      '$item: $room, $shelf, level $level, spot $position.');
   String get searchStart => _t(
       'Scrivi o parla. Capisco anche gli errori.',
       'Type or talk. I understand typos too.');
@@ -146,6 +146,74 @@ class S {
   String moved(String name) => _t('$name spostato ✓', '$name moved ✓');
   String get editItem => _t('Modifica', 'Edit');
   String get chooseIcon => _t("Scegli un'icona", 'Choose an icon');
+
+  // Posti
+  String slot(int n) => _t('Posto $n', 'Spot $n');
+  String get free => _t('Libero', 'Free');
+  String get emptySlot => _t('Posto libero: tocca per mettere qualcosa', 'Free spot: tap to put something');
+  String get addSlot => _t('Aggiungi un posto', 'Add a spot');
+  String get slotsPerLevel => _t('Quanti posti per piano?', 'How many spots per level?');
+  String removeSlotConfirm(int n) => _t(
+      'Togliere il posto $n? I posti a destra scorrono di uno: ristampa le etichette QR di questo piano.',
+      'Remove spot $n? The spots on the right shift by one: reprint the QR labels for this level.');
+  String get remove => _t('Togli', 'Remove');
+  String get span => _t('Quanti posti occupa?', 'How many spots does it take?');
+  String get spanSub => _t('Es. 12 pomarole su 2 file: 6 + 6.', 'E.g. 12 jars in 2 rows: 6 + 6.');
+  String get noRoomBeside => _t('Non c\'è spazio accanto. Libera un posto vicino.', 'No room next to it. Free a spot nearby.');
+  String get noRoomHere => _t('Qui non c\'è spazio.', 'No room here.');
+  String get dragToMove => _t('Tieni premuto e trascina per spostare', 'Long-press and drag to move');
+
+  // Codici a barre e QR
+  String get scan => _t('Scansiona', 'Scan');
+  String get scanHint => _t('Inquadra un QR di Trovo o un codice a barre', 'Point at a Trovo QR or a barcode');
+  String get scanBarcodeHint => _t('Inquadra il codice a barre', 'Point at the barcode');
+  String get scanBarcode => _t('Codice a barre', 'Barcode');
+  String get unknownCode => _t('Questo codice non è di Trovo.', "This code isn't from Trovo.");
+  String get codeNotFound => _t('Questo posto o barattolo non c\'è più.', "This spot or jar doesn't exist anymore.");
+  String get productNotHere => _t('Questo prodotto non è ancora negli scaffali.', "This product isn't on your shelves yet.");
+  String get addIt => _t('Aggiungilo', 'Add it');
+  String get lookingUp => _t('Cerco il prodotto…', 'Looking up the product…');
+  String get productNotFound => _t('Prodotto non trovato: scrivi tu il nome.', 'Product not found: type the name.');
+  String get cameraUnavailable => _t(
+      'La fotocamera non funziona qui. Controlla il permesso della fotocamera.',
+      "The camera doesn't work here. Check the camera permission.");
+
+  // Etichette QR
+  String get labels => _t('Etichette QR', 'QR labels');
+  String get labelsHint => _t(
+      'Foglio A4: stampa, ritaglia e attacca con lo scotch.',
+      'A4 sheet: print, cut out and stick with tape.');
+  String get labelsSlots => _t('Etichette dei posti', 'Spot labels');
+  String get labelsSlotsSub => _t('Da attaccare sotto ogni posto, sul bordo del piano.', 'Stick them under each spot, on the edge of the level.');
+  String get labelsItems => _t('Etichette per i barattoli', 'Jar labels');
+  String get labelsItemsSub => _t(
+      'Da attaccare sui barattoli: con una foto Trovo capisce dove sono.',
+      'Stick them on your jars: with a photo Trovo knows where they are.');
+  String get print => _t('Stampa', 'Print');
+  String get saveOrShare => _t('Salva o condividi', 'Save or share');
+  String get jar => _t('Barattolo', 'Jar');
+  String get nothingToPrint => _t('Non c\'è niente da stampare qui.', 'Nothing to print here.');
+
+  // Foto che aggiorna
+  String get photoUpdate => _t('Aggiorna con una foto', 'Update with a photo');
+  String get photoUpdateSub => _t(
+      'Fotografa un piano: leggo i QR e sposto le cose al posto giusto.',
+      'Take a photo of a level: I read the QR codes and move things to the right spot.');
+  String get photoReading => _t('Leggo i QR…', 'Reading the QR codes…');
+  String get photoNoCodes => _t(
+      'Non vedo QR di Trovo. Avvicinati un po\' e controlla la luce.',
+      "I can't see any Trovo QR codes. Get a bit closer and check the light.");
+  String get photoNoSlots => _t(
+      'Vedo i barattoli ma non i QR dei posti. Inquadra anche il bordo del piano.',
+      "I can see the jars but not the spot QR codes. Include the edge of the level.");
+  String photoAllGood(int n) => _t('Tutto a posto! Ho controllato ${itemsCount(n)}.', 'All good! I checked ${itemsCount(n)}.');
+  String get photoChanges => _t('Ho trovato queste modifiche', 'I found these changes');
+  String photoApplied(int n) => _t('${itemsCount(n)} aggiornate ✓', '${itemsCount(n)} updated ✓');
+  String seen(int n) => _t('ne vedo $n', 'I see $n');
+  String get confirm => _t('Conferma', 'Confirm');
+  String get photoNotSupported => _t(
+      'Qui non posso leggere le foto: usa l\'app sul telefono.',
+      "I can't read photos here: use the app on your phone.");
 
   // Impostazioni
   String get settings => _t('Impostazioni', 'Settings');

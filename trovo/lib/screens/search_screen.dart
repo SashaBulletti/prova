@@ -74,7 +74,7 @@ class _SearchScreenState extends State<SearchScreen> {
   void _speakLocation(ItemLocation loc) {
     final s = context.s;
     Voice.instance.speak(
-      s.foundSpeech(loc.item.name, loc.room.name, loc.shelf.name, loc.levelNumber),
+      s.foundSpeech(loc.item.name, loc.room.name, loc.shelf.name, loc.levelNumber, loc.positionNumber),
       localeTag: s.localeTag,
     );
   }
@@ -286,7 +286,7 @@ class _ResultTileState extends State<_ResultTile> with SingleTickerProviderState
                           children: [
                             Text(loc.item.name, style: theme.textTheme.titleMedium, maxLines: 2, overflow: TextOverflow.ellipsis),
                             const SizedBox(height: 6),
-                            LocationLine(room: loc.room, shelf: shelf, levelIndex: loc.levelIndex),
+                            LocationLine(room: loc.room, shelf: shelf, levelIndex: loc.levelIndex, position: loc.positionNumber),
                           ],
                         ),
                       ),
@@ -295,8 +295,9 @@ class _ResultTileState extends State<_ResultTile> with SingleTickerProviderState
                         width: 46,
                         height: 64,
                         levelColors: [for (final l in shelf.levels) TrovoColors.level(l.colorIndex)],
-                        itemCounts: [for (final l in shelf.levels) l.items.length],
+                        slots: shelfSlots(shelf.levels.map((l) => l.slots)),
                         highlightIndex: loc.levelIndex,
+                        highlightPositions: loc.level.positionsOf(loc.item.id).toSet(),
                         glow: glow,
                       ),
                       IconButton(

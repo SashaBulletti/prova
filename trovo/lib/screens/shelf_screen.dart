@@ -1,6 +1,5 @@
 import 'dart:math' as math;
 
-import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -10,21 +9,33 @@ import '../store_scope.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/fly.dart';
+import '../widgets/labels_sheet.dart';
+import '../widgets/photo_update.dart';
 import '../widgets/sheets.dart';
+import '../widgets/shelf3d.dart';
 import '../widgets/shelf_art.dart';
 import 'level_screen.dart';
 
-const _levelHeight = 128.0;
 const _capHeight = 14.0;
 
-/// Lo scaffale grande, visto di fronte, con tutti i suoi piani.
-/// Se arrivi da una ricerca, parte l'animazione "Faro" sul piano giusto.
+/// Lo scaffale in 3D: ogni piano è una fila di posti, e in ogni posto
+/// le cose stanno in fila una dietro l'altra.
+/// Se arrivi da una ricerca o da un QR, parte il "Faro" sul posto giusto.
 class ShelfScreen extends StatefulWidget {
-  const ShelfScreen({super.key, required this.shelfId, this.highlightLevelId, this.highlightItemId});
+  const ShelfScreen({
+    super.key,
+    required this.shelfId,
+    this.highlightLevelId,
+    this.highlightItemId,
+    this.highlightSlot,
+  });
 
   final String shelfId;
   final String? highlightLevelId;
   final String? highlightItemId;
+
+  /// Posto da illuminare (da 0), quando arrivi dal QR di un posto.
+  final int? highlightSlot;
 
   @override
   State<ShelfScreen> createState() => _ShelfScreenState();
@@ -37,16 +48,15 @@ class _ShelfScreenState extends State<ShelfScreen> with SingleTickerProviderStat
   );
   final Map<String, GlobalKey> _levelKeys = {};
   final Set<String> _justAdded = {};
-  final Set<String> _removing = {};
+  DropHover? _hover;
 
   GlobalKey _keyFor(String id) => _levelKeys.putIfAbsent(id, GlobalKey.new);
 
   /// Intensità del bagliore: 3 impulsi, poi resta acceso.
   double get _glow {
-    if (Motion.reduced(context)) return 1;
-    final t = _faro.value;
     if (_faro.status == AnimationStatus.dismissed) return 0;
-    return 0.3 + 0.7 * math.cos(t * 3 * math.pi).abs();
+    if (Motion.reduced(context)) return 1;
+    return 0.3 + 0.7 * math.cos(_faro.value * 3 * math.pi).abs();
   }
 
   @override
@@ -104,26 +114,69 @@ class _ShelfScreenState extends State<ShelfScreen> with SingleTickerProviderStat
     });
   }
 
-  Future<void> _levelMenu(Shelf shelf, Level level, int index) async {
-    final s = context.s;
-    HapticFeedback.mediumImpact();
-    final number = shelf.levelNumber(index);
-    final ok = await confirmDialog(context, s.deleteLevelConfirm(number, level.items.length));
-    if (!ok || !mounted) return;
-    setState(() => _removing.add(level.id));
-  }
-
-  void _quickAdd(Room room, Shelf shelf, Level level, int index) {
+  void _addAt(Room room, Shelf shelf, Level level, int index, int pos) {
     showAddItemSheet(
       context,
       target: LevelRef(room: room, shelf: shelf, level: level, levelIndex: index),
+      position: pos,
       onAdded: (item, where, from) {
         final key = _levelKeys[where.level.id];
-        if (key != null) {
-          flyEmoji(context, emoji: item.emoji, from: from, to: centerOf(key));
-        }
+        if (key != null) flyEmoji(context, emoji: item.emoji, from: from, to: centerOf(key));
       },
     );
+  }
+
+  Future<void> _removeSlot(Level level, int pos) async {
+    final s = context.s;
+    final ok = await confirmDialog(context, s.removeSlotConfirm(pos + 1), confirmLabel: s.remove);
+    if (!ok || !mounted) return;
+    context.store.removeSlot(level, pos);
+  }
+
+  Future<void> _editItem(Room room, Shelf shelf, Level level, int index, Item item) async {
+    final loc = ItemLocation(room: room, shelf: shelf, level: level, levelIndex: index, item: item);
+    final result = await showEditItemSheet(context, loc);
+    if (!mounted) return;
+    final s = context.s;
+    if (result == ItemEditResult.usedUp) {
+      final store = context.store;
+      final positions = store.removeItem(level, item);
+      HapticFeedback.mediumImpact();
+      showToast(
+        context,
+        '${item.emoji} ${s.removed(item.name)}',
+        actionLabel: s.undo,
+        onAction: () => store.restoreItem(level, item, positions),
+      );
+    } else if (result == ItemEditResult.moved) {
+      showToast(context, s.moved(item.name));
+    }
+  }
+
+  int _startFor(DragPayload p, Level to, int pos) =>
+      (pos - p.grab).clamp(0, math.max(0, to.slotCount - p.span));
+
+  void _onHover(DragPayload p, Level to, int pos) {
+    final start = _startFor(p, to, pos);
+    final ok = context.store.moveItemTo(p.item, p.level, to, start, dryRun: true);
+    final next = DropHover(levelId: to.id, start: start, span: p.span, ok: ok);
+    if (next != _hover) {
+      HapticFeedback.selectionClick();
+      setState(() => _hover = next);
+    }
+  }
+
+  bool _onDrop(DragPayload p, Level to, int pos) {
+    final start = _startFor(p, to, pos);
+    final ok = context.store.moveItemTo(p.item, p.level, to, start);
+    setState(() => _hover = null);
+    if (ok) {
+      HapticFeedback.mediumImpact();
+    } else {
+      HapticFeedback.heavyImpact();
+      showToast(context, context.s.noRoomHere);
+    }
+    return ok;
   }
 
   @override
@@ -152,13 +205,28 @@ class _ShelfScreenState extends State<ShelfScreen> with SingleTickerProviderStat
         ),
         actions: [
           IconButton(
-            tooltip: s.edit,
+            tooltip: s.photoUpdate,
             iconSize: 26,
-            onPressed: () async {
-              final r = await showEditShelfSheet(context, room, shelf);
-              if (r == ShelfEditResult.deleted && context.mounted) Navigator.of(context).pop();
+            onPressed: () => runPhotoUpdate(context),
+            icon: const Icon(Icons.photo_camera_rounded),
+          ),
+          PopupMenuButton<String>(
+            iconSize: 26,
+            onSelected: (v) async {
+              if (v == 'edit') {
+                final r = await showEditShelfSheet(context, room, shelf);
+                if (r == ShelfEditResult.deleted && context.mounted) Navigator.of(context).pop();
+              } else if (v == 'labels') {
+                showLabelsSheet(context, shelf: shelf);
+              } else if (v == 'photo') {
+                runPhotoUpdate(context);
+              }
             },
-            icon: const Icon(Icons.edit_rounded),
+            itemBuilder: (_) => [
+              PopupMenuItem(value: 'labels', child: ListTile(leading: const Icon(Icons.qr_code_2_rounded), title: Text(s.labels))),
+              PopupMenuItem(value: 'photo', child: ListTile(leading: const Icon(Icons.photo_camera_rounded), title: Text(s.photoUpdate))),
+              PopupMenuItem(value: 'edit', child: ListTile(leading: const Icon(Icons.edit_rounded), title: Text(s.edit))),
+            ],
           ),
           const SizedBox(width: 4),
         ],
@@ -172,45 +240,50 @@ class _ShelfScreenState extends State<ShelfScreen> with SingleTickerProviderStat
           for (var i = 0; i < shelf.levels.length; i++) {
             final level = shelf.levels[i];
             final isHi = level.id == widget.highlightLevelId;
-            Widget row = _LevelRow(
+            final glowPositions = !isHi
+                ? const <int>{}
+                : widget.highlightItemId != null
+                    ? level.positionsOf(widget.highlightItemId!).toSet()
+                    : {if (widget.highlightSlot != null) widget.highlightSlot!};
+            Widget row = Level3DRow(
               key: _keyFor(level.id),
               shelf: shelf,
               level: level,
               number: shelf.levelNumber(i),
               yOffset: y,
               glow: isHi ? glow : 0,
+              glowPositions: glowPositions,
               pulseItemId: isHi ? widget.highlightItemId : null,
-              onAdd: () => _quickAdd(room, shelf, level, i),
-              onLongPress: () => _levelMenu(shelf, level, i),
-              onOpened: () {
+              hover: _hover,
+              onTapEmpty: (pos) => _addAt(room, shelf, level, i, pos),
+              onLongPressEmpty: (pos) => _removeSlot(level, pos),
+              onTapItem: (item) => _editItem(room, shelf, level, i, item),
+              onAddSlot: () => store.addSlot(level),
+              onOpenLevel: () {
                 if (isHi) _faro.reset();
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => LevelScreen(levelId: level.id)));
               },
+              onHover: (p, pos) => _onHover(p, level, pos),
+              onHoverEnd: () {
+                if (_hover?.levelId == level.id) setState(() => _hover = null);
+              },
+              onDrop: (p, pos) => _onDrop(p, level, pos),
             );
             if (_justAdded.contains(level.id)) {
-              // Nuovo piano: entra di lato con un "clic".
               row = row
                   .animate(onComplete: (_) => _justAdded.remove(level.id))
                   .fadeIn(duration: Motion.of(context, 200))
                   .slideX(begin: 1.0, curve: Curves.easeOutBack, duration: Motion.of(context, 480));
             }
-            if (_removing.contains(level.id)) {
-              row = row
-                  .animate(onComplete: (_) {
-                    _removing.remove(level.id);
-                    store.deleteLevel(shelf, level);
-                    HapticFeedback.lightImpact();
-                  })
-                  .fadeOut(duration: Motion.of(context, 220))
-                  .slideX(end: -1, curve: Curves.easeInCubic, duration: Motion.of(context, 280));
-            }
             rows.add(KeyedSubtree(key: ValueKey(level.id), child: row));
-            y += _levelHeight;
+            y += 140;
           }
 
+          const sideGutters = EdgeInsets.only(left: LevelGeometry.tagW, right: LevelGeometry.addW);
           return CustomScrollView(
             slivers: [
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
                 sliver: SliverToBoxAdapter(
                   child: Text(
                     '${room.emoji} ${room.name} · ${s.levelsCount(shelf.levels.length)} · ${s.itemsCount(shelf.itemCount)}',
@@ -219,7 +292,13 @@ class _ShelfScreenState extends State<ShelfScreen> with SingleTickerProviderStat
                 ),
               ),
               SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+                sliver: SliverToBoxAdapter(
+                  child: Text('👆 ${s.dragToMove}', style: theme.textTheme.bodySmall),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
                 sliver: SliverToBoxAdapter(
                   child: AnimatedSize(
                     duration: Motion.of(context, 320),
@@ -227,12 +306,22 @@ class _ShelfScreenState extends State<ShelfScreen> with SingleTickerProviderStat
                     alignment: Alignment.topCenter,
                     child: Column(
                       children: [
-                        SizedBox(height: _capHeight, width: double.infinity, child: CustomPaint(painter: ShelfCapPainter())),
+                        Padding(
+                          padding: sideGutters,
+                          child: SizedBox(
+                            height: _capHeight,
+                            width: double.infinity,
+                            child: CustomPaint(painter: ShelfCapPainter(uprightWidth: LevelGeometry.uprightW)),
+                          ),
+                        ),
                         ...rows,
-                        SizedBox(
-                          height: 26,
-                          width: double.infinity,
-                          child: CustomPaint(painter: ShelfFeetPainter(yOffset: y)),
+                        Padding(
+                          padding: sideGutters,
+                          child: SizedBox(
+                            height: 26,
+                            width: double.infinity,
+                            child: CustomPaint(painter: ShelfFeetPainter(yOffset: y, uprightWidth: LevelGeometry.uprightW)),
+                          ),
                         ),
                       ],
                     ),
@@ -254,202 +343,5 @@ class _ShelfScreenState extends State<ShelfScreen> with SingleTickerProviderStat
         },
       ),
     );
-  }
-}
-
-class _LevelRow extends StatefulWidget {
-  const _LevelRow({
-    super.key,
-    required this.shelf,
-    required this.level,
-    required this.number,
-    required this.yOffset,
-    required this.glow,
-    required this.onAdd,
-    required this.onLongPress,
-    required this.onOpened,
-    this.pulseItemId,
-  });
-
-  final Shelf shelf;
-  final Level level;
-  final int number;
-  final double yOffset;
-  final double glow;
-  final String? pulseItemId;
-  final VoidCallback onAdd;
-  final VoidCallback onLongPress;
-  final VoidCallback onOpened;
-
-  @override
-  State<_LevelRow> createState() => _LevelRowState();
-}
-
-class _LevelRowState extends State<_LevelRow> {
-  bool _pressed = false;
-
-  double _tiltFor(String id) => ((id.hashCode % 7) - 3) * 0.025;
-
-  @override
-  Widget build(BuildContext context) {
-    final s = context.s;
-    final level = widget.level;
-    final color = TrovoColors.level(level.colorIndex);
-    final glow = widget.glow;
-
-    final content = SizedBox(
-      height: _levelHeight,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned.fill(
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(end: _pressed ? 1 : 0),
-              duration: Motion.of(context, 150),
-              builder: (context, p, _) => CustomPaint(
-                painter: LevelFramePainter(
-                  color: color,
-                  yOffset: widget.yOffset,
-                  highlight: glow,
-                  pressed: p,
-                ),
-              ),
-            ),
-          ),
-          // Oggetti in piedi sul ripiano.
-          Positioned(
-            left: LevelFramePainter.uprightWidth + 12,
-            right: LevelFramePainter.uprightWidth + 8,
-            top: 8,
-            height: _levelHeight * LevelFramePainter.boardTop - 10,
-            child: LayoutBuilder(
-              builder: (context, c) {
-                const sticker = 54.0;
-                const gap = 10.0;
-                final addW = 48.0 + gap;
-                final fit = math.max(0, ((c.maxWidth - addW + gap) / (sticker + gap)).floor());
-                final items = level.items;
-                final showMore = items.length > fit;
-                final shown = showMore ? math.max(0, fit - 1) : items.length;
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    for (var i = 0; i < shown; i++)
-                      Padding(
-                        padding: const EdgeInsets.only(right: gap),
-                        child: Tooltip(
-                          message: items[i].name,
-                          child: _Pulse(
-                            active: items[i].id == widget.pulseItemId,
-                            glow: glow,
-                            child: ItemSticker(
-                              item: items[i],
-                              size: sticker,
-                              tilt: _tiltFor(items[i].id),
-                              glow: items[i].id == widget.pulseItemId ? glow : 0,
-                            ),
-                          ),
-                        ),
-                      ),
-                    if (showMore)
-                      Container(
-                        width: sticker,
-                        height: sticker,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: TrovoColors.surfaceHigh,
-                          borderRadius: BorderRadius.circular(sticker * 0.28),
-                          border: Border.all(color: TrovoColors.metalDark, width: 2),
-                        ),
-                        child: Text('+${items.length - shown}', style: Theme.of(context).textTheme.titleMedium),
-                      ),
-                    const Spacer(),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: IconButton.filledTonal(
-                        tooltip: s.add,
-                        onPressed: () {
-                          HapticFeedback.selectionClick();
-                          widget.onAdd();
-                        },
-                        style: IconButton.styleFrom(
-                          backgroundColor: color.withValues(alpha: 0.22),
-                          foregroundColor: color,
-                          minimumSize: const Size(48, 48),
-                        ),
-                        icon: const Icon(Icons.add_rounded, size: 28),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-          // Etichetta con numero sul bordo del ripiano.
-          Positioned(
-            left: LevelFramePainter.uprightWidth + 4,
-            bottom: 2,
-            child: LevelTag(number: widget.number, color: color, size: 34, glow: glow),
-          ),
-          Positioned(
-            right: LevelFramePainter.uprightWidth + 8,
-            bottom: 12,
-            child: Text(
-              s.itemsCount(level.items.length),
-              style: TextStyle(
-                fontFamily: TrovoTheme.fontFamily,
-                fontWeight: FontWeight.w700,
-                fontSize: 14,
-                color: TrovoColors.onColor(Color.lerp(color, TrovoColors.found, glow)!),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    // "Cassetto": il piano si apre a schermo intero.
-    return OpenContainer(
-      tappable: false,
-      transitionDuration: Motion.of(context, 400),
-      closedColor: TrovoColors.background,
-      openColor: TrovoColors.background,
-      middleColor: TrovoColors.background,
-      closedElevation: 0,
-      openElevation: 0,
-      closedShape: const RoundedRectangleBorder(),
-      closedBuilder: (context, open) => GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapDown: (_) => setState(() => _pressed = true),
-        onTapCancel: () => setState(() => _pressed = false),
-        onTapUp: (_) => setState(() => _pressed = false),
-        onTap: () {
-          HapticFeedback.selectionClick();
-          widget.onOpened();
-          open();
-        },
-        onLongPress: widget.onLongPress,
-        child: Semantics(
-          button: true,
-          label: '${s.level(widget.number)}, ${s.itemsCount(level.items.length)}',
-          child: content,
-        ),
-      ),
-      openBuilder: (context, _) => LevelScreen(levelId: level.id),
-    );
-  }
-}
-
-/// L'oggetto cercato pulsa (fa parte del "Faro").
-class _Pulse extends StatelessWidget {
-  const _Pulse({required this.active, required this.glow, required this.child});
-  final bool active;
-  final double glow;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    if (!active) return child;
-    return Transform.scale(scale: 1 + 0.18 * glow, child: child);
   }
 }

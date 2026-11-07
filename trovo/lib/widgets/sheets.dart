@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../emoji_guess.dart';
+import '../screens/scan_screen.dart';
+import '../services/product_lookup.dart';
 import '../models.dart';
 import '../store_scope.dart';
 import '../theme.dart';
@@ -103,6 +105,7 @@ class _NewShelfSheet extends StatefulWidget {
 class _NewShelfSheetState extends State<_NewShelfSheet> {
   late int _color = context.store.nextShelfColor(widget.room);
   int _levels = 5;
+  int _slots = Level.defaultSlots;
   bool _fromTop = true;
   late final TextEditingController _name = TextEditingController(text: context.s.shelfDefaultName(_color));
   bool _nameEdited = false;
@@ -121,6 +124,7 @@ class _NewShelfSheetState extends State<_NewShelfSheet> {
       name: name,
       colorIndex: _color,
       levelCount: _levels,
+      slotsPerLevel: _slots,
       numberFromTop: _fromTop,
     );
     Navigator.pop(context, shelf);
@@ -139,7 +143,7 @@ class _NewShelfSheetState extends State<_NewShelfSheet> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ShelfPreview(levels: _levels, fromTop: _fromTop),
+              ShelfPreview(levels: _levels, slots: _slots, fromTop: _fromTop),
               const SizedBox(width: 20),
               Expanded(
                 child: Column(
@@ -153,7 +157,16 @@ class _NewShelfSheetState extends State<_NewShelfSheet> {
                       big: true,
                       onChanged: (v) => setState(() => _levels = v),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
+                    _Label(s.slotsPerLevel),
+                    QuantityStepper(
+                      value: _slots,
+                      min: 1,
+                      max: 30,
+                      big: true,
+                      onChanged: (v) => setState(() => _slots = v),
+                    ),
+                    const SizedBox(height: 16),
                     _Label(s.levelOneIs),
                     SegmentedButton<bool>(
                       showSelectedIcon: false,
@@ -209,8 +222,9 @@ class _NewShelfSheetState extends State<_NewShelfSheet> {
 
 /// Anteprima dello scaffale che cresce mentre premi +.
 class ShelfPreview extends StatelessWidget {
-  const ShelfPreview({super.key, required this.levels, required this.fromTop});
+  const ShelfPreview({super.key, required this.levels, required this.slots, required this.fromTop});
   final int levels;
+  final int slots;
   final bool fromTop;
 
   @override
@@ -218,7 +232,7 @@ class ShelfPreview extends StatelessWidget {
     const rowH = 34.0;
     const width = 132.0;
     return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: width, maxHeight: 300),
+      constraints: const BoxConstraints(maxWidth: width, maxHeight: 380),
       child: FittedBox(
         fit: BoxFit.scaleDown,
         alignment: Alignment.topCenter,
@@ -236,6 +250,7 @@ class ShelfPreview extends StatelessWidget {
                   _PreviewLevel(
                     key: ValueKey('lvl$i'),
                     number: fromTop ? i + 1 : levels - i,
+                    slots: slots,
                     height: rowH,
                     yOffset: 10 + i * rowH,
                   ),
@@ -254,8 +269,9 @@ class ShelfPreview extends StatelessWidget {
 }
 
 class _PreviewLevel extends StatelessWidget {
-  const _PreviewLevel({super.key, required this.number, required this.height, required this.yOffset});
+  const _PreviewLevel({super.key, required this.number, required this.slots, required this.height, required this.yOffset});
   final int number;
+  final int slots;
   final double height;
   final double yOffset;
 
@@ -268,6 +284,29 @@ class _PreviewLevel extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           Positioned.fill(child: CustomPaint(painter: LevelFramePainter(color: color, yOffset: yOffset))),
+          // I posti: quadratini vuoti con il + dentro.
+          Positioned(
+            left: LevelFramePainter.uprightWidth + 3,
+            right: LevelFramePainter.uprightWidth + 3,
+            bottom: height * 0.24,
+            height: height * 0.5,
+            child: Row(
+              children: [
+                for (var i = 0; i < slots; i++)
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 1.2),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(3),
+                          border: Border.all(color: TrovoColors.metal.withValues(alpha: 0.7), width: 1),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
           Positioned(
             left: 22,
             bottom: 1,
@@ -644,15 +683,30 @@ typedef ItemAdded = void Function(Item item, LevelRef where, Offset from);
 Future<void> showAddItemSheet(
   BuildContext context, {
   LevelRef? target,
+  int? position,
   String initialName = '',
+  String? barcode,
   ItemAdded? onAdded,
 }) =>
-    _sheet<void>(context, _AddItemSheet(target: target, initialName: initialName, onAdded: onAdded));
+    _sheet<void>(
+      context,
+      _AddItemSheet(
+        target: target,
+        position: position,
+        initialName: initialName,
+        barcode: barcode,
+        onAdded: onAdded,
+      ),
+    );
 
 class _AddItemSheet extends StatefulWidget {
-  const _AddItemSheet({this.target, this.initialName = '', this.onAdded});
+  const _AddItemSheet({this.target, this.position, this.initialName = '', this.barcode, this.onAdded});
   final LevelRef? target;
+
+  /// Posto scelto (da 0). Se null: il primo libero.
+  final int? position;
   final String initialName;
+  final String? barcode;
   final ItemAdded? onAdded;
 
   @override
@@ -664,6 +718,9 @@ class _AddItemSheetState extends State<_AddItemSheet> {
   final _focus = FocusNode();
   final _addKey = GlobalKey();
   late LevelRef? _target = widget.target;
+  late int? _position = widget.position;
+  late String? _barcode = widget.barcode;
+  bool _looking = false;
   int _qty = 1;
   String? _manualEmoji;
   String? _lastAdded;
@@ -689,9 +746,35 @@ class _AddItemSheetState extends State<_AddItemSheet> {
   Future<void> _pickLevel() async {
     final ref = await showLevelPicker(context, currentLevelId: _target?.level.id);
     if (ref != null && mounted) {
-      setState(() => _target = ref);
+      setState(() {
+        _target = ref;
+        _position = null;
+      });
       _focus.requestFocus();
     }
+  }
+
+  /// Codice a barre: il nome si scrive da solo (Open Food Facts).
+  Future<void> _scanBarcode() async {
+    final code = await scanBarcode(context);
+    if (code == null || !mounted) return;
+    final s = context.s;
+    final existing = context.store.findByBarcode(code);
+    setState(() {
+      _barcode = code;
+      _looking = true;
+    });
+    final name = existing?.name ?? await lookupProductName(code, italian: s.it);
+    if (!mounted) return;
+    setState(() {
+      _looking = false;
+      if (name != null) {
+        _name.text = name;
+        _manualEmoji = existing?.emoji;
+      }
+    });
+    if (name == null) showToast(context, s.productNotFound);
+    _focus.requestFocus();
   }
 
   Future<void> _dictate() async {
@@ -714,8 +797,23 @@ class _AddItemSheetState extends State<_AddItemSheet> {
       return;
     }
     final store = context.store;
-    final item = Item(name: name[0].toUpperCase() + name.substring(1), emoji: _emoji, quantity: _qty);
-    store.addItem(target.level, item);
+    final item = Item(
+      name: name[0].toUpperCase() + name.substring(1),
+      emoji: _emoji,
+      quantity: _qty,
+      barcode: _barcode,
+    );
+    final placed = store.addItem(target.level, item, position: _position);
+    // A raffica: la cosa successiva va nel primo posto libero più a destra.
+    final slots = target.level.slots;
+    var next = -1;
+    for (var i = placed + 1; i < slots.length; i++) {
+      if (slots[i] == null) {
+        next = i;
+        break;
+      }
+    }
+    _position = next >= 0 ? next : null;
     HapticFeedback.mediumImpact();
     final from = centerOf(_addKey);
     widget.onAdded?.call(item, target, from);
@@ -726,6 +824,7 @@ class _AddItemSheetState extends State<_AddItemSheet> {
         _name.clear();
         _qty = 1;
         _manualEmoji = null;
+        _barcode = null;
       });
       _focus.requestFocus();
     } else {
@@ -765,7 +864,12 @@ class _AddItemSheetState extends State<_AddItemSheet> {
                   Expanded(
                     child: target == null
                         ? Text(s.whereDoesItGo, style: theme.textTheme.titleSmall?.copyWith(color: TrovoColors.primary))
-                        : LocationLine(room: target.room, shelf: target.shelf, levelIndex: target.levelIndex),
+                        : LocationLine(
+                            room: target.room,
+                            shelf: target.shelf,
+                            levelIndex: target.levelIndex,
+                            position: (_position ?? target.level.slots.indexOf(null)) + 1,
+                          ),
                   ),
                   const Icon(Icons.edit_location_alt_rounded, color: TrovoColors.textMuted),
                 ],
@@ -814,6 +918,14 @@ class _AddItemSheetState extends State<_AddItemSheet> {
               const SizedBox(width: 10),
               MicButton(onPressed: _dictate, size: 56, tooltip: s.dictate),
             ],
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: _looking ? null : _scanBarcode,
+            icon: _looking
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.5))
+                : const Icon(Icons.qr_code_scanner_rounded),
+            label: Text(_looking ? s.lookingUp : (_barcode == null ? s.scanBarcode : '${s.scanBarcode} ✓')),
           ),
           const SizedBox(height: 18),
           Row(
@@ -880,6 +992,7 @@ class _EditItemSheetState extends State<_EditItemSheet> {
   late final TextEditingController _name = TextEditingController(text: widget.loc.item.name);
   late final TextEditingController _note = TextEditingController(text: widget.loc.item.note);
   late int _qty = widget.loc.item.quantity;
+  late int _span = widget.loc.level.spanOf(widget.loc.item.id).clamp(1, 999);
   late String _emoji = widget.loc.item.emoji;
 
   @override
@@ -890,7 +1003,13 @@ class _EditItemSheetState extends State<_EditItemSheet> {
   }
 
   void _save() {
-    context.store.updateItem(widget.loc.item, name: _name.text, emoji: _emoji, quantity: _qty, note: _note.text);
+    final store = context.store;
+    store.updateItem(widget.loc.item, name: _name.text, emoji: _emoji, quantity: _qty, note: _note.text);
+    if (_span != widget.loc.level.spanOf(widget.loc.item.id)) {
+      if (!store.setSpan(widget.loc.level, widget.loc.item, _span)) {
+        showToast(context, context.s.noRoomBeside);
+      }
+    }
   }
 
   @override
@@ -904,7 +1023,7 @@ class _EditItemSheetState extends State<_EditItemSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _SheetTitle(s.editItem),
-          LocationLine(room: loc.room, shelf: loc.shelf, levelIndex: loc.levelIndex),
+          LocationLine(room: loc.room, shelf: loc.shelf, levelIndex: loc.levelIndex, position: loc.positionNumber),
           const SizedBox(height: 16),
           Row(
             children: [
@@ -942,6 +1061,22 @@ class _EditItemSheetState extends State<_EditItemSheet> {
               Text(s.quantity, style: theme.textTheme.titleSmall),
               const Spacer(),
               QuantityStepper(value: _qty, onChanged: (v) => setState(() => _qty = v)),
+            ],
+          ),
+          const SizedBox(height: 14),
+          // Una cosa grande o tante confezioni possono prendere più posti.
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(s.span, style: theme.textTheme.titleSmall),
+                    Text(s.spanSub, style: theme.textTheme.bodySmall),
+                  ],
+                ),
+              ),
+              QuantityStepper(value: _span, min: 1, max: 30, onChanged: (v) => setState(() => _span = v)),
             ],
           ),
           const SizedBox(height: 16),

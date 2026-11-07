@@ -200,6 +200,7 @@ List<SearchResult> searchItems(List<Room> rooms, String query, {double minScore 
         final level = shelf.levels[li];
         for (final item in level.items) {
           var score = scoreText(query, item.name);
+          if (item.barcode != null && item.barcode == query.trim()) score = 1.0;
           if (item.note.isNotEmpty) {
             final noteScore = scoreText(query, item.note) * 0.8;
             if (noteScore > score) score = noteScore;

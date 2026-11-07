@@ -8,7 +8,8 @@ import '../theme.dart';
 
 const _holeSpacing = 13.0;
 
-void _paintUpright(Canvas canvas, Rect rect, {double holeOffset = 0}) {
+/// Montante forato dello scaffale.
+void paintUpright(Canvas canvas, Rect rect, {double holeOffset = 0}) {
   final r = RRect.fromRectAndRadius(rect, const Radius.circular(3));
   final paint = Paint()
     ..shader = const LinearGradient(
@@ -34,17 +35,20 @@ void _paintUpright(Canvas canvas, Rect rect, {double holeOffset = 0}) {
 }
 
 /// Scaffale in miniatura (Home, risultati di ricerca, anteprima).
+/// [slots]: per ogni piano, quali posti sono occupati (true) e quali liberi.
 class MiniShelfPainter extends CustomPainter {
   MiniShelfPainter({
     required this.levelColors,
-    required this.itemCounts,
+    required this.slots,
     this.highlightIndex,
+    this.highlightPositions = const {},
     this.glow = 0,
   });
 
   final List<Color> levelColors;
-  final List<int> itemCounts;
+  final List<List<bool>> slots;
   final int? highlightIndex;
+  final Set<int> highlightPositions;
   final double glow;
 
   static const _blockHeights = [0.62, 0.78, 0.5, 0.7, 0.58];
@@ -77,20 +81,24 @@ class MiniShelfPainter extends CustomPainter {
         );
       }
 
-      // Oggetti come blocchetti.
-      final count = math.min(itemCounts.length > i ? itemCounts[i] : 0, 4);
-      final blockW = innerW / 5.6;
-      final gap = blockW * 0.22;
-      for (var b = 0; b < count; b++) {
-        final h = (levelH - boardH) * _blockHeights[(b + i) % _blockHeights.length];
-        final x = innerLeft + gap * 1.5 + b * (blockW + gap);
-        final rect = Rect.fromLTWH(x, boardY - h, blockW, h);
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(rect, Radius.circular(blockW * 0.22)),
-          Paint()
-            ..color = (isHi ? Color.lerp(color, TrovoColors.found, glow)! : color)
-                .withValues(alpha: isHi ? 0.55 + 0.35 * glow : 0.55),
-        );
+      // Un blocchetto per ogni posto occupato, al suo posto.
+      final row = slots.length > i ? slots[i] : const <bool>[];
+      if (row.isNotEmpty) {
+        final colW = innerW / row.length;
+        final blockW = colW * 0.72;
+        for (var p = 0; p < row.length; p++) {
+          if (!row[p]) continue;
+          final h = (levelH - boardH) * _blockHeights[(p + i) % _blockHeights.length];
+          final x = innerLeft + p * colW + (colW - blockW) / 2;
+          final rect = Rect.fromLTWH(x, boardY - h, blockW, h);
+          final hiBlock = isHi && (highlightPositions.isEmpty || highlightPositions.contains(p));
+          canvas.drawRRect(
+            RRect.fromRectAndRadius(rect, Radius.circular(math.min(blockW * 0.22, 3))),
+            Paint()
+              ..color = (hiBlock ? Color.lerp(color, TrovoColors.found, glow)! : color)
+                  .withValues(alpha: hiBlock ? 0.55 + 0.4 * glow : 0.55),
+          );
+        }
       }
 
       // Ripiano: bordo frontale colorato.
@@ -101,8 +109,8 @@ class MiniShelfPainter extends CustomPainter {
       );
     }
 
-    _paintUpright(canvas, Rect.fromLTWH(0, 0, uw, size.height));
-    _paintUpright(canvas, Rect.fromLTWH(size.width - uw, 0, uw, size.height));
+    paintUpright(canvas, Rect.fromLTWH(0, 0, uw, size.height));
+    paintUpright(canvas, Rect.fromLTWH(size.width - uw, 0, uw, size.height));
   }
 
   @override
@@ -110,9 +118,21 @@ class MiniShelfPainter extends CustomPainter {
       old.glow != glow ||
       old.highlightIndex != highlightIndex ||
       old.levelColors.length != levelColors.length ||
-      !_listEq(old.itemCounts, itemCounts) ||
-      !_listEq(old.levelColors, levelColors);
+      !_listEq(old.levelColors, levelColors) ||
+      old.slots.length != slots.length ||
+      !_slotsEq(old.slots, slots);
 }
+
+bool _slotsEq(List<List<bool>> a, List<List<bool>> b) {
+  for (var i = 0; i < a.length; i++) {
+    if (!_listEq(a[i], b[i])) return false;
+  }
+  return true;
+}
+
+/// Occupazione dei posti di uno scaffale, per il disegno in miniatura.
+List<List<bool>> shelfSlots(Iterable<List<String?>> levels) =>
+    [for (final l in levels) [for (final s in l) s != null]];
 
 bool _listEq<T>(List<T> a, List<T> b) {
   if (a.length != b.length) return false;
@@ -211,8 +231,8 @@ class LevelFramePainter extends CustomPainter {
         ).createShader(Rect.fromLTWH(0, boardY + lipH, 1, size.height * 0.06)),
     );
 
-    _paintUpright(canvas, Rect.fromLTWH(0, 0, uw, size.height), holeOffset: yOffset);
-    _paintUpright(canvas, Rect.fromLTWH(size.width - uw, 0, uw, size.height),
+    paintUpright(canvas, Rect.fromLTWH(0, 0, uw, size.height), holeOffset: yOffset);
+    paintUpright(canvas, Rect.fromLTWH(size.width - uw, 0, uw, size.height),
         holeOffset: yOffset);
   }
 
@@ -226,11 +246,14 @@ class LevelFramePainter extends CustomPainter {
 
 /// Parte alta dello scaffale (tappi dei montanti).
 class ShelfCapPainter extends CustomPainter {
+  ShelfCapPainter({this.uprightWidth = LevelFramePainter.uprightWidth});
+  final double uprightWidth;
+
   @override
   void paint(Canvas canvas, Size size) {
-    const uw = LevelFramePainter.uprightWidth;
+    final uw = uprightWidth;
     for (final x in [0.0, size.width - uw]) {
-      _paintUpright(canvas, Rect.fromLTWH(x, 6, uw, size.height - 6));
+      paintUpright(canvas, Rect.fromLTWH(x, 6, uw, size.height - 6));
       canvas.drawRRect(
         RRect.fromRectAndRadius(Rect.fromLTWH(x - 2, 0, uw + 4, 9), const Radius.circular(3)),
         Paint()..color = TrovoColors.metalDark,
@@ -244,14 +267,15 @@ class ShelfCapPainter extends CustomPainter {
 
 /// Parte bassa dello scaffale (piedini).
 class ShelfFeetPainter extends CustomPainter {
-  ShelfFeetPainter({required this.yOffset});
+  ShelfFeetPainter({required this.yOffset, this.uprightWidth = LevelFramePainter.uprightWidth});
   final double yOffset;
+  final double uprightWidth;
 
   @override
   void paint(Canvas canvas, Size size) {
-    const uw = LevelFramePainter.uprightWidth;
+    final uw = uprightWidth;
     for (final x in [0.0, size.width - uw]) {
-      _paintUpright(canvas, Rect.fromLTWH(x, 0, uw, size.height - 6), holeOffset: yOffset);
+      paintUpright(canvas, Rect.fromLTWH(x, 0, uw, size.height - 6), holeOffset: yOffset);
       canvas.drawRRect(
         RRect.fromRectAndRadius(
             Rect.fromLTWH(x - 4, size.height - 8, uw + 8, 8), const Radius.circular(3)),
@@ -276,16 +300,18 @@ class MiniShelf extends StatelessWidget {
   const MiniShelf({
     super.key,
     required this.levelColors,
-    required this.itemCounts,
+    required this.slots,
     this.highlightIndex,
+    this.highlightPositions = const {},
     this.glow = 0,
     this.width = 120,
     this.height = 140,
   });
 
   final List<Color> levelColors;
-  final List<int> itemCounts;
+  final List<List<bool>> slots;
   final int? highlightIndex;
+  final Set<int> highlightPositions;
   final double glow;
   final double width;
   final double height;
@@ -298,8 +324,9 @@ class MiniShelf extends StatelessWidget {
       child: CustomPaint(
         painter: MiniShelfPainter(
           levelColors: levelColors,
-          itemCounts: itemCounts,
+          slots: slots,
           highlightIndex: highlightIndex,
+          highlightPositions: highlightPositions,
           glow: glow,
         ),
       ),

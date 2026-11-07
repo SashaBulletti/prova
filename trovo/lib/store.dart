@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'models.dart';
+import 'scan_codes.dart';
 import 'search.dart';
 
 /// Tutti i dati dell'app. Restano solo sul telefono.
@@ -75,7 +76,7 @@ class PantryStore extends ChangeNotifier {
 
   Map<String, dynamic> _dataJson() => {
         'app': 'trovo',
-        'version': 1,
+        'version': 2,
         'selectedRoomId': _selectedRoomId,
         'rooms': rooms.map((r) => r.toJson()).toList(),
       };
@@ -146,13 +147,14 @@ class PantryStore extends ChangeNotifier {
     required String name,
     required int colorIndex,
     required int levelCount,
+    int slotsPerLevel = Level.defaultSlots,
     bool numberFromTop = true,
   }) {
     final shelf = Shelf(name: name.trim(), colorIndex: colorIndex, numberFromTop: numberFromTop);
     for (var i = 0; i < levelCount; i++) {
       // Il colore segue il numero del piano: piano 1 = primo colore.
       final number = numberFromTop ? i + 1 : levelCount - i;
-      shelf.levels.add(Level(colorIndex: number - 1));
+      shelf.levels.add(Level(colorIndex: number - 1, slotCount: slotsPerLevel));
     }
     room.shelves.add(shelf);
     _changed();
@@ -191,7 +193,9 @@ class PantryStore extends ChangeNotifier {
   /// Il nuovo piano prende sempre il numero successivo.
   /// Restituisce la posizione (dall'alto) dove è stato messo.
   int addLevel(Shelf shelf) {
-    final level = Level(colorIndex: shelf.levels.length);
+    // Stessi posti degli altri piani dello scaffale.
+    final slots = shelf.levels.isEmpty ? Level.defaultSlots : shelf.levels.last.slotCount;
+    final level = Level(colorIndex: shelf.levels.length, slotCount: slots);
     final index = shelf.numberFromTop ? shelf.levels.length : 0;
     shelf.levels.insert(index, level);
     _changed();
@@ -208,41 +212,253 @@ class PantryStore extends ChangeNotifier {
     _changed();
   }
 
-  // ───────────────────────── Oggetti
+  // ───────────────────────── Posti
 
-  void addItem(Level level, Item item) {
-    level.items.add(item);
+  /// Aggiunge un posto libero in fondo al piano (a destra).
+  void addSlot(Level level) {
+    level.slots.add(null);
     _changed();
   }
 
-  void updateItem(Item item, {String? name, String? emoji, int? quantity, String? note}) {
+  /// Toglie un posto libero. I posti a destra scorrono di uno.
+  bool removeSlot(Level level, int pos) {
+    if (pos < 0 || pos >= level.slots.length || level.slots[pos] != null) return false;
+    if (level.slots.length <= 1) return false;
+    level.slots.removeAt(pos);
+    _changed();
+    return true;
+  }
+
+  /// Quanti posti occupa l'oggetto. Si allarga verso destra (poi sinistra)
+  /// solo nei posti liberi accanto. false se non c'è spazio.
+  bool setSpan(Level level, Item item, int span) {
+    final positions = level.positionsOf(item.id);
+    if (positions.isEmpty || span < 1) return false;
+    final current = positions.length;
+    if (span == current) return true;
+    if (span < current) {
+      // Libera i posti in fondo a destra.
+      for (final p in positions.sublist(span)) {
+        level.slots[p] = null;
+      }
+      _changed();
+      return true;
+    }
+    var need = span - current;
+    var right = positions.last + 1;
+    var left = positions.first - 1;
+    final toTake = <int>[];
+    while (need > 0 && right < level.slots.length && level.slots[right] == null) {
+      toTake.add(right++);
+      need--;
+    }
+    while (need > 0 && left >= 0 && level.slots[left] == null) {
+      toTake.add(left--);
+      need--;
+    }
+    if (need > 0) return false;
+    for (final p in toTake) {
+      level.slots[p] = item.id;
+    }
+    _changed();
+    return true;
+  }
+
+  // ───────────────────────── Oggetti
+
+  /// Mette un oggetto nuovo sul piano. Se [position] è libero lo mette lì,
+  /// altrimenti nel primo posto libero (o in un posto nuovo in fondo).
+  int addItem(Level level, Item item, {int? position}) {
+    level.items.add(item);
+    var pos = position ?? -1;
+    if (pos < 0 || pos >= level.slots.length || level.slots[pos] != null) {
+      pos = level.slots.indexOf(null);
+    }
+    if (pos < 0) {
+      level.slots.add(item.id);
+      pos = level.slots.length - 1;
+    } else {
+      level.slots[pos] = item.id;
+    }
+    _changed();
+    return pos;
+  }
+
+  void updateItem(Item item, {String? name, String? emoji, int? quantity, String? note, String? barcode}) {
     if (name != null && name.trim().isNotEmpty) item.name = name.trim();
     if (emoji != null) item.emoji = emoji;
     if (quantity != null) item.quantity = quantity.clamp(1, 999);
     if (note != null) item.note = note.trim();
+    if (barcode != null) item.barcode = barcode.isEmpty ? null : barcode;
     _changed();
   }
 
-  /// Restituisce la posizione, così si può annullare.
-  int removeItem(Level level, Item item) {
-    final index = level.items.indexOf(item);
-    if (index >= 0) {
-      level.items.removeAt(index);
-      _changed();
+  /// "Finito": l'oggetto sparisce ma i suoi posti restano liberi.
+  /// Restituisce i posti che occupava, così si può annullare.
+  List<int> removeItem(Level level, Item item) {
+    final positions = level.positionsOf(item.id);
+    level.items.remove(item);
+    for (final p in positions) {
+      level.slots[p] = null;
     }
-    return index;
+    _changed();
+    return positions;
   }
 
-  void insertItem(Level level, Item item, int index) {
-    level.items.insert(index.clamp(0, level.items.length), item);
+  /// Annulla "Finito": rimette l'oggetto nei suoi posti, se sono ancora liberi.
+  void restoreItem(Level level, Item item, List<int> positions) {
+    level.items.add(item);
+    var placed = false;
+    for (final p in positions) {
+      if (p < level.slots.length && level.slots[p] == null) {
+        level.slots[p] = item.id;
+        placed = true;
+      }
+    }
+    if (!placed) level.normalize();
     _changed();
   }
 
+  /// Sposta un oggetto (con tutti i suoi posti) al posto [to] del piano [toLevel].
+  /// Se lì c'è un altro oggetto della stessa larghezza, si scambiano.
+  /// false se non c'è spazio.
+  bool moveItemTo(Item item, Level fromLevel, Level toLevel, int to, {bool dryRun = false}) {
+    final from = fromLevel.positionsOf(item.id);
+    if (from.isEmpty) return false;
+    final span = from.length;
+    if (to < 0) return false;
+    // Se lo lasci verso la fine, l'oggetto si appoggia all'ultimo posto.
+    if (to + span > toLevel.slots.length) to = toLevel.slots.length - span;
+    if (to < 0) return false;
+    final target = [for (var i = to; i < to + span; i++) i];
+    final sameLevel = identical(fromLevel, toLevel);
+
+    final occupants = <String>{
+      for (final p in target)
+        if (toLevel.slots[p] != null && !(sameLevel && toLevel.slots[p] == item.id)) toLevel.slots[p]!,
+    };
+
+    if (occupants.isEmpty) {
+      if (dryRun) return true;
+      for (final p in from) {
+        fromLevel.slots[p] = null;
+      }
+      if (!sameLevel) {
+        fromLevel.items.remove(item);
+        toLevel.items.add(item);
+      }
+      for (final p in target) {
+        toLevel.slots[p] = item.id;
+      }
+      _changed();
+      return true;
+    }
+
+    // Scambio con un solo oggetto della stessa larghezza.
+    if (occupants.length == 1) {
+      final otherId = occupants.first;
+      final otherPos = toLevel.positionsOf(otherId);
+      final other = toLevel.itemById(otherId);
+      if (other != null && otherPos.length == span && otherPos.first == to) {
+        if (dryRun) return true;
+        for (final p in from) {
+          fromLevel.slots[p] = otherId;
+        }
+        for (final p in target) {
+          toLevel.slots[p] = item.id;
+        }
+        if (!sameLevel) {
+          fromLevel.items.remove(item);
+          toLevel.items.remove(other);
+          toLevel.items.add(item);
+          fromLevel.items.add(other);
+        }
+        _changed();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// Sposta in un altro piano, nel primo posto libero.
   void moveItem(Item item, Level from, Level to) {
-    if (from == to) return;
+    if (identical(from, to)) return;
+    final span = from.spanOf(item.id).clamp(1, 999);
+    for (final p in from.positionsOf(item.id)) {
+      from.slots[p] = null;
+    }
     from.items.remove(item);
     to.items.add(item);
+    var placed = 0;
+    for (var i = 0; i < to.slots.length && placed < span; i++) {
+      if (to.slots[i] == null) {
+        to.slots[i] = item.id;
+        placed++;
+      }
+    }
+    while (placed < span) {
+      to.slots.add(item.id);
+      placed++;
+    }
     _changed();
+  }
+
+  /// Applica le modifiche lette da una foto.
+  /// Prima toglie gli oggetti che si spostano, poi li rimette al posto giusto.
+  /// Se un posto è occupato da un oggetto che non si sposta, quello va nel primo posto libero.
+  void applyPhotoMoves(List<PhotoMove> moves) {
+    if (moves.isEmpty) return;
+    final moving = moves.map((m) => m.item.id).toSet();
+    for (final m in moves) {
+      for (final p in m.fromLevel.positionsOf(m.item.id)) {
+        m.fromLevel.slots[p] = null;
+      }
+      m.fromLevel.items.remove(m.item);
+    }
+    final displaced = <({Level level, Item item})>[];
+    for (final m in moves) {
+      final level = m.toLevel;
+      while (level.slots.length < m.start + m.span) {
+        level.slots.add(null);
+      }
+      for (var p = m.start; p < m.start + m.span; p++) {
+        final other = level.slots[p];
+        if (other != null && !moving.contains(other)) {
+          final item = level.itemById(other);
+          for (final q in level.positionsOf(other)) {
+            level.slots[q] = null;
+          }
+          if (item != null) {
+            level.items.remove(item);
+            displaced.add((level: level, item: item));
+          }
+        }
+        level.slots[p] = m.item.id;
+      }
+      level.items.add(m.item);
+    }
+    for (final d in displaced) {
+      d.level.items.add(d.item);
+      d.level.normalize();
+    }
+    _changed();
+  }
+
+  ({Level level, Item item})? findItemWithLevel(String itemId) {
+    for (final ref in allLevels()) {
+      final item = ref.level.itemById(itemId);
+      if (item != null) return (level: ref.level, item: item);
+    }
+    return null;
+  }
+
+  Item? findByBarcode(String code) {
+    for (final ref in allLevels()) {
+      for (final item in ref.level.items) {
+        if (item.barcode == code) return item;
+      }
+    }
+    return null;
   }
 
   // ───────────────────────── Trovare le cose

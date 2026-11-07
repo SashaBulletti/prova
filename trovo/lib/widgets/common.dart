@@ -136,12 +136,16 @@ class LocationLine extends StatelessWidget {
     required this.shelf,
     required this.levelIndex,
     this.showRoom = true,
+    this.position,
   });
 
   final Room room;
   final Shelf shelf;
   final int levelIndex;
   final bool showRoom;
+
+  /// Numero del posto (da 1), se lo vuoi mostrare.
+  final int? position;
 
   @override
   Widget build(BuildContext context) {
@@ -169,6 +173,10 @@ class LocationLine extends StatelessWidget {
           color: TrovoColors.level(level.colorIndex),
           size: 24,
         ),
+        if (position != null && position! > 0) ...[
+          const SizedBox(width: 6),
+          Text(context.s.slot(position!), style: theme.textTheme.bodySmall?.copyWith(color: TrovoColors.text)),
+        ],
       ],
     );
   }

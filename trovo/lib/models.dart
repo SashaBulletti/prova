@@ -14,6 +14,7 @@ class Item {
     this.emoji = '📦',
     this.quantity = 1,
     this.note = '',
+    this.barcode,
     int? addedAt,
   })  : id = id ?? newId(),
         addedAt = addedAt ?? DateTime.now().millisecondsSinceEpoch;
@@ -23,6 +24,9 @@ class Item {
   String emoji;
   int quantity;
   String note;
+
+  /// Codice a barre del prodotto (EAN), se l'hai scansionato.
+  String? barcode;
   int addedAt;
 
   Map<String, dynamic> toJson() => {
@@ -31,6 +35,7 @@ class Item {
         'emoji': emoji,
         'quantity': quantity,
         'note': note,
+        'barcode': barcode,
         'addedAt': addedAt,
       };
 
@@ -40,37 +45,141 @@ class Item {
         emoji: (j['emoji'] as String?) ?? '📦',
         quantity: (j['quantity'] as num?)?.toInt() ?? 1,
         note: (j['note'] as String?) ?? '',
+        barcode: j['barcode'] as String?,
         addedAt: (j['addedAt'] as num?)?.toInt(),
       );
 }
 
+/// Un tratto di piano: un oggetto (su uno o più posti) o un posto libero.
+class SlotBlock {
+  const SlotBlock({required this.start, required this.span, this.item});
+  final int start;
+  final int span;
+  final Item? item;
+  bool get isEmpty => item == null;
+}
+
+/// Un piano: una fila di posti da sinistra a destra, come sullo scaffale vero.
+/// Ogni posto è libero (null) oppure contiene l'id di un oggetto.
+/// Un oggetto può occupare più posti vicini (es. 12 pomarole su 2 file).
 class Level {
-  Level({String? id, required this.colorIndex, this.photoPath, List<Item>? items})
-      : id = id ?? newId(),
-        items = items ?? [];
+  Level({
+    String? id,
+    required this.colorIndex,
+    this.photoPath,
+    List<Item>? items,
+    List<String?>? slots,
+    int slotCount = defaultSlots,
+  })  : id = id ?? newId(),
+        items = items ?? [],
+        slots = slots ?? List<String?>.filled(slotCount, null, growable: true);
+
+  static const defaultSlots = 5;
 
   final String id;
   int colorIndex;
   String? photoPath;
   final List<Item> items;
 
+  /// Posti da sinistra a destra.
+  final List<String?> slots;
+
+  int get slotCount => slots.length;
+  int get freeCount => slots.where((s) => s == null).length;
   int get totalQuantity => items.fold(0, (sum, i) => sum + i.quantity);
+
+  Item? itemById(String id) {
+    for (final i in items) {
+      if (i.id == id) return i;
+    }
+    return null;
+  }
+
+  Item? itemAt(int pos) => (pos >= 0 && pos < slots.length && slots[pos] != null) ? itemById(slots[pos]!) : null;
+
+  List<int> positionsOf(String itemId) => [
+        for (var i = 0; i < slots.length; i++)
+          if (slots[i] == itemId) i,
+      ];
+
+  /// Primo posto dell'oggetto (0 = il più a sinistra), -1 se non c'è.
+  int positionOf(String itemId) => slots.indexOf(itemId);
+
+  int spanOf(String itemId) => slots.where((s) => s == itemId).length;
+
+  /// Il piano diviso in blocchi: oggetti (anche su più posti) e posti liberi.
+  List<SlotBlock> get blocks {
+    final out = <SlotBlock>[];
+    var i = 0;
+    while (i < slots.length) {
+      final id = slots[i];
+      if (id == null) {
+        out.add(SlotBlock(start: i, span: 1));
+        i++;
+        continue;
+      }
+      var j = i + 1;
+      while (j < slots.length && slots[j] == id) {
+        j++;
+      }
+      out.add(SlotBlock(start: i, span: j - i, item: itemById(id)));
+      i = j;
+    }
+    return out;
+  }
+
+  /// Sistema eventuali incoerenze (oggetti senza posto, posti con oggetti spariti).
+  void normalize() {
+    final ids = items.map((i) => i.id).toSet();
+    for (var i = 0; i < slots.length; i++) {
+      if (slots[i] != null && !ids.contains(slots[i])) slots[i] = null;
+    }
+    for (final item in items) {
+      if (!slots.contains(item.id)) {
+        final free = slots.indexOf(null);
+        if (free >= 0) {
+          slots[free] = item.id;
+        } else {
+          slots.add(item.id);
+        }
+      }
+    }
+  }
 
   Map<String, dynamic> toJson() => {
         'id': id,
         'colorIndex': colorIndex,
         'photoPath': photoPath,
+        'slots': slots,
         'items': items.map((i) => i.toJson()).toList(),
       };
 
-  factory Level.fromJson(Map<String, dynamic> j) => Level(
-        id: j['id'] as String?,
-        colorIndex: (j['colorIndex'] as num?)?.toInt() ?? 0,
-        photoPath: j['photoPath'] as String?,
-        items: ((j['items'] as List?) ?? [])
-            .map((e) => Item.fromJson(Map<String, dynamic>.from(e as Map)))
-            .toList(),
-      );
+  factory Level.fromJson(Map<String, dynamic> j) {
+    final items = ((j['items'] as List?) ?? [])
+        .map((e) => Item.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
+    final rawSlots = j['slots'] as List?;
+    final List<String?> slots;
+    if (rawSlots != null) {
+      slots = rawSlots.map((e) => e as String?).toList();
+    } else {
+      // Dati della versione 1: gli oggetti vanno in fila da sinistra,
+      // e il piano ha almeno 5 posti.
+      slots = [for (final i in items) i.id];
+      while (slots.length < defaultSlots) {
+        slots.add(null);
+      }
+    }
+    final level = Level(
+      id: j['id'] as String?,
+      colorIndex: (j['colorIndex'] as num?)?.toInt() ?? 0,
+      photoPath: j['photoPath'] as String?,
+      items: items,
+      slots: slots,
+    );
+    level.normalize();
+    return level;
+  }
 }
 
 class Shelf {
@@ -163,6 +272,9 @@ class ItemLocation {
   final Item item;
 
   int get levelNumber => shelf.levelNumber(levelIndex);
+
+  /// Posto (1 = il primo a sinistra).
+  int get positionNumber => level.positionOf(item.id) + 1;
 }
 
 /// Riferimento a un piano con la sua posizione.
