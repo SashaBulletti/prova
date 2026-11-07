@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Schermata di avvio: sfondo scuro con l'icona al centro. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/trovo_background" />
+    <item android:width="160dp" android:height="160dp" android:gravity="center">
+        <bitmap android:gravity="fill" android:src="@mipmap/ic_launcher" />
+    </item>
+</layer-list>
