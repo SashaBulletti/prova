@@ -14,6 +14,7 @@ PantryStore _sampleStore() {
   store.addItem(shelf.levels[2], Item(name: 'Passata di pomodoro', emoji: '🍅', quantity: 3));
   store.addItem(shelf.levels[0], Item(name: 'Spaghetti', emoji: '🍝'));
   store.addItem(shelf.levels[1], Item(name: 'Pile AA', emoji: '🔋'));
+  store.addItem(shelf.levels[3], Item(name: 'Pasta', emoji: '🍝'));
   return store;
 }
 
@@ -24,11 +25,13 @@ void main() {
     test('trova con errori di battitura', () {
       expect(store.search('pasatta').first.location.item.name, 'Passata di pomodoro');
       expect(store.search('spagetti').first.location.item.name, 'Spaghetti');
+      expect(store.search('pomodri').first.location.item.name, 'Passata di pomodoro');
     });
 
     test('trova con sinonimi e plurale', () {
       expect(store.search('pomodori').first.location.item.name, 'Passata di pomodoro');
-      expect(store.search('pasta').first.location.item.name, 'Spaghetti');
+      expect(store.search('pasta').first.location.item.name, 'Pasta');
+      expect(store.search('pasta')[1].location.item.name, 'Spaghetti');
       expect(store.search('batterie').first.location.item.name, 'Pile AA');
     });
 

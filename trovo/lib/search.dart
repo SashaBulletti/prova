@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'models.dart';
 
 /// Ricerca "gentile": capisce gli errori di battitura, gli accenti,
@@ -130,13 +132,33 @@ double _wordScore(String query, String word) {
   if (ws.startsWith(qs) && qs.length >= 3) return 0.85;
   if (word.contains(query) && query.length >= 3) return 0.75;
   // Tolleranza agli errori: "pasatta" ≈ "passata".
-  final maxLen = qs.length > ws.length ? qs.length : ws.length;
-  if (maxLen < 3) return 0;
-  final dist = _levenshtein(qs, ws.length > qs.length + 2 ? ws.substring(0, qs.length + 2) : ws);
+  if (query.length < 3 || word.length < 3) return 0;
+  final allowed = query.length <= 4 ? 1 : (query.length <= 7 ? 2 : 3);
+  final dist = math.min(_levenshtein(query, word), _levenshtein(qs, ws));
+  if (dist > allowed) return 0;
+  final maxLen = math.max(query.length, word.length);
   final sim = 1 - dist / maxLen;
-  final allowed = qs.length <= 4 ? 1 : (qs.length <= 7 ? 2 : 3);
-  if (dist <= allowed) return 0.55 + 0.3 * sim;
-  return 0;
+  // Le coppie di lettere in comune distinguono "passata" da "pasta".
+  return 0.5 + 0.35 * (sim + _dice(query, word)) / 2;
+}
+
+double _dice(String a, String b) {
+  if (a.length < 2 || b.length < 2) return 0;
+  final pairs = <String, int>{};
+  for (var i = 0; i < a.length - 1; i++) {
+    final p = a.substring(i, i + 2);
+    pairs[p] = (pairs[p] ?? 0) + 1;
+  }
+  var common = 0;
+  for (var i = 0; i < b.length - 1; i++) {
+    final p = b.substring(i, i + 2);
+    final n = pairs[p] ?? 0;
+    if (n > 0) {
+      common++;
+      pairs[p] = n - 1;
+    }
+  }
+  return 2 * common / (a.length - 1 + b.length - 1);
 }
 
 double scoreText(String query, String text) {
@@ -152,8 +174,9 @@ double scoreText(String query, String text) {
     final synonyms = _synonymIndex[_stem(qw)];
     for (final tw in tWords) {
       var s = _wordScore(qw, tw);
-      if (s < 0.7 && synonyms != null && synonyms.contains(_stem(tw))) {
-        s = 0.7;
+      // Un sinonimo vale più di una parola solo "somigliante".
+      if (s < 0.8 && synonyms != null && synonyms.contains(_stem(tw))) {
+        s = 0.8;
       }
       if (s > best) best = s;
     }

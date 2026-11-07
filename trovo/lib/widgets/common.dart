@@ -22,7 +22,6 @@ class LevelTag extends StatelessWidget {
       constraints: BoxConstraints(minWidth: size * 1.15),
       height: size,
       padding: EdgeInsets.symmetric(horizontal: size * 0.22),
-      alignment: Alignment.center,
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(size * 0.3),
@@ -32,14 +31,17 @@ class LevelTag extends StatelessWidget {
             BoxShadow(color: TrovoColors.found.withValues(alpha: 0.6 * glow), blurRadius: 18 * glow),
         ],
       ),
-      child: Text(
-        '$number',
-        style: TextStyle(
-          fontFamily: TrovoTheme.fontFamily,
-          fontWeight: FontWeight.w800,
-          fontSize: size * 0.58,
-          height: 1,
-          color: TrovoColors.onColor(bg),
+      child: Center(
+        widthFactor: 1,
+        child: Text(
+          '$number',
+          style: TextStyle(
+            fontFamily: TrovoTheme.fontFamily,
+            fontWeight: FontWeight.w800,
+            fontSize: size * 0.58,
+            height: 1,
+            color: TrovoColors.onColor(bg),
+          ),
         ),
       ),
     );
@@ -134,14 +136,12 @@ class LocationLine extends StatelessWidget {
     required this.shelf,
     required this.levelIndex,
     this.showRoom = true,
-    this.glow = 0,
   });
 
   final Room room;
   final Shelf shelf;
   final int levelIndex;
   final bool showRoom;
-  final double glow;
 
   @override
   Widget build(BuildContext context) {
@@ -163,11 +163,11 @@ class LocationLine extends StatelessWidget {
         const SizedBox(width: 6),
         Text(shelf.name, style: theme.textTheme.bodySmall?.copyWith(color: TrovoColors.text)),
         sep,
+        // Il colore del piano resta visibile: è un aiuto per ricordare.
         LevelTag(
           number: shelf.levelNumber(levelIndex),
           color: TrovoColors.level(level.colorIndex),
           size: 24,
-          glow: glow,
         ),
       ],
     );

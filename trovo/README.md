@@ -7,6 +7,13 @@ negli scaffali di casa: dispensa, garage, cantina…
 
 Pensata per chi si dimentica le cose (ADHD, dislessia, o semplicemente troppi scaffali).
 
+<p>
+  <img src="docs/screenshots/home.png" width="200" alt="Home">
+  <img src="docs/screenshots/scaffale.png" width="200" alt="Scaffale">
+  <img src="docs/screenshots/ricerca.png" width="200" alt="Ricerca">
+  <img src="docs/screenshots/faro.png" width="200" alt="Faro">
+</p>
+
 ## Cosa fa
 
 - 🏠 **Stanze**: dispensa, garage, cantina… quante ne vuoi.

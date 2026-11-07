@@ -158,8 +158,8 @@ class _NewShelfSheetState extends State<_NewShelfSheet> {
                     SegmentedButton<bool>(
                       showSelectedIcon: false,
                       segments: [
-                        ButtonSegment(value: true, label: Text(s.atTop), icon: const Icon(Icons.vertical_align_top_rounded)),
-                        ButtonSegment(value: false, label: Text(s.atBottom), icon: const Icon(Icons.vertical_align_bottom_rounded)),
+                        ButtonSegment(value: true, label: Text(s.atTop)),
+                        ButtonSegment(value: false, label: Text(s.atBottom)),
                       ],
                       selected: {_fromTop},
                       onSelectionChanged: (v) {
@@ -217,9 +217,8 @@ class ShelfPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     const rowH = 34.0;
     const width = 132.0;
-    return SizedBox(
-      width: width,
-      height: 300,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: width, maxHeight: 300),
       child: FittedBox(
         fit: BoxFit.scaleDown,
         alignment: Alignment.topCenter,
@@ -337,8 +336,8 @@ class _EditShelfSheetState extends State<_EditShelfSheet> {
           SegmentedButton<bool>(
             showSelectedIcon: false,
             segments: [
-              ButtonSegment(value: true, label: Text(s.atTop), icon: const Icon(Icons.vertical_align_top_rounded)),
-              ButtonSegment(value: false, label: Text(s.atBottom), icon: const Icon(Icons.vertical_align_bottom_rounded)),
+              ButtonSegment(value: true, label: Text(s.atTop)),
+              ButtonSegment(value: false, label: Text(s.atBottom)),
             ],
             selected: {_fromTop},
             onSelectionChanged: (v) => setState(() => _fromTop = v.first),

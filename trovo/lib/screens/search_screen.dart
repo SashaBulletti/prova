@@ -270,8 +270,9 @@ class _ResultTileState extends State<_ResultTile> with SingleTickerProviderState
               child: AnimatedBuilder(
                 animation: _pulse,
                 builder: (context, _) {
+                  // Nei "recenti" il piano è acceso fisso; nei risultati pulsa 3 volte.
                   final glow = !widget.highlight
-                      ? 0.0
+                      ? 1.0
                       : (Motion.reduced(context) || _pulse.isCompleted
                           ? 1.0
                           : 0.4 + 0.6 * math.cos(_pulse.value * 3 * math.pi).abs());
@@ -285,7 +286,7 @@ class _ResultTileState extends State<_ResultTile> with SingleTickerProviderState
                           children: [
                             Text(loc.item.name, style: theme.textTheme.titleMedium, maxLines: 2, overflow: TextOverflow.ellipsis),
                             const SizedBox(height: 6),
-                            LocationLine(room: loc.room, shelf: shelf, levelIndex: loc.levelIndex, glow: glow),
+                            LocationLine(room: loc.room, shelf: shelf, levelIndex: loc.levelIndex),
                           ],
                         ),
                       ),

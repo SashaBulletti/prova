@@ -87,7 +87,9 @@ class MiniShelfPainter extends CustomPainter {
         final rect = Rect.fromLTWH(x, boardY - h, blockW, h);
         canvas.drawRRect(
           RRect.fromRectAndRadius(rect, Radius.circular(blockW * 0.22)),
-          Paint()..color = (isHi ? TrovoColors.found : color).withValues(alpha: isHi ? 0.9 : 0.55),
+          Paint()
+            ..color = (isHi ? Color.lerp(color, TrovoColors.found, glow)! : color)
+                .withValues(alpha: isHi ? 0.55 + 0.35 * glow : 0.55),
         );
       }
 
