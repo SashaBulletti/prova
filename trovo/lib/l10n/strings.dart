@@ -1,5 +1,8 @@
 import 'package:flutter/widgets.dart';
 
+import '../furniture_templates.dart';
+import '../models.dart';
+
 /// Tutti i testi dell'app, in italiano e in inglese.
 /// Frasi corte e semplici: è un'app pensata anche per chi ha ADHD o dislessia.
 class S {
@@ -49,9 +52,9 @@ class S {
   String get notFoundBody => _t("Forse non l'hai ancora aggiunto.", "Maybe you haven't added it yet.");
   String notFoundSpeech(String q) => _t('Non trovo $q.', "I can't find $q.");
   String get readAloud => _t('Leggi ad alta voce', 'Read aloud');
-  String foundSpeech(String item, String room, String shelf, int level, int position) => _t(
-      '$item: $room, $shelf, piano $level, posto $position.',
-      '$item: $room, $shelf, level $level, spot $position.');
+  String foundSpeech(String item, String room, String shelf, String compartment, int position) => _t(
+      '$item: $room, $shelf, ${compartment.toLowerCase()}, posto $position.',
+      '$item: $room, $shelf, ${compartment.toLowerCase()}, spot $position.');
   String get searchStart => _t(
       'Scrivi o parla. Capisco anche gli errori.',
       'Type or talk. I understand typos too.');
@@ -79,10 +82,11 @@ class S {
     return _t('Scaffale $c', '$c shelf');
   }
 
-  String colorName(int i) {
+  String colorName(int i, {bool feminine = false}) {
     const itNames = ['Blu', 'Rosso', 'Verde', 'Arancione', 'Viola', 'Rosa', 'Azzurro', 'Marrone'];
+    const itFem = ['Blu', 'Rossa', 'Verde', 'Arancione', 'Viola', 'Rosa', 'Azzurra', 'Marrone'];
     const enNames = ['Blue', 'Red', 'Green', 'Orange', 'Purple', 'Pink', 'Sky', 'Brown'];
-    return (it ? itNames : enNames)[i % itNames.length];
+    return (it ? (feminine ? itFem : itNames) : enNames)[i % itNames.length];
   }
 
   String get howManyLevels => _t('Quanti piani?', 'How many levels?');
@@ -100,7 +104,18 @@ class S {
       'Create your first shelf.\nIt takes 10 seconds.');
   String get dragHint => _t('Tieni premuto per spostare', 'Long-press to move');
   String shelvesCount(int n) =>
-      n == 1 ? _t('1 scaffale', '1 shelf') : _t('$n scaffali', '$n shelves');
+      n == 1 ? _t('1 mobile', '1 piece of furniture') : _t('$n mobili', '$n pieces of furniture');
+
+  /// "5 piani", "3 cassetti", "9 cubi", "4 scomparti".
+  String partsCount(Shelf shelf) {
+    final n = shelf.levels.length;
+    return switch (shelf.kind) {
+      FurnitureKind.shelf => levelsCount(n),
+      FurnitureKind.drawers => n == 1 ? _t('1 cassetto', '1 drawer') : _t('$n cassetti', '$n drawers'),
+      FurnitureKind.cubes => n == 1 ? _t('1 cubo', '1 cube') : _t('$n cubi', '$n cubes'),
+      _ => n == 1 ? _t('1 scomparto', '1 section') : _t('$n scomparti', '$n sections'),
+    };
+  }
 
   // Piani
   String level(int n) => _t('Piano $n', 'Level $n');
@@ -214,6 +229,62 @@ class S {
   String get photoNotSupported => _t(
       'Qui non posso leggere le foto: usa l\'app sul telefono.',
       "I can't read photos here: use the app on your phone.");
+
+  // Mobili
+  String get newFurniture => _t('Nuovo mobile', 'New furniture');
+  String get whatFurniture => _t('Che mobile è?', 'What kind of furniture?');
+  String templateName(TemplateId id) => switch (id) {
+        TemplateId.shelf => _t('Scaffale', 'Shelf'),
+        TemplateId.drawers => _t('Cassettiera', 'Drawers'),
+        TemplateId.wardrobe => _t('Armadio', 'Wardrobe'),
+        TemplateId.cubes => _t('Libreria a cubi', 'Cube shelf'),
+        TemplateId.kitchenBase => _t('Base cucina', 'Kitchen base'),
+        TemplateId.kitchenWall => _t('Pensile', 'Wall cabinet'),
+        TemplateId.bathroom => _t('Mobile bagno', 'Bathroom unit'),
+        TemplateId.nightstand => _t('Comodino', 'Nightstand'),
+      };
+
+  /// Nome corto per il nome automatico ("Libreria Verde").
+  String templateShortName(TemplateId id) => id == TemplateId.cubes ? _t('Libreria', 'Cube shelf') : templateName(id);
+
+  String furnitureDefaultName(TemplateId id, int colorIndex, bool feminine) {
+    final c = colorName(colorIndex, feminine: feminine);
+    return _t('${templateShortName(id)} $c', '$c ${templateShortName(id).toLowerCase()}');
+  }
+
+  String paramLabel(ParamKey k) => switch (k) {
+        ParamKey.levels => _t('Quanti piani?', 'How many levels?'),
+        ParamKey.slots => _t('Quanti posti per piano?', 'How many spots per level?'),
+        ParamKey.drawers => _t('Quanti cassetti?', 'How many drawers?'),
+        ParamKey.hangers => _t('Quante grucce?', 'How many hangers?'),
+        ParamKey.rows => _t('Quante righe?', 'How many rows?'),
+        ParamKey.cols => _t('Quanti cubi per riga?', 'How many cubes per row?'),
+        ParamKey.boards => _t('Quanti ripiani?', 'How many shelves?'),
+      };
+
+  /// "Piano 3", "Cassetto 2", "Asta 1", "Cubo 5".
+  String compartment(LevelKind k, int n) => switch (k) {
+        LevelKind.board => _t('Piano $n', 'Level $n'),
+        LevelKind.drawer => _t('Cassetto $n', 'Drawer $n'),
+        LevelKind.rail => _t('Asta $n', 'Rail $n'),
+        LevelKind.cube => _t('Cubo $n', 'Cube $n'),
+      };
+  String addCompartment(LevelKind k) => switch (k) {
+        LevelKind.board => _t('Aggiungi piano', 'Add level'),
+        LevelKind.drawer => _t('Aggiungi cassetto', 'Add drawer'),
+        LevelKind.rail => _t('Aggiungi asta', 'Add rail'),
+        LevelKind.cube => _t('Aggiungi cubo', 'Add cube'),
+      };
+  String get openDrawer => _t('Tocca per aprire', 'Tap to open');
+  String get hangers => _t('grucce', 'hangers');
+  String get furnitureView => _t('Mobili', 'Furniture');
+  String get mapView => _t('Mappa', 'Map');
+  String get editMap => _t('Sistema la mappa', 'Arrange the map');
+  String get editMapHint => _t(
+      'Trascina stanze e mobili. Tira l\'angolo per cambiare la misura.',
+      'Drag rooms and furniture. Pull the corner to resize.');
+  String get rotate => _t('Ruota', 'Rotate');
+  String get mapEmpty => _t('Aggiungi una stanza per vedere la mappa.', 'Add a room to see the map.');
 
   // Impostazioni
   String get settings => _t('Impostazioni', 'Settings');

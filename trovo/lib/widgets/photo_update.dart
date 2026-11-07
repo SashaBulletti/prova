@@ -126,7 +126,7 @@ class _ConfirmMoves extends StatelessWidget {
                       final ref = store.findLevel(m.toLevel.id);
                       final where = ref == null
                           ? ''
-                          : '${ref.shelf.name} · ${s.level(ref.levelNumber)} · ${s.slot(m.start + 1)}';
+                          : '${ref.shelf.name} · ${s.compartment(ref.level.kind, ref.levelNumber)} · ${s.slot(m.start + 1)}';
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 10),
                         child: Row(

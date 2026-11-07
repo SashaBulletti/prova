@@ -7,6 +7,9 @@ import '../models.dart';
 import '../store_scope.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/furniture_art.dart';
+import '../widgets/house_map.dart';
+import '../widgets/new_furniture_sheet.dart';
 import '../widgets/sheets.dart';
 import '../widgets/shelf_art.dart';
 import '../widgets/voice_sheet.dart';
@@ -15,24 +18,38 @@ import 'search_screen.dart';
 import 'settings_screen.dart';
 import 'shelf_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  /// true: si vede la mappa della casa invece della lista dei mobili.
+  bool _map = false;
+  bool _editing = false;
 
   void _openSearch(BuildContext context, {bool voice = false}) {
     HapticFeedback.selectionClick();
-    Navigator.of(context).push(PageRouteBuilder(
-      transitionDuration: Motion.of(context, 320),
-      reverseTransitionDuration: Motion.of(context, 260),
-      pageBuilder: (_, _, _) => SearchScreen(startWithVoice: voice),
-      transitionsBuilder: (_, anim, _, child) => FadeTransition(opacity: anim, child: child),
-    ));
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        transitionDuration: Motion.of(context, 320),
+        reverseTransitionDuration: Motion.of(context, 260),
+        pageBuilder: (_, _, _) => SearchScreen(startWithVoice: voice),
+        transitionsBuilder: (_, anim, _, child) =>
+            FadeTransition(opacity: anim, child: child),
+      ),
+    );
   }
 
   Future<void> _newShelf(BuildContext context) async {
     final store = context.store;
-    final shelf = await showNewShelfSheet(context, store.selectedRoom);
+    final shelf = await showNewFurnitureSheet(context, store.selectedRoom);
     if (shelf != null && context.mounted) {
-      Navigator.of(context).push(MaterialPageRoute(builder: (_) => ShelfScreen(shelfId: shelf.id)));
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => ShelfScreen(shelfId: shelf.id)));
     }
   }
 
@@ -44,11 +61,16 @@ class HomeScreen extends StatelessWidget {
     final room = store.selectedRoom;
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _newShelf(context),
-        icon: const Icon(Icons.add_rounded, size: 28),
-        label: Text(s.newShelf),
-      ).animate().scale(delay: Motion.of(context, 300), curve: Curves.easeOutBack, duration: Motion.of(context, 400)),
+      floatingActionButton:
+          FloatingActionButton.extended(
+            onPressed: () => _newShelf(context),
+            icon: const Icon(Icons.add_rounded, size: 28),
+            label: Text(s.newFurniture),
+          ).animate().scale(
+            delay: Motion.of(context, 300),
+            curve: Curves.easeOutBack,
+            duration: Motion.of(context, 400),
+          ),
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
@@ -63,7 +85,10 @@ class HomeScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(s.appName, style: theme.textTheme.headlineMedium),
+                          Text(
+                            s.appName,
+                            style: theme.textTheme.headlineMedium,
+                          ),
                           Text(s.tagline, style: theme.textTheme.bodySmall),
                         ],
                       ),
@@ -72,7 +97,9 @@ class HomeScreen extends StatelessWidget {
                       tooltip: s.settings,
                       iconSize: 28,
                       onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const SettingsScreen(),
+                        ),
                       ),
                       icon: const Icon(Icons.settings_rounded),
                     ),
@@ -86,61 +113,178 @@ class HomeScreen extends StatelessWidget {
                 child: _SearchBar(
                   onTap: () => _openSearch(context),
                   onMic: () => _openSearch(context, voice: true),
-                  onScan: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const ScanScreen()),
+                  onScan: () => Navigator.of(
+                    context,
+                  ).push(MaterialPageRoute(builder: (_) => const ScanScreen())),
+                ),
+              ),
+            ),
+            // Mobili | Mappa
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 6, 20, 2),
+              sliver: SliverToBoxAdapter(
+                child: SegmentedButton<bool>(
+                  showSelectedIcon: false,
+                  segments: [
+                    ButtonSegment(
+                      value: false,
+                      icon: const Icon(Icons.grid_view_rounded),
+                      label: Text(s.furnitureView),
+                    ),
+                    ButtonSegment(
+                      value: true,
+                      icon: const Icon(Icons.map_rounded),
+                      label: Text(s.mapView),
+                    ),
+                  ],
+                  selected: {_map},
+                  onSelectionChanged: (v) {
+                    HapticFeedback.selectionClick();
+                    setState(() {
+                      _map = v.first;
+                      _editing = false;
+                    });
+                  },
+                  style: SegmentedButton.styleFrom(
+                    selectedBackgroundColor: TrovoColors.primary,
+                    selectedForegroundColor: TrovoColors.onPrimary,
+                    textStyle: theme.textTheme.labelLarge,
                   ),
                 ),
               ),
             ),
-            const SliverToBoxAdapter(child: _RoomBar()),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-              sliver: SliverToBoxAdapter(
-                child: Text(
-                  '${room.emoji}  ${s.shelvesCount(room.shelves.length)} · ${s.itemsCount(room.itemCount)}',
-                  style: theme.textTheme.bodySmall,
+            if (_map)
+              SliverFillRemaining(
+                hasScrollBody: true,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: HouseMapView(
+                          editing: _editing,
+                          highlightRoomId: room.id,
+                          onOpenShelf: (shelf) => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => ShelfScreen(shelfId: shelf.id),
+                            ),
+                          ),
+                          onSelectRoom: (r) => store.selectRoom(r),
+                        ),
+                      ),
+                      Positioned(
+                        left: 16,
+                        right: 16,
+                        top: 4,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: AnimatedSwitcher(
+                                duration: Motion.of(context, 200),
+                                child: _editing
+                                    ? Container(
+                                        key: const ValueKey('hint'),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 8,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: TrovoColors.surfaceHigh,
+                                          borderRadius: BorderRadius.circular(
+                                            14,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          s.editMapHint,
+                                          style: theme.textTheme.bodySmall,
+                                        ),
+                                      )
+                                    : const SizedBox.shrink(),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            FilledButton.tonalIcon(
+                              onPressed: () {
+                                HapticFeedback.selectionClick();
+                                setState(() => _editing = !_editing);
+                              },
+                              icon: Icon(
+                                _editing
+                                    ? Icons.check_rounded
+                                    : Icons.edit_rounded,
+                              ),
+                              label: Text(_editing ? s.done : s.editMap),
+                              style: FilledButton.styleFrom(
+                                minimumSize: const Size(48, 44),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            if (room.shelves.isEmpty)
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: Center(
-                  child: EmptyState(
-                    art: const _EmptyShelfArt(),
-                    title: s.emptyRoomTitle,
-                    body: s.emptyRoomBody,
-                    action: FilledButton.icon(
-                      onPressed: () => _newShelf(context),
-                      icon: const Icon(Icons.add_rounded),
-                      label: Text(s.newShelf),
+            if (!_map) ...[
+              const SliverToBoxAdapter(child: _RoomBar()),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                sliver: SliverToBoxAdapter(
+                  child: Text(
+                    '${room.emoji}  ${s.shelvesCount(room.shelves.length)} · ${s.itemsCount(room.itemCount)}',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+              ),
+              if (room.shelves.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(
+                    child: EmptyState(
+                      art: const _EmptyShelfArt(),
+                      title: s.emptyRoomTitle,
+                      body: s.emptyRoomBody,
+                      action: FilledButton.icon(
+                        onPressed: () => _newShelf(context),
+                        icon: const Icon(Icons.add_rounded),
+                        label: Text(s.newFurniture),
+                      ),
+                    ),
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
+                  sliver: SliverGrid(
+                    gridDelegate:
+                        const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 260,
+                          mainAxisSpacing: 14,
+                          crossAxisSpacing: 14,
+                          childAspectRatio: 0.72,
+                        ),
+                    delegate: SliverChildBuilderDelegate(
+                      (context, i) =>
+                          _DraggableShelfCard(
+                                key: ValueKey(room.shelves[i].id),
+                                room: room,
+                                index: i,
+                              )
+                              .animate()
+                              .fadeIn(
+                                delay: Motion.of(context, 50 * i),
+                                duration: Motion.of(context, 260),
+                              )
+                              .slideY(
+                                begin: 0.15,
+                                curve: Curves.easeOutCubic,
+                                duration: Motion.of(context, 320),
+                              ),
+                      childCount: room.shelves.length,
                     ),
                   ),
                 ),
-              )
-            else
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
-                sliver: SliverGrid(
-                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                    maxCrossAxisExtent: 260,
-                    mainAxisSpacing: 14,
-                    crossAxisSpacing: 14,
-                    childAspectRatio: 0.72,
-                  ),
-                  delegate: SliverChildBuilderDelegate(
-                    (context, i) => _DraggableShelfCard(
-                      key: ValueKey(room.shelves[i].id),
-                      room: room,
-                      index: i,
-                    )
-                        .animate()
-                        .fadeIn(delay: Motion.of(context, 50 * i), duration: Motion.of(context, 260))
-                        .slideY(begin: 0.15, curve: Curves.easeOutCubic, duration: Motion.of(context, 320)),
-                    childCount: room.shelves.length,
-                  ),
-                ),
-              ),
+            ],
           ],
         ),
       ),
@@ -163,7 +307,11 @@ class _Logo extends StatelessWidget {
       ),
       child: CustomPaint(
         painter: MiniShelfPainter(
-          levelColors: [TrovoColors.level(3), TrovoColors.level(0), TrovoColors.level(2)],
+          levelColors: [
+            TrovoColors.level(3),
+            TrovoColors.level(0),
+            TrovoColors.level(2),
+          ],
           slots: const [
             [true, true, false],
             [true, true, true],
@@ -178,7 +326,11 @@ class _Logo extends StatelessWidget {
 }
 
 class _SearchBar extends StatelessWidget {
-  const _SearchBar({required this.onTap, required this.onMic, required this.onScan});
+  const _SearchBar({
+    required this.onTap,
+    required this.onMic,
+    required this.onScan,
+  });
   final VoidCallback onTap;
   final VoidCallback onMic;
   final VoidCallback onScan;
@@ -198,19 +350,27 @@ class _SearchBar extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(20, 8, 8, 8),
             child: Row(
               children: [
-                const Icon(Icons.search_rounded, size: 30, color: TrovoColors.textMuted),
+                const Icon(
+                  Icons.search_rounded,
+                  size: 30,
+                  color: TrovoColors.textMuted,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     s.searchHint,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(color: TrovoColors.textMuted),
+                    style: Theme.of(context).textTheme.titleMedium
+                        ?.copyWith(color: TrovoColors.textMuted),
                   ),
                 ),
                 IconButton(
                   tooltip: s.scan,
                   iconSize: 30,
                   onPressed: onScan,
-                  icon: const Icon(Icons.qr_code_scanner_rounded, color: TrovoColors.text),
+                  icon: const Icon(
+                    Icons.qr_code_scanner_rounded,
+                    color: TrovoColors.text,
+                  ),
                 ),
                 const SizedBox(width: 4),
                 MicButton(onPressed: onMic, size: 52),
@@ -252,11 +412,16 @@ class _RoomBar extends StatelessWidget {
                     HapticFeedback.selectionClick();
                     st.selectRoom(room);
                   },
-                  avatar: Text(room.emoji, style: const TextStyle(fontSize: 20)),
+                  avatar: Text(
+                    room.emoji,
+                    style: const TextStyle(fontSize: 20),
+                  ),
                   label: Text(room.name),
                   labelStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: room.id == selected.id ? TrovoColors.onPrimary : TrovoColors.text,
-                      ),
+                    color: room.id == selected.id
+                        ? TrovoColors.onPrimary
+                        : TrovoColors.text,
+                  ),
                 ),
               ),
             ),
@@ -273,7 +438,11 @@ class _RoomBar extends StatelessWidget {
 
 /// Scheda dello scaffale. Tieni premuto per spostarla (effetto "calamita").
 class _DraggableShelfCard extends StatefulWidget {
-  const _DraggableShelfCard({super.key, required this.room, required this.index});
+  const _DraggableShelfCard({
+    super.key,
+    required this.room,
+    required this.index,
+  });
   final Room room;
   final int index;
 
@@ -312,7 +481,10 @@ class _DraggableShelfCardState extends State<_DraggableShelfCard> {
             duration: Motion.of(context, 180),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: _hovered ? TrovoColors.primary : Colors.transparent, width: 2.5),
+              border: Border.all(
+                color: _hovered ? TrovoColors.primary : Colors.transparent,
+                width: 2.5,
+              ),
             ),
             child: LongPressDraggable<int>(
               data: widget.index,
@@ -327,7 +499,11 @@ class _DraggableShelfCardState extends State<_DraggableShelfCard> {
                     elevation: 12,
                     shadowColor: Colors.black,
                     borderRadius: BorderRadius.circular(20),
-                    child: _ShelfCard(room: widget.room, shelf: shelf, interactive: false),
+                    child: _ShelfCard(
+                      room: widget.room,
+                      shelf: shelf,
+                      interactive: false,
+                    ),
                   ),
                 ),
               ),
@@ -342,7 +518,11 @@ class _DraggableShelfCardState extends State<_DraggableShelfCard> {
 }
 
 class _ShelfCard extends StatelessWidget {
-  const _ShelfCard({required this.room, required this.shelf, this.interactive = true});
+  const _ShelfCard({
+    required this.room,
+    required this.shelf,
+    this.interactive = true,
+  });
   final Room room;
   final Shelf shelf;
   final bool interactive;
@@ -354,58 +534,60 @@ class _ShelfCard extends StatelessWidget {
     final shelfColor = TrovoColors.shelf(shelf.colorIndex);
 
     Widget closed(VoidCallback? open) => Material(
-          color: TrovoColors.surface,
-          borderRadius: BorderRadius.circular(20),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(20),
-            onTap: open == null
-                ? null
-                : () {
-                    HapticFeedback.selectionClick();
-                    open();
-                  },
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Center(
-                      child: LayoutBuilder(
-                        builder: (context, c) => MiniShelf(
-                          width: c.maxWidth * 0.82,
-                          height: c.maxHeight,
-                          levelColors: [for (final l in shelf.levels) TrovoColors.level(l.colorIndex)],
-                          slots: shelfSlots(shelf.levels.map((l) => l.slots)),
-                        ),
-                      ),
+      color: TrovoColors.surface,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: open == null
+            ? null
+            : () {
+                HapticFeedback.selectionClick();
+                open();
+              },
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Center(
+                  child: LayoutBuilder(
+                    builder: (context, c) => MiniFurniture(
+                      width: c.maxWidth * 0.82,
+                      height: c.maxHeight,
+                      kind: shelf.kind,
+                      compartments: miniCompartments(shelf),
+                      gridColumns: shelf.gridColumns,
+                      bodyColor: TrovoColors.shelf(shelf.colorIndex),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      ColorDot(color: shelfColor, size: 14),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          shelf.name,
-                          style: theme.textTheme.titleSmall,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${s.levelsCount(shelf.levels.length)} · ${s.itemsCount(shelf.itemCount)}',
-                    style: theme.textTheme.bodySmall,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  ColorDot(color: shelfColor, size: 14),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      shelf.name,
+                      style: theme.textTheme.titleSmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
               ),
-            ),
+              const SizedBox(height: 2),
+              Text(
+                '${s.partsCount(shelf)} · ${s.itemsCount(shelf.itemCount)}',
+                style: theme.textTheme.bodySmall,
+              ),
+            ],
           ),
-        );
+        ),
+      ),
+    );
 
     if (!interactive) return closed(null);
 
@@ -418,7 +600,9 @@ class _ShelfCard extends StatelessWidget {
       middleColor: TrovoColors.background,
       closedElevation: 0,
       openElevation: 0,
-      closedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      closedShape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
       closedBuilder: (context, open) => closed(open),
       openBuilder: (context, _) => ShelfScreen(shelfId: shelf.id),
     );
@@ -431,13 +615,21 @@ class _EmptyShelfArt extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MiniShelf(
-      width: 120,
-      height: 140,
-      levelColors: [for (var i = 0; i < 4; i++) TrovoColors.level(i).withValues(alpha: 0.5)],
-      slots: const [[], [], [], []],
-    )
+          width: 120,
+          height: 140,
+          levelColors: [
+            for (var i = 0; i < 4; i++)
+              TrovoColors.level(i).withValues(alpha: 0.5),
+          ],
+          slots: const [[], [], [], []],
+        )
         .animate()
         .fadeIn(duration: Motion.of(context, 400))
-        .moveY(begin: 12, end: 0, duration: Motion.of(context, 500), curve: Curves.easeOutBack);
+        .moveY(
+          begin: 12,
+          end: 0,
+          duration: Motion.of(context, 500),
+          curve: Curves.easeOutBack,
+        );
   }
 }

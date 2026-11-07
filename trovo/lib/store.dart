@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'furniture_templates.dart';
 import 'models.dart';
 import 'scan_codes.dart';
 import 'search.dart';
@@ -161,6 +162,39 @@ class PantryStore extends ChangeNotifier {
     return shelf;
   }
 
+  /// Crea un mobile da un modello pronto (cassettiera, armadio, cubi…).
+  Shelf addFurniture(
+    Room room, {
+    required TemplateId template,
+    required Map<ParamKey, int> params,
+    required String name,
+    required int colorIndex,
+    bool numberFromTop = true,
+  }) {
+    final t = templateById(template);
+    final shelf = Shelf(
+      name: name.trim(),
+      colorIndex: colorIndex,
+      numberFromTop: numberFromTop,
+      kind: t.kind,
+      gridColumns: template == TemplateId.cubes ? (params[ParamKey.cols] ?? 3) : 1,
+      levels: buildLevels(template, params, numberFromTop: numberFromTop),
+    );
+    room.shelves.add(shelf);
+    _changed();
+    return shelf;
+  }
+
+  void setRoomMap(Room room, MapBox box) {
+    room.mapBox = box;
+    _changed();
+  }
+
+  void setShelfMap(Shelf shelf, MapBox box) {
+    shelf.mapBox = box;
+    _changed();
+  }
+
   void updateShelf(Shelf shelf, {String? name, int? colorIndex, bool? numberFromTop}) {
     if (name != null && name.trim().isNotEmpty) shelf.name = name.trim();
     if (colorIndex != null) shelf.colorIndex = colorIndex;
@@ -192,10 +226,23 @@ class PantryStore extends ChangeNotifier {
 
   /// Il nuovo piano prende sempre il numero successivo.
   /// Restituisce la posizione (dall'alto) dove è stato messo.
-  int addLevel(Shelf shelf) {
-    // Stessi posti degli altri piani dello scaffale.
-    final slots = shelf.levels.isEmpty ? Level.defaultSlots : shelf.levels.last.slotCount;
-    final level = Level(colorIndex: shelf.levels.length, slotCount: slots);
+  int addLevel(Shelf shelf, {LevelKind kind = LevelKind.board}) {
+    // Stessi posti degli altri scomparti dello stesso tipo.
+    final same = shelf.levels.where((l) => l.kind == kind);
+    final slots = same.isNotEmpty
+        ? same.last.slotCount
+        : switch (kind) {
+            LevelKind.drawer => 6,
+            LevelKind.cube => 2,
+            LevelKind.rail => 8,
+            LevelKind.board => Level.defaultSlots,
+          };
+    final level = Level(
+      colorIndex: shelf.levels.length,
+      slotCount: slots,
+      kind: kind,
+      columns: kind == LevelKind.cube ? 2 : 3,
+    );
     final index = shelf.numberFromTop ? shelf.levels.length : 0;
     shelf.levels.insert(index, level);
     _changed();

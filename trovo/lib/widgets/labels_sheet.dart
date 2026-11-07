@@ -41,7 +41,7 @@ class _LabelsSheetState extends State<_LabelsSheet> {
     final out = <LabelEntry>[];
     for (final ref in _levels()) {
       final color = TrovoColors.level(ref.level.colorIndex).toARGB32();
-      final where = '${ref.shelf.name} · ${s.level(ref.levelNumber)}';
+      final where = '${ref.shelf.name} · ${s.compartment(ref.level.kind, ref.levelNumber)}';
       if (_kind == _Kind.slots) {
         for (var p = 0; p < ref.level.slotCount; p++) {
           final item = ref.level.itemAt(p);

@@ -8,6 +8,7 @@ import '../models.dart';
 import '../store_scope.dart';
 import '../theme.dart';
 import 'common.dart';
+import 'furniture_art.dart' show paintPanelSide;
 import 'shelf_art.dart' show paintUpright;
 
 /// Quello che si trascina: un oggetto con tutti i suoi posti.
@@ -41,7 +42,7 @@ class DropHover {
 
 /// Misure di un piano, calcolate dalla larghezza: più posti = oggetti più piccoli.
 class LevelGeometry {
-  LevelGeometry(double width, int slotCount) {
+  LevelGeometry(double width, int slotCount, {this.rail = false}) {
     frameW = width - tagW - addW;
     colsW = frameW - 2 * uprightW - 2 * pad;
     final natural = colsW / math.max(1, slotCount);
@@ -51,10 +52,21 @@ class LevelGeometry {
     unit = (colW * 0.8).clamp(16.0, 52.0);
     step = unit * 0.25;
     floorDepth = unit * 0.3 + 6;
-    height = math.max(118.0, top + unit + (maxVisible - 1) * step + floorDepth + lipH + 6);
-    floorFrontY = height - lipH;
-    floorBackY = floorFrontY - floorDepth;
+    if (rail) {
+      // Asta in alto, grucce, vestiti appesi, nome sotto.
+      height = math.max(150.0, rodY + 10 + unit * 0.4 + unit * 1.35 + 18 + lipH);
+      floorFrontY = height - lipH;
+      floorBackY = floorFrontY;
+    } else {
+      height = math.max(118.0, top + unit + (maxVisible - 1) * step + floorDepth + lipH + 6);
+      floorFrontY = height - lipH;
+      floorBackY = floorFrontY - floorDepth;
+    }
   }
+
+  /// true: è un'asta con le grucce (armadio).
+  final bool rail;
+  static const rodY = 16.0;
 
   static const tagW = 42.0;
   static const addW = 40.0;
@@ -108,7 +120,11 @@ class Level3DRow extends StatelessWidget {
     this.glowPositions = const {},
     this.pulseItemId,
     this.hover,
+    this.panel = false,
   });
+
+  /// true: mobile chiuso (pannelli laterali al posto dei montanti in ferro).
+  final bool panel;
 
   final Shelf shelf;
   final Level level;
@@ -133,7 +149,7 @@ class Level3DRow extends StatelessWidget {
     final color = TrovoColors.level(level.colorIndex);
     final s = context.s;
     return LayoutBuilder(builder: (context, c) {
-      final g = LevelGeometry(c.maxWidth, level.slotCount);
+      final g = LevelGeometry(c.maxWidth, level.slotCount, rail: level.kind == LevelKind.rail);
       final columns = _Columns(row: this, g: g, color: color);
       return SizedBox(
         height: g.height,
@@ -146,7 +162,7 @@ class Level3DRow extends StatelessWidget {
                 alignment: Alignment(0, (g.floorFrontY + 10) / g.height * 2 - 1),
                 child: Semantics(
                   button: true,
-                  label: '${s.level(number)}, ${s.itemsCount(level.items.length)}',
+                  label: '${s.compartment(level.kind, number)}, ${s.itemsCount(level.items.length)}',
                   child: GestureDetector(
                     onTap: () {
                       HapticFeedback.selectionClick();
@@ -163,7 +179,14 @@ class Level3DRow extends StatelessWidget {
                 children: [
                   Positioned.fill(
                     child: CustomPaint(
-                      painter: _FramePainter(g: g, color: color, yOffset: yOffset, glow: glow),
+                      painter: _FramePainter(
+                        g: g,
+                        color: color,
+                        yOffset: yOffset,
+                        glow: glow,
+                        panel: panel,
+                        panelColor: TrovoColors.shelf(shelf.colorIndex),
+                      ),
                     ),
                   ),
                   Positioned(
@@ -274,7 +297,14 @@ class _Columns extends StatelessWidget {
           width: width,
           top: 0,
           height: g.floorFrontY,
-          child: _EmptySlot(
+          child: g.rail
+              ? _EmptyHanger(
+                  g: g,
+                  glow: row.glowPositions.contains(block.start) ? row.glow : 0,
+                  onTap: () => row.onTapEmpty(block.start),
+                  onLongPress: () => row.onLongPressEmpty(block.start),
+                )
+              : _EmptySlot(
             g: g,
             glow: row.glowPositions.contains(block.start) ? row.glow : 0,
             onTap: () => row.onTapEmpty(block.start),
@@ -284,13 +314,22 @@ class _Columns extends StatelessWidget {
       } else {
         final item = block.item!;
         final glowing = row.glowPositions.contains(block.start) ? row.glow : 0.0;
-        final visual = _BlockVisual(
-          item: item,
-          span: block.span,
-          g: g,
-          glow: glowing,
-          pulse: item.id == row.pulseItemId ? row.glow : 0,
-        );
+        final Widget visual = g.rail
+            ? _HangingVisual(
+                item: item,
+                span: block.span,
+                g: g,
+                color: color,
+                glow: glowing,
+                pulse: item.id == row.pulseItemId ? row.glow : 0,
+              )
+            : _BlockVisual(
+                item: item,
+                span: block.span,
+                g: g,
+                glow: glowing,
+                pulse: item.id == row.pulseItemId ? row.glow : 0,
+              );
         children.add(AnimatedPositioned(
           key: ValueKey('item-${item.id}'),
           duration: duration,
@@ -619,11 +658,20 @@ class _Unit extends StatelessWidget {
 
 /// Cornice del piano: fondo, pavimento in prospettiva, bordo colorato, montanti.
 class _FramePainter extends CustomPainter {
-  _FramePainter({required this.g, required this.color, required this.yOffset, required this.glow});
+  _FramePainter({
+    required this.g,
+    required this.color,
+    required this.yOffset,
+    required this.glow,
+    this.panel = false,
+    this.panelColor = TrovoColors.metal,
+  });
   final LevelGeometry g;
   final Color color;
   final double yOffset;
   final double glow;
+  final bool panel;
+  final Color panelColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -643,6 +691,20 @@ class _FramePainter extends CustomPainter {
           ],
         ).createShader(inner),
     );
+
+    if (g.rail) {
+      // Asta di metallo con le grucce.
+      final rod = Rect.fromLTRB(uw - 2, LevelGeometry.rodY - 3, size.width - uw + 2, LevelGeometry.rodY + 3);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(rod, const Radius.circular(3)),
+        Paint()
+          ..shader = const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [TrovoColors.metalLight, TrovoColors.metal, TrovoColors.metalDark],
+          ).createShader(rod),
+      );
+    }
 
     // Pavimento visto un po' dall'alto: più stretto dietro, più largo davanti.
     const inset = 10.0;
@@ -685,13 +747,23 @@ class _FramePainter extends CustomPainter {
         ).createShader(lip),
     );
 
-    paintUpright(canvas, Rect.fromLTWH(0, 0, uw, size.height), holeOffset: yOffset);
-    paintUpright(canvas, Rect.fromLTWH(size.width - uw, 0, uw, size.height), holeOffset: yOffset);
+    if (panel) {
+      paintPanelSide(canvas, Rect.fromLTWH(0, 0, uw, size.height), panelColor, left: true);
+      paintPanelSide(canvas, Rect.fromLTWH(size.width - uw, 0, uw, size.height), panelColor, left: false);
+    } else {
+      paintUpright(canvas, Rect.fromLTWH(0, 0, uw, size.height), holeOffset: yOffset);
+      paintUpright(canvas, Rect.fromLTWH(size.width - uw, 0, uw, size.height), holeOffset: yOffset);
+    }
   }
 
   @override
   bool shouldRepaint(_FramePainter old) =>
-      old.color != color || old.glow != glow || old.yOffset != yOffset || old.g.height != g.height;
+      old.color != color ||
+      old.glow != glow ||
+      old.yOffset != yOffset ||
+      old.g.height != g.height ||
+      old.panel != panel ||
+      old.panelColor != panelColor;
 }
 
 /// Righe del pavimento tra un posto e l'altro, e i colori della "calamita".
@@ -710,15 +782,18 @@ class _FloorGridPainter extends CustomPainter {
     double backX(double x) => cx + (x - cx) * 0.94;
 
     final h = hover;
+    final top = g.rail ? LevelGeometry.rodY + 6 : g.floorBackY;
     for (var pos = 0; pos < count; pos++) {
       final l = pos * g.colW;
       final r = l + g.colW;
-      final cell = Path()
-        ..moveTo(backX(l), g.floorBackY)
-        ..lineTo(backX(r), g.floorBackY)
-        ..lineTo(r, g.floorFrontY)
-        ..lineTo(l, g.floorFrontY)
-        ..close();
+      final cell = g.rail
+          ? (Path()..addRRect(RRect.fromRectAndRadius(Rect.fromLTRB(l + 2, top, r - 2, g.floorFrontY - 2), const Radius.circular(8))))
+          : (Path()
+            ..moveTo(backX(l), g.floorBackY)
+            ..lineTo(backX(r), g.floorBackY)
+            ..lineTo(r, g.floorFrontY)
+            ..lineTo(l, g.floorFrontY)
+            ..close());
       Color? fill;
       if (h != null && pos >= h.start && pos < h.start + h.span) {
         fill = (h.ok ? TrovoColors.primary : TrovoColors.danger).withValues(alpha: 0.45);
@@ -728,6 +803,7 @@ class _FloorGridPainter extends CustomPainter {
       if (fill != null) canvas.drawPath(cell, Paint()..color = fill);
     }
 
+    if (g.rail) return;
     final line = Paint()
       ..color = Colors.black.withValues(alpha: 0.28)
       ..strokeWidth = 1.2;
@@ -766,4 +842,187 @@ class _DashedBoxPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_DashedBoxPainter old) => old.color != color || old.radius != radius;
+}
+
+/// Gruccia (disegno): gancio sull'asta e spalle.
+class _HangerPainter extends CustomPainter {
+  _HangerPainter({required this.color});
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()
+      ..color = color
+      ..strokeWidth = 1.8
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    final cx = size.width / 2;
+    final hookTop = 0.0;
+    final neck = size.height * 0.45;
+    final path = Path()
+      ..moveTo(cx - 4, hookTop + 4)
+      ..quadraticBezierTo(cx - 4, hookTop, cx, hookTop)
+      ..quadraticBezierTo(cx + 4, hookTop, cx + 4, hookTop + 4)
+      ..quadraticBezierTo(cx + 4, neck * 0.7, cx, neck)
+      ..lineTo(size.width * 0.06, size.height)
+      ..lineTo(size.width * 0.94, size.height)
+      ..lineTo(cx, neck);
+    canvas.drawPath(path, p);
+  }
+
+  @override
+  bool shouldRepaint(_HangerPainter old) => old.color != color;
+}
+
+/// Un capo appeso: gruccia + tessera con l'emoji, nome sotto.
+class _HangingVisual extends StatelessWidget {
+  const _HangingVisual({
+    required this.item,
+    required this.span,
+    required this.g,
+    required this.color,
+    required this.glow,
+    required this.pulse,
+  });
+
+  final Item item;
+  final int span;
+  final LevelGeometry g;
+  final Color color;
+  final double glow;
+  final double pulse;
+
+  @override
+  Widget build(BuildContext context) {
+    final perColumn = splitQuantity(item.quantity, span);
+    final hangerH = g.unit * 0.4;
+    final cardW = g.unit * 1.05;
+    final cardH = g.unit * 1.35;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        for (var c = 0; c < span; c++)
+          Positioned(
+            left: c * g.colW,
+            width: g.colW,
+            top: LevelGeometry.rodY - 4,
+            child: Column(
+              children: [
+                SizedBox(
+                  width: math.min(g.colW * 0.9, cardW),
+                  height: hangerH,
+                  child: CustomPaint(
+                    painter: _HangerPainter(color: Color.lerp(TrovoColors.metalLight, TrovoColors.found, glow)!),
+                  ),
+                ),
+                Transform.scale(
+                  scale: c == 0 ? 1 + 0.14 * pulse : 1,
+                  alignment: Alignment.topCenter,
+                  child: Container(
+                    width: math.min(g.colW * 0.92, cardW),
+                    height: cardH,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Color.lerp(TrovoColors.surfaceHigher, color, 0.22),
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(g.unit * 0.12), bottom: Radius.circular(g.unit * 0.3)),
+                      border: Border.all(
+                        color: Color.lerp(Colors.white.withValues(alpha: 0.8), TrovoColors.found, glow)!,
+                        width: glow > 0 ? 2.5 : 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withValues(alpha: 0.45), blurRadius: 6, offset: const Offset(0, 3)),
+                        if (glow > 0) BoxShadow(color: TrovoColors.found.withValues(alpha: 0.7 * glow), blurRadius: 18 * glow),
+                      ],
+                    ),
+                    child: Text(item.emoji, style: TextStyle(fontSize: g.unit * 0.55)),
+                  ),
+                ),
+                if (perColumn[c] > 1)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      '×${perColumn[c]}',
+                      style: const TextStyle(
+                        fontFamily: TrovoTheme.fontFamily,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 11,
+                        color: TrovoColors.textMuted,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        Positioned(
+          left: 2,
+          right: 2,
+          bottom: 2,
+          child: Center(
+            child: Text(
+              item.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontFamily: TrovoTheme.fontFamily,
+                fontWeight: FontWeight.w700,
+                fontSize: span * g.colW >= 70 ? 13 : 11,
+                color: TrovoColors.text,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Gruccia libera con il + sotto.
+class _EmptyHanger extends StatelessWidget {
+  const _EmptyHanger({required this.g, required this.glow, required this.onTap, required this.onLongPress});
+  final LevelGeometry g;
+  final double glow;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
+
+  @override
+  Widget build(BuildContext context) {
+    final w = math.min(g.colW * 0.9, g.unit * 1.05);
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      onLongPress: () {
+        HapticFeedback.mediumImpact();
+        onLongPress();
+      },
+      child: Semantics(
+        button: true,
+        label: context.s.emptySlot,
+        child: Padding(
+          padding: const EdgeInsets.only(top: LevelGeometry.rodY - 4),
+          child: Column(
+            children: [
+              SizedBox(
+                width: w,
+                height: g.unit * 0.4,
+                child: CustomPaint(
+                  painter: _HangerPainter(
+                    color: Color.lerp(TrovoColors.metal.withValues(alpha: 0.6), TrovoColors.found, glow)!,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Icon(
+                Icons.add_rounded,
+                size: g.unit * 0.5,
+                color: Color.lerp(TrovoColors.metal, TrovoColors.found, glow),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

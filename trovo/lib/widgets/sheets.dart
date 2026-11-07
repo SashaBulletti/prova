@@ -46,8 +46,8 @@ class _Label extends StatelessWidget {
 }
 
 /// Cerchi colorati per scegliere il colore dello scaffale.
-class _ShelfColorPicker extends StatelessWidget {
-  const _ShelfColorPicker({required this.value, required this.onChanged});
+class ShelfColorPicker extends StatelessWidget {
+  const ShelfColorPicker({super.key, required this.value, required this.onChanged});
   final int value;
   final ValueChanged<int> onChanged;
 
@@ -192,7 +192,7 @@ class _NewShelfSheetState extends State<_NewShelfSheet> {
           ),
           const SizedBox(height: 20),
           _Label(s.color),
-          _ShelfColorPicker(
+          ShelfColorPicker(
             value: _color,
             onChanged: (i) => setState(() {
               _color = i;
@@ -369,7 +369,7 @@ class _EditShelfSheetState extends State<_EditShelfSheet> {
           ),
           const SizedBox(height: 20),
           _Label(s.color),
-          _ShelfColorPicker(value: _color, onChanged: (i) => setState(() => _color = i)),
+          ShelfColorPicker(value: _color, onChanged: (i) => setState(() => _color = i)),
           const SizedBox(height: 20),
           _Label(s.levelOneIs),
           SegmentedButton<bool>(

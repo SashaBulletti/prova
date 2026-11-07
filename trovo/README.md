@@ -13,11 +13,21 @@ Pensata per chi si dimentica le cose (ADHD, dislessia, o semplicemente troppi sc
   <img src="docs/screenshots/ricerca.png" width="200" alt="Ricerca">
   <img src="docs/screenshots/faro.png" width="200" alt="Faro">
 </p>
+<p>
+  <img src="docs/screenshots/mappa.png" width="200" alt="Mappa della casa">
+  <img src="docs/screenshots/armadio.png" width="200" alt="Armadio">
+  <img src="docs/screenshots/cucina.png" width="200" alt="Cassettiera della cucina">
+  <img src="docs/screenshots/cubi.png" width="200" alt="Libreria a cubi">
+</p>
 
 ## Cosa fa
 
 - 🏠 **Stanze**: dispensa, garage, cantina… quante ne vuoi.
 - 🗄️ **Scaffali in ferro** disegnati come quelli veri, con **quanti piani vuoi** (da 1 a 30).
+- 🪑 **Tutti i mobili**: cassettiere, armadio con le grucce, libreria a cubi, base e pensile
+  della cucina, mobile del bagno, comodino. Li scegli già pronti e li regoli.
+- 🗺️ **Mappa della casa vista dall'alto**: le stanze e i mobili come su una piantina.
+  Tocchi un mobile e si apre. Con "Sistema la mappa" sposti stanze e mobili come nella realtà.
 - 🎨 **Ogni piano ha un colore e un numero grande**: ti ricordi "il piano rosa".
 - 🔎 **Ricerca che perdona gli errori**: "pasatta" trova la passata, "pomodori" trova i pelati.
 - 🎤 **Ricerca a voce**: "Dov'è la passata?". Trovo ti risponde a voce:

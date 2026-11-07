@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trovo/app.dart';
 import 'package:trovo/emoji_guess.dart';
+import 'package:trovo/furniture_templates.dart';
+import 'package:trovo/widgets/house_map.dart';
 import 'package:trovo/models.dart';
 import 'package:trovo/scan_codes.dart';
 import 'package:trovo/search.dart';
@@ -204,5 +206,65 @@ void main() {
       expect(TrovoCode.parse('trovo:i:xyz')!.kind, TrovoCodeKind.item);
       expect(TrovoCode.parse('8001234567890'), isNull);
     });
+  });
+
+  group('Mobili', () {
+    test('cassettiera: 4 cassetti da 6 posti', () {
+      final store = PantryStore.memory();
+      final f = store.addFurniture(store.rooms.first,
+          template: TemplateId.drawers, params: {ParamKey.drawers: 4}, name: 'Cassettiera', colorIndex: 1);
+      expect(f.kind, FurnitureKind.drawers);
+      expect(f.levels.length, 4);
+      expect(f.levels.every((l) => l.kind == LevelKind.drawer && l.slotCount == 6), isTrue);
+    });
+
+    test('armadio: ripiano, asta con grucce e cassetti numerati a parte', () {
+      final store = PantryStore.memory();
+      final f = store.addFurniture(store.rooms.first,
+          template: TemplateId.wardrobe, params: {ParamKey.hangers: 10, ParamKey.drawers: 2}, name: 'Armadio', colorIndex: 4);
+      expect(f.levels.map((l) => l.kind).toList(),
+          [LevelKind.board, LevelKind.rail, LevelKind.drawer, LevelKind.drawer]);
+      expect(f.levels[1].slotCount, 10);
+      expect(f.levelNumber(2), 1);
+      expect(f.levelNumber(3), 2);
+    });
+
+    test('libreria a cubi 2×3', () {
+      final store = PantryStore.memory();
+      final f = store.addFurniture(store.rooms.first,
+          template: TemplateId.cubes, params: {ParamKey.rows: 2, ParamKey.cols: 3}, name: 'Cubi', colorIndex: 2);
+      expect(f.levels.length, 6);
+      expect(f.gridColumns, 3);
+      expect(f.levelNumber(5), 6);
+    });
+
+    test('tipo e posizione sulla mappa si salvano nel backup', () {
+      final store = PantryStore.memory();
+      final f = store.addFurniture(store.rooms.first,
+          template: TemplateId.bathroom, params: {ParamKey.drawers: 2, ParamKey.boards: 1}, name: 'Bagno', colorIndex: 5);
+      store.setShelfMap(f, MapBox(0.1, 0.2, 0.3, 0.1));
+      store.setRoomMap(store.rooms.first, MapBox(0, 0, 5, 4));
+      final other = PantryStore.memory();
+      expect(other.importJson(store.exportJson()), isTrue);
+      final g = other.rooms.first.shelves.first;
+      expect(g.kind, FurnitureKind.cabinet);
+      expect(g.levels.first.kind, LevelKind.drawer);
+      expect(g.mapBox!.y, closeTo(0.2, 1e-9));
+      expect(other.rooms.first.mapBox!.w, 5);
+    });
+  });
+
+  test('mappa: ogni mobile sta dentro la sua stanza', () {
+    final store = _sampleStore();
+    store.addFurniture(store.rooms.first,
+        template: TemplateId.drawers, params: {ParamKey.drawers: 3}, name: 'C', colorIndex: 1);
+    store.addRoom('Garage', '🚗');
+    final layout = computeLayout(store.rooms, columns: 1);
+    expect(layout.rooms.length, 2);
+    final room = layout.rooms[store.rooms.first.id]!;
+    for (final sh in store.rooms.first.shelves) {
+      final f = layout.furniture[sh.id]!;
+      expect(room.inflate(0.01).contains(f.topLeft) && room.inflate(0.01).contains(f.bottomRight), isTrue);
+    }
   });
 }

@@ -165,7 +165,7 @@ class _LevelScreenState extends State<LevelScreen> {
             backgroundColor: TrovoColors.background,
             flexibleSpace: FlexibleSpaceBar(
               titlePadding: const EdgeInsetsDirectional.only(start: 56, bottom: 14, end: 16),
-              title: Text(s.level(ref.levelNumber), style: theme.textTheme.titleLarge),
+              title: Text(s.compartment(level.kind, ref.levelNumber), style: theme.textTheme.titleLarge),
               background: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(

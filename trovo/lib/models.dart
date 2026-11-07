@@ -50,6 +50,36 @@ class Item {
       );
 }
 
+/// Che tipo di scomparto è: ripiano, cassetto, asta con grucce, cubo.
+enum LevelKind { board, drawer, rail, cube }
+
+LevelKind levelKindFrom(Object? v) =>
+    LevelKind.values.firstWhere((k) => k.name == v, orElse: () => LevelKind.board);
+
+/// Che tipo di mobile è.
+enum FurnitureKind { shelf, drawers, wardrobe, cubes, cabinet }
+
+FurnitureKind furnitureKindFrom(Object? v) =>
+    FurnitureKind.values.firstWhere((k) => k.name == v, orElse: () => FurnitureKind.shelf);
+
+/// Posizione e misura sulla mappa della casa.
+/// Per le stanze: in metri circa. Per i mobili: dentro la stanza, da 0 a 1.
+class MapBox {
+  MapBox(this.x, this.y, this.w, this.h);
+  double x;
+  double y;
+  double w;
+  double h;
+
+  Map<String, dynamic> toJson() => {'x': x, 'y': y, 'w': w, 'h': h};
+
+  static MapBox? fromJson(Object? j) {
+    if (j is! Map) return null;
+    double v(String k) => (j[k] as num?)?.toDouble() ?? 0;
+    return MapBox(v('x'), v('y'), v('w'), v('h'));
+  }
+}
+
 /// Un tratto di piano: un oggetto (su uno o più posti) o un posto libero.
 class SlotBlock {
   const SlotBlock({required this.start, required this.span, this.item});
@@ -70,6 +100,8 @@ class Level {
     List<Item>? items,
     List<String?>? slots,
     int slotCount = defaultSlots,
+    this.kind = LevelKind.board,
+    this.columns = 3,
   })  : id = id ?? newId(),
         items = items ?? [],
         slots = slots ?? List<String?>.filled(slotCount, null, growable: true);
@@ -80,6 +112,12 @@ class Level {
   int colorIndex;
   String? photoPath;
   final List<Item> items;
+
+  /// Ripiano, cassetto, asta o cubo.
+  LevelKind kind;
+
+  /// Quanti posti per riga quando lo scomparto si vede dall'alto (cassetti, cubi).
+  int columns;
 
   /// Posti da sinistra a destra.
   final List<String?> slots;
@@ -151,6 +189,8 @@ class Level {
         'colorIndex': colorIndex,
         'photoPath': photoPath,
         'slots': slots,
+        'kind': kind.name,
+        'columns': columns,
         'items': items.map((i) => i.toJson()).toList(),
       };
 
@@ -176,6 +216,8 @@ class Level {
       photoPath: j['photoPath'] as String?,
       items: items,
       slots: slots,
+      kind: levelKindFrom(j['kind']),
+      columns: (j['columns'] as num?)?.toInt() ?? 3,
     );
     level.normalize();
     return level;
@@ -188,6 +230,9 @@ class Shelf {
     required this.name,
     required this.colorIndex,
     this.numberFromTop = true,
+    this.kind = FurnitureKind.shelf,
+    this.gridColumns = 1,
+    this.mapBox,
     List<Level>? levels,
   })  : id = id ?? newId(),
         levels = levels ?? [];
@@ -196,14 +241,35 @@ class Shelf {
   String name;
   int colorIndex;
 
+  /// Scaffale, cassettiera, armadio, libreria a cubi, mobile chiuso.
+  FurnitureKind kind;
+
+  /// Per la libreria a cubi: quanti cubi per riga.
+  int gridColumns;
+
+  /// Dove sta nella stanza (mappa). null = posizione automatica.
+  MapBox? mapBox;
+
   /// true: il piano 1 è quello in alto. false: il piano 1 è quello in basso.
   bool numberFromTop;
 
   /// I piani sono sempre salvati dall'alto verso il basso, come li vedi.
   final List<Level> levels;
 
-  int levelNumber(int index) =>
-      numberFromTop ? index + 1 : levels.length - index;
+  /// Numero dello scomparto, contato tra quelli dello stesso tipo
+  /// (piano 1, 2, 3… e cassetto 1, 2… separati).
+  int levelNumber(int index) {
+    if (index < 0 || index >= levels.length) return index + 1;
+    final k = levels[index].kind;
+    var pos = 0;
+    var total = 0;
+    for (var i = 0; i < levels.length; i++) {
+      if (levels[i].kind != k) continue;
+      if (i < index) pos++;
+      total++;
+    }
+    return numberFromTop ? pos + 1 : total - pos;
+  }
 
   int get itemCount => levels.fold(0, (sum, l) => sum + l.items.length);
 
@@ -212,6 +278,9 @@ class Shelf {
         'name': name,
         'colorIndex': colorIndex,
         'numberFromTop': numberFromTop,
+        'kind': kind.name,
+        'gridColumns': gridColumns,
+        if (mapBox != null) 'map': mapBox!.toJson(),
         'levels': levels.map((l) => l.toJson()).toList(),
       };
 
@@ -220,6 +289,9 @@ class Shelf {
         name: (j['name'] as String?) ?? '',
         colorIndex: (j['colorIndex'] as num?)?.toInt() ?? 0,
         numberFromTop: (j['numberFromTop'] as bool?) ?? true,
+        kind: furnitureKindFrom(j['kind']),
+        gridColumns: (j['gridColumns'] as num?)?.toInt() ?? 1,
+        mapBox: MapBox.fromJson(j['map']),
         levels: ((j['levels'] as List?) ?? [])
             .map((e) => Level.fromJson(Map<String, dynamic>.from(e as Map)))
             .toList(),
@@ -227,7 +299,7 @@ class Shelf {
 }
 
 class Room {
-  Room({String? id, required this.name, this.emoji = '🏠', List<Shelf>? shelves})
+  Room({String? id, required this.name, this.emoji = '🏠', this.mapBox, List<Shelf>? shelves})
       : id = id ?? newId(),
         shelves = shelves ?? [];
 
@@ -236,12 +308,16 @@ class Room {
   String emoji;
   final List<Shelf> shelves;
 
+  /// Dove sta la stanza sulla mappa della casa. null = posizione automatica.
+  MapBox? mapBox;
+
   int get itemCount => shelves.fold(0, (sum, s) => sum + s.itemCount);
 
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
         'emoji': emoji,
+        if (mapBox != null) 'map': mapBox!.toJson(),
         'shelves': shelves.map((s) => s.toJson()).toList(),
       };
 
@@ -249,6 +325,7 @@ class Room {
         id: j['id'] as String?,
         name: (j['name'] as String?) ?? '',
         emoji: (j['emoji'] as String?) ?? '🏠',
+        mapBox: MapBox.fromJson(j['map']),
         shelves: ((j['shelves'] as List?) ?? [])
             .map((e) => Shelf.fromJson(Map<String, dynamic>.from(e as Map)))
             .toList(),

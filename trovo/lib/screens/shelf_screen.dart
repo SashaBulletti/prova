@@ -9,11 +9,14 @@ import '../store_scope.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/fly.dart';
+import '../widgets/furniture_art.dart';
+import '../widgets/furniture_rows.dart';
 import '../widgets/labels_sheet.dart';
 import '../widgets/photo_update.dart';
 import '../widgets/sheets.dart';
 import '../widgets/shelf3d.dart';
 import '../widgets/shelf_art.dart';
+import 'compartment_screen.dart';
 import 'level_screen.dart';
 
 const _capHeight = 14.0;
@@ -97,9 +100,17 @@ class _ShelfScreenState extends State<ShelfScreen> with SingleTickerProviderStat
     return null;
   }
 
+  /// Che scomparto aggiunge il bottone in fondo: piano, cassetto, cubo…
+  LevelKind _newKind(Shelf shelf) => switch (shelf.kind) {
+        FurnitureKind.shelf => LevelKind.board,
+        FurnitureKind.cabinet => LevelKind.board,
+        FurnitureKind.cubes => LevelKind.cube,
+        FurnitureKind.drawers || FurnitureKind.wardrobe => LevelKind.drawer,
+      };
+
   void _addLevel(Shelf shelf) {
     final store = context.store;
-    final index = store.addLevel(shelf);
+    final index = store.addLevel(shelf, kind: _newKind(shelf));
     final level = shelf.levels[index];
     HapticFeedback.heavyImpact();
     setState(() => _justAdded.add(level.id));
@@ -151,6 +162,22 @@ class _ShelfScreenState extends State<ShelfScreen> with SingleTickerProviderStat
     } else if (result == ItemEditResult.moved) {
       showToast(context, s.moved(item.name));
     }
+  }
+
+  bool _dropInto(DragPayload p, Level to) {
+    final store = context.store;
+    if (identical(p.level, to)) return true;
+    store.moveItem(p.item, p.level, to);
+    setState(() => _hover = null);
+    HapticFeedback.mediumImpact();
+    showToast(context, context.s.moved(p.item.name));
+    return true;
+  }
+
+  void _openCompartment(Level level, {String? highlightItemId}) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => CompartmentScreen(levelId: level.id, highlightItemId: highlightItemId),
+    ));
   }
 
   int _startFor(DragPayload p, Level to, int pos) =>
@@ -237,9 +264,48 @@ class _ShelfScreenState extends State<ShelfScreen> with SingleTickerProviderStat
           final glow = _glow;
           var y = _capHeight;
           final rows = <Widget>[];
-          for (var i = 0; i < shelf.levels.length; i++) {
+          final panel = shelf.kind != FurnitureKind.shelf;
+          if (shelf.kind == FurnitureKind.cubes) {
+            rows.add(CubesGrid(
+              shelf: shelf,
+              keyFor: _keyFor,
+              highlightLevelId: widget.highlightLevelId,
+              pulseItemId: widget.highlightItemId,
+              glow: glow,
+              onOpen: (level, i) {
+                if (level.id == widget.highlightLevelId) _faro.reset();
+                _openCompartment(level, highlightItemId: level.id == widget.highlightLevelId ? widget.highlightItemId : null);
+              },
+              onDrop: (level, p) => _dropInto(p, level),
+            ));
+          }
+          for (var i = 0; i < (shelf.kind == FurnitureKind.cubes ? 0 : shelf.levels.length); i++) {
             final level = shelf.levels[i];
             final isHi = level.id == widget.highlightLevelId;
+            if (level.kind == LevelKind.drawer) {
+              Widget drawer = DrawerRow(
+                key: _keyFor(level.id),
+                shelf: shelf,
+                level: level,
+                number: shelf.levelNumber(i),
+                glow: isHi ? glow : 0,
+                pulseItemId: isHi ? widget.highlightItemId : null,
+                onOpen: () {
+                  if (isHi) _faro.reset();
+                  _openCompartment(level, highlightItemId: isHi ? widget.highlightItemId : null);
+                },
+                onDrop: (p) => _dropInto(p, level),
+              );
+              if (_justAdded.contains(level.id)) {
+                drawer = drawer
+                    .animate(onComplete: (_) => _justAdded.remove(level.id))
+                    .fadeIn(duration: Motion.of(context, 200))
+                    .slideX(begin: 1.0, curve: Curves.easeOutBack, duration: Motion.of(context, 480));
+              }
+              rows.add(KeyedSubtree(key: ValueKey(level.id), child: drawer));
+              y += 96;
+              continue;
+            }
             final glowPositions = !isHi
                 ? const <int>{}
                 : widget.highlightItemId != null
@@ -247,6 +313,7 @@ class _ShelfScreenState extends State<ShelfScreen> with SingleTickerProviderStat
                     : {if (widget.highlightSlot != null) widget.highlightSlot!};
             Widget row = Level3DRow(
               key: _keyFor(level.id),
+              panel: panel,
               shelf: shelf,
               level: level,
               number: shelf.levelNumber(i),
@@ -286,7 +353,7 @@ class _ShelfScreenState extends State<ShelfScreen> with SingleTickerProviderStat
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
                 sliver: SliverToBoxAdapter(
                   child: Text(
-                    '${room.emoji} ${room.name} · ${s.levelsCount(shelf.levels.length)} · ${s.itemsCount(shelf.itemCount)}',
+                    '${room.emoji} ${room.name} · ${s.itemsCount(shelf.itemCount)}',
                     style: theme.textTheme.bodySmall,
                   ),
                 ),
@@ -311,7 +378,11 @@ class _ShelfScreenState extends State<ShelfScreen> with SingleTickerProviderStat
                           child: SizedBox(
                             height: _capHeight,
                             width: double.infinity,
-                            child: CustomPaint(painter: ShelfCapPainter(uprightWidth: LevelGeometry.uprightW)),
+                            child: CustomPaint(
+                              painter: panel
+                                  ? PanelCapPainter(TrovoColors.shelf(shelf.colorIndex))
+                                  : ShelfCapPainter(uprightWidth: LevelGeometry.uprightW),
+                            ),
                           ),
                         ),
                         ...rows,
@@ -320,7 +391,11 @@ class _ShelfScreenState extends State<ShelfScreen> with SingleTickerProviderStat
                           child: SizedBox(
                             height: 26,
                             width: double.infinity,
-                            child: CustomPaint(painter: ShelfFeetPainter(yOffset: y, uprightWidth: LevelGeometry.uprightW)),
+                            child: CustomPaint(
+                              painter: panel
+                                  ? PanelFeetPainter(TrovoColors.shelf(shelf.colorIndex))
+                                  : ShelfFeetPainter(yOffset: y, uprightWidth: LevelGeometry.uprightW),
+                            ),
                           ),
                         ),
                       ],
@@ -334,7 +409,7 @@ class _ShelfScreenState extends State<ShelfScreen> with SingleTickerProviderStat
                   child: OutlinedButton.icon(
                     onPressed: shelf.levels.length >= 30 ? null : () => _addLevel(shelf),
                     icon: const Icon(Icons.add_rounded),
-                    label: Text(s.addLevel),
+                    label: Text(s.addCompartment(_newKind(shelf))),
                   ),
                 ),
               ),

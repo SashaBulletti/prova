@@ -11,9 +11,10 @@ import '../services/voice.dart';
 import '../store_scope.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/furniture_art.dart';
 import '../widgets/sheets.dart';
-import '../widgets/shelf_art.dart';
 import '../widgets/voice_sheet.dart';
+import 'map_screen.dart';
 import 'shelf_screen.dart';
 
 /// "Dov'è…?": scrivi o parla, e Trovo ti mostra lo scaffale e il piano.
@@ -74,7 +75,7 @@ class _SearchScreenState extends State<SearchScreen> {
   void _speakLocation(ItemLocation loc) {
     final s = context.s;
     Voice.instance.speak(
-      s.foundSpeech(loc.item.name, loc.room.name, loc.shelf.name, loc.levelNumber, loc.positionNumber),
+      s.foundSpeech(loc.item.name, loc.room.name, loc.shelf.name, s.compartment(loc.level.kind, loc.levelNumber), loc.positionNumber),
       localeTag: s.localeTag,
     );
   }
@@ -291,14 +292,27 @@ class _ResultTileState extends State<_ResultTile> with SingleTickerProviderState
                         ),
                       ),
                       const SizedBox(width: 8),
-                      MiniShelf(
+                      MiniFurniture(
                         width: 46,
                         height: 64,
-                        levelColors: [for (final l in shelf.levels) TrovoColors.level(l.colorIndex)],
-                        slots: shelfSlots(shelf.levels.map((l) => l.slots)),
+                        kind: shelf.kind,
+                        compartments: miniCompartments(shelf),
+                        gridColumns: shelf.gridColumns,
+                        bodyColor: TrovoColors.shelf(shelf.colorIndex),
                         highlightIndex: loc.levelIndex,
                         highlightPositions: loc.level.positionsOf(loc.item.id).toSet(),
                         glow: glow,
+                      ),
+                      IconButton(
+                        tooltip: context.s.mapView,
+                        onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => MapScreen(
+                            highlightShelfId: shelf.id,
+                            highlightLevelId: loc.level.id,
+                            highlightItemId: loc.item.id,
+                          ),
+                        )),
+                        icon: const Icon(Icons.map_rounded, size: 24),
                       ),
                       IconButton(
                         tooltip: context.s.readAloud,
