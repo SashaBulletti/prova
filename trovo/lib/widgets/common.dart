@@ -1,9 +1,12 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../models.dart';
 import '../store_scope.dart';
 import '../theme.dart';
+import 'pantry_art.dart';
 
 /// Etichetta del piano: colore + numero grande (mai solo il colore,
 /// così funziona anche per chi è daltonico).
@@ -17,18 +20,19 @@ class LevelTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Cartellino di carta colorata, con il numero a china.
     final bg = Color.lerp(color, TrovoColors.found, glow)!;
     return Container(
-      constraints: BoxConstraints(minWidth: size * 1.15),
+      constraints: BoxConstraints(minWidth: size * 1.1),
       height: size,
-      padding: EdgeInsets.symmetric(horizontal: size * 0.22),
+      padding: EdgeInsets.symmetric(horizontal: size * 0.2),
       decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(size * 0.3),
+        color: Color.lerp(bg, Colors.white, 0.15),
+        borderRadius: BorderRadius.circular(size * 0.22),
+        border: Border.all(color: PaperColors.ink.withValues(alpha: 0.85), width: size > 26 ? 1.6 : 1.2),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.35), blurRadius: 4, offset: const Offset(0, 2)),
-          if (glow > 0)
-            BoxShadow(color: TrovoColors.found.withValues(alpha: 0.6 * glow), blurRadius: 18 * glow),
+          BoxShadow(color: PaperColors.ink.withValues(alpha: 0.18), offset: const Offset(0, 2)),
+          if (glow > 0) BoxShadow(color: TrovoColors.found.withValues(alpha: 0.6 * glow), blurRadius: 16 * glow),
         ],
       ),
       child: Center(
@@ -38,10 +42,38 @@ class LevelTag extends StatelessWidget {
           style: TextStyle(
             fontFamily: TrovoTheme.fontFamily,
             fontWeight: FontWeight.w800,
-            fontSize: size * 0.58,
+            fontSize: size * 0.56,
             height: 1,
-            color: TrovoColors.onColor(bg),
+            color: PaperColors.ink,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Etichetta con la quantità (es. "12").
+class QuantityTag extends StatelessWidget {
+  const QuantityTag({super.key, required this.quantity});
+  final int quantity;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: TrovoColors.primary,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: PaperColors.ink, width: 1.3),
+      ),
+      child: Text(
+        '$quantity',
+        style: const TextStyle(
+          fontFamily: TrovoTheme.fontFamily,
+          fontWeight: FontWeight.w800,
+          fontSize: 12,
+          height: 1.2,
+          color: Colors.white,
         ),
       ),
     );
@@ -76,52 +108,16 @@ class ItemSticker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Transform.rotate(
-      angle: tilt,
+    // L'oggetto disegnato come il suo contenitore (barattolo, bottiglia, cesto…).
+    return SizedBox(
+      width: size,
+      height: size,
       child: Stack(
         clipBehavior: Clip.none,
+        alignment: Alignment.bottomCenter,
         children: [
-          Container(
-            width: size,
-            height: size,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: TrovoColors.surfaceHigher,
-              borderRadius: BorderRadius.circular(size * 0.28),
-              border: Border.all(
-                color: Color.lerp(Colors.white.withValues(alpha: 0.85), TrovoColors.found, glow)!,
-                width: 2 + glow * 1.5,
-              ),
-              boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.45), blurRadius: 6, offset: const Offset(0, 3)),
-                if (glow > 0)
-                  BoxShadow(color: TrovoColors.found.withValues(alpha: 0.75 * glow), blurRadius: 22 * glow, spreadRadius: 2 * glow),
-              ],
-            ),
-            child: Text(item.emoji, style: TextStyle(fontSize: size * 0.52, height: 1.1)),
-          ),
-          if (item.quantity > 1)
-            Positioned(
-              right: -6,
-              top: -6,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: TrovoColors.primary,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: TrovoColors.background, width: 2),
-                ),
-                child: Text(
-                  '${item.quantity}',
-                  style: const TextStyle(
-                    fontFamily: TrovoTheme.fontFamily,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 13,
-                    color: TrovoColors.onPrimary,
-                  ),
-                ),
-              ),
-            ),
+          VesselView(item: item, size: math.min(size, size / VesselView.widthFor(item, 1)), glow: glow),
+          if (item.quantity > 1) Positioned(right: -6, top: -4, child: QuantityTag(quantity: item.quantity)),
         ],
       ),
     );

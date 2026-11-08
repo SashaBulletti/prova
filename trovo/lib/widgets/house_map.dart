@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../models.dart';
 import '../store_scope.dart';
 import '../theme.dart';
+import 'wallpaper.dart';
 
 /// Disposizione della casa sulla mappa (in "metri" circa).
 class HouseLayout {
@@ -25,12 +26,18 @@ class HouseLayout {
 
 /// Ingombro di un mobile visto dall'alto (larghezza × profondità).
 Size footprint(Shelf shelf) => switch (shelf.kind) {
-      FurnitureKind.shelf => Size(math.max(1.0, shelf.levels.fold<int>(0, (m, l) => math.max(m, l.slotCount)) * 0.3), 0.45),
-      FurnitureKind.drawers => const Size(1.0, 0.6),
-      FurnitureKind.wardrobe => const Size(2.0, 0.65),
-      FurnitureKind.cubes => Size(math.max(0.8, shelf.gridColumns * 0.4), 0.4),
-      FurnitureKind.cabinet => const Size(0.9, 0.55),
-    };
+  FurnitureKind.shelf => Size(
+    math.max(
+      1.0,
+      shelf.levels.fold<int>(0, (m, l) => math.max(m, l.slotCount)) * 0.3,
+    ),
+    0.45,
+  ),
+  FurnitureKind.drawers => const Size(1.0, 0.6),
+  FurnitureKind.wardrobe => const Size(2.0, 0.65),
+  FurnitureKind.cubes => Size(math.max(0.8, shelf.gridColumns * 0.4), 0.4),
+  FurnitureKind.cabinet => const Size(0.9, 0.55),
+};
 
 /// Calcola dove stanno stanze e mobili. Se l'utente li ha spostati, usa le sue posizioni;
 /// altrimenti li mette in ordine da solo (stanze su due colonne, mobili lungo i muri).
@@ -64,7 +71,12 @@ HouseLayout computeLayout(List<Room> rooms, {int columns = 2}) {
     for (final shelf in room.shelves) {
       final mb = shelf.mapBox;
       if (mb != null) {
-        furn[shelf.id] = Rect.fromLTWH(rect.left + mb.x * rect.width, rect.top + mb.y * rect.height, mb.w * rect.width, mb.h * rect.height);
+        furn[shelf.id] = Rect.fromLTWH(
+          rect.left + mb.x * rect.width,
+          rect.top + mb.y * rect.height,
+          mb.w * rect.width,
+          mb.h * rect.height,
+        );
         continue;
       }
       final f = footprint(shelf);
@@ -79,7 +91,12 @@ HouseLayout computeLayout(List<Room> rooms, {int columns = 2}) {
         1 => rect.height - margin - f.height,
         _ => math.min(midY, rect.height - margin - f.height),
       };
-      furn[shelf.id] = Rect.fromLTWH(rect.left + cursorX, rect.top + y, fw, f.height);
+      furn[shelf.id] = Rect.fromLTWH(
+        rect.left + cursorX,
+        rect.top + y,
+        fw,
+        f.height,
+      );
       cursorX += fw + 0.25;
     }
   }
@@ -108,8 +125,12 @@ class HouseMapView extends StatefulWidget {
   State<HouseMapView> createState() => _HouseMapViewState();
 }
 
-class _HouseMapViewState extends State<HouseMapView> with SingleTickerProviderStateMixin {
-  late final AnimationController _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200));
+class _HouseMapViewState extends State<HouseMapView>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1200),
+  );
   final _transform = TransformationController();
 
   /// Posizioni mentre trascini (in metri). Si salvano quando lasci.
@@ -143,7 +164,12 @@ class _HouseMapViewState extends State<HouseMapView> with SingleTickerProviderSt
       for (final shelf in room.shelves) {
         final f = layout.furniture[shelf.id];
         if (f == null || shelf.mapBox != null) continue;
-        shelf.mapBox = MapBox((f.left - r.left) / r.width, (f.top - r.top) / r.height, f.width / r.width, f.height / r.height);
+        shelf.mapBox = MapBox(
+          (f.left - r.left) / r.width,
+          (f.top - r.top) / r.height,
+          f.width / r.width,
+          f.height / r.height,
+        );
       }
     }
   }
@@ -161,220 +187,283 @@ class _HouseMapViewState extends State<HouseMapView> with SingleTickerProviderSt
     final store = context.watchStore;
     final s = context.s;
     if (store.rooms.isEmpty) {
-      return Center(child: Text(s.mapEmpty, style: Theme.of(context).textTheme.bodyLarge));
+      return Center(
+        child: Text(s.mapEmpty, style: Theme.of(context).textTheme.bodyLarge),
+      );
     }
 
-    return LayoutBuilder(builder: (context, c) {
-      // Sul telefono le stanze vanno una sotto l'altra, grandi; sul tablet su due colonne.
-      _columns = c.maxWidth < 600 ? 1 : 2;
-      final layout = computeLayout(store.rooms, columns: _columns);
-      final rooms = {...layout.rooms, ..._dragRooms};
-      final furn = {...layout.furniture, ..._dragFurn};
-      final b = layout.bounds;
-      const pad = 20.0;
-      const padTop = 60.0;
-      final scale = ((c.maxWidth - 2 * pad) / b.width).clamp(24.0, 90.0);
-      final canvasW = b.width * scale + 2 * pad;
-      final canvasH = math.max(b.height * scale + padTop + pad + 80, c.maxHeight);
-      Offset toPx(double x, double y) => Offset(pad + (x - b.left) * scale, padTop + (y - b.top) * scale);
-      Rect rectPx(Rect r) => Rect.fromPoints(toPx(r.left, r.top), toPx(r.right, r.bottom));
+    return LayoutBuilder(
+      builder: (context, c) {
+        // Sul telefono le stanze vanno una sotto l'altra, grandi; sul tablet su due colonne.
+        _columns = c.maxWidth < 600 ? 1 : 2;
+        final layout = computeLayout(store.rooms, columns: _columns);
+        final rooms = {...layout.rooms, ..._dragRooms};
+        final furn = {...layout.furniture, ..._dragFurn};
+        final b = layout.bounds;
+        const pad = 20.0;
+        const padTop = 60.0;
+        final scale = ((c.maxWidth - 2 * pad) / b.width).clamp(24.0, 90.0);
+        final canvasW = b.width * scale + 2 * pad;
+        final canvasH = math.max(
+          b.height * scale + padTop + pad + 80,
+          c.maxHeight,
+        );
+        Offset toPx(double x, double y) =>
+            Offset(pad + (x - b.left) * scale, padTop + (y - b.top) * scale);
+        Rect rectPx(Rect r) =>
+            Rect.fromPoints(toPx(r.left, r.top), toPx(r.right, r.bottom));
 
-      final children = <Widget>[
-        Positioned.fill(child: CustomPaint(painter: _DotsPainter())),
-      ];
+        final children = <Widget>[
+          Positioned.fill(child: CustomPaint(painter: _DotsPainter())),
+        ];
 
-      for (var i = 0; i < store.rooms.length; i++) {
-        final room = store.rooms[i];
-        final r = rooms[room.id]!;
-        final px = rectPx(r);
-        final tint = TrovoColors.shelf(i);
-        final selected = room.id == widget.highlightRoomId;
-        final dimmed = widget.highlightShelfId != null && !room.shelves.any((sh) => sh.id == widget.highlightShelfId);
+        for (var i = 0; i < store.rooms.length; i++) {
+          final room = store.rooms[i];
+          final r = rooms[room.id]!;
+          final px = rectPx(r);
+          final tint = TrovoColors.shelf(i);
+          final selected = room.id == widget.highlightRoomId;
+          final dimmed =
+              widget.highlightShelfId != null &&
+              !room.shelves.any((sh) => sh.id == widget.highlightShelfId);
 
-        children.add(Positioned.fromRect(
-          rect: px,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: widget.editing
-                ? null
-                : () {
-                    HapticFeedback.selectionClick();
-                    widget.onSelectRoom?.call(room);
-                  },
-            onPanUpdate: !widget.editing
-                ? null
-                : (d) => setState(() {
-                      final cur = _dragRooms[room.id] ?? r;
-                      final next = cur.shift(d.delta / scale);
-                      _dragRooms[room.id] = next;
-                      // I mobili si spostano con la stanza.
-                      for (final sh in room.shelves) {
-                        final f = _dragFurn[sh.id] ?? layout.furniture[sh.id];
-                        if (f != null) _dragFurn[sh.id] = f.shift(d.delta / scale);
-                      }
-                    }),
-            onPanEnd: !widget.editing ? null : (_) => _commitRoom(room),
-            child: AnimatedOpacity(
-              duration: Motion.of(context, 300),
-              opacity: dimmed ? 0.45 : 1,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Color.lerp(TrovoColors.surface, tint, 0.10),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: selected ? TrovoColors.primary : TrovoColors.metalLight.withValues(alpha: 0.55),
-                    width: selected ? 3 : 2.5,
-                  ),
-                ),
-                child: Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: FittedBox(
-                      child: Text(
-                        '${room.emoji} ${room.name}',
-                        style: TextStyle(
-                          fontFamily: TrovoTheme.fontFamily,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 15,
-                          color: TrovoColors.text.withValues(alpha: 0.85),
-                        ),
+          children.add(
+            Positioned.fromRect(
+              rect: px,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: widget.editing
+                    ? null
+                    : () {
+                        HapticFeedback.selectionClick();
+                        widget.onSelectRoom?.call(room);
+                      },
+                onPanUpdate: !widget.editing
+                    ? null
+                    : (d) => setState(() {
+                        final cur = _dragRooms[room.id] ?? r;
+                        final next = cur.shift(d.delta / scale);
+                        _dragRooms[room.id] = next;
+                        // I mobili si spostano con la stanza.
+                        for (final sh in room.shelves) {
+                          final f = _dragFurn[sh.id] ?? layout.furniture[sh.id];
+                          if (f != null) {
+                            _dragFurn[sh.id] = f.shift(d.delta / scale);
+                          }
+                        }
+                      }),
+                onPanEnd: !widget.editing ? null : (_) => _commitRoom(room),
+                child: AnimatedOpacity(
+                  duration: Motion.of(context, 300),
+                  opacity: dimmed ? 0.45 : 1,
+                  child: Container(
+                    clipBehavior: Clip.antiAlias,
+                    decoration: BoxDecoration(
+                      color: Color.lerp(TrovoColors.surface, tint, 0.06),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: selected
+                            ? TrovoColors.primary
+                            : PaperColors.ink.withValues(alpha: 0.85),
+                        width: selected ? 3.5 : 3,
                       ),
+                    ),
+                    foregroundDecoration: null,
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: Opacity(
+                            opacity: 0.55,
+                            child: CustomPaint(
+                              painter: WallpaperPainter(
+                                wallpaperOf(room),
+                                scale: 0.5,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Align(
+                          alignment: Alignment.bottomCenter,
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: FittedBox(
+                              child: Text(
+                                '${room.emoji} ${room.name}',
+                                style: TextStyle(
+                                  fontFamily: TrovoTheme.fontFamily,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 15,
+                                  color: TrovoColors.text.withValues(
+                                    alpha: 0.85,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-        ));
+          );
 
-        // Maniglia per allargare la stanza.
-        if (widget.editing) {
-          children.add(Positioned(
-            left: px.right - 18,
-            top: px.bottom - 18,
-            width: 36,
-            height: 36,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onPanUpdate: (d) => setState(() {
-                final cur = _dragRooms[room.id] ?? r;
-                _dragRooms[room.id] = Rect.fromLTWH(
-                  cur.left,
-                  cur.top,
-                  math.max(2.0, cur.width + d.delta.dx / scale),
-                  math.max(2.0, cur.height + d.delta.dy / scale),
-                );
-              }),
-              onPanEnd: (_) => _commitRoom(room),
-              child: Center(
-                child: Container(
-                  width: 22,
-                  height: 22,
-                  decoration: BoxDecoration(
-                    color: TrovoColors.primary,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: TrovoColors.background, width: 3),
-                  ),
-                  child: const Icon(Icons.open_in_full_rounded, size: 12, color: TrovoColors.onPrimary),
-                ),
-              ),
-            ),
-          ));
-        }
-      }
-
-      // Mobili visti dall'alto.
-      for (final room in store.rooms) {
-        final roomRect = rooms[room.id]!;
-        for (final shelf in room.shelves) {
-          final f = furn[shelf.id];
-          if (f == null) continue;
-          final px = rectPx(f);
-          final hi = shelf.id == widget.highlightShelfId;
-          children.add(Positioned.fromRect(
-            rect: px,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () {
-                if (widget.editing) return;
-                HapticFeedback.selectionClick();
-                widget.onOpenShelf(shelf);
-              },
-              onDoubleTap: !widget.editing
-                  ? null
-                  : () {
-                      // Ruota di 90°: scambia larghezza e profondità.
-                      final cur = _dragFurn[shelf.id] ?? f;
-                      final c = cur.center;
-                      _dragFurn[shelf.id] = Rect.fromCenter(center: c, width: cur.height, height: cur.width);
-                      _commitFurniture(room, shelf, roomRect);
-                    },
-              onPanUpdate: !widget.editing
-                  ? null
-                  : (d) => setState(() {
-                        final cur = _dragFurn[shelf.id] ?? f;
-                        var next = cur.shift(d.delta / scale);
-                        // Resta dentro la stanza.
-                        final dx = next.left < roomRect.left
-                            ? roomRect.left - next.left
-                            : (next.right > roomRect.right ? roomRect.right - next.right : 0.0);
-                        final dy = next.top < roomRect.top
-                            ? roomRect.top - next.top
-                            : (next.bottom > roomRect.bottom ? roomRect.bottom - next.bottom : 0.0);
-                        next = next.shift(Offset(dx, dy));
-                        _dragFurn[shelf.id] = next;
-                      }),
-              onPanEnd: !widget.editing ? null : (_) => _commitFurniture(room, shelf, roomRect),
-              child: AnimatedBuilder(
-                animation: _pulse,
-                builder: (context, _) => CustomPaint(
-                  painter: _FurnitureTopPainter(
-                    shelf: shelf,
-                    color: TrovoColors.shelf(shelf.colorIndex),
-                    highlight: hi ? 1 : 0,
-                    pulse: hi ? _pulse.value : 0,
-                    editing: widget.editing,
+          // Maniglia per allargare la stanza.
+          if (widget.editing) {
+            children.add(
+              Positioned(
+                left: px.right - 18,
+                top: px.bottom - 18,
+                width: 36,
+                height: 36,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onPanUpdate: (d) => setState(() {
+                    final cur = _dragRooms[room.id] ?? r;
+                    _dragRooms[room.id] = Rect.fromLTWH(
+                      cur.left,
+                      cur.top,
+                      math.max(2.0, cur.width + d.delta.dx / scale),
+                      math.max(2.0, cur.height + d.delta.dy / scale),
+                    );
+                  }),
+                  onPanEnd: (_) => _commitRoom(room),
+                  child: Center(
+                    child: Container(
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        color: TrovoColors.primary,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: TrovoColors.background,
+                          width: 3,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.open_in_full_rounded,
+                        size: 12,
+                        color: TrovoColors.onPrimary,
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ));
-          // Nome sotto il mobile.
-          if (px.width > 36) {
-            children.add(Positioned(
-              left: px.left - 20,
-              width: px.width + 40,
-              top: px.bottom + 2,
-              child: IgnorePointer(
-                child: Text(
-                  shelf.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: TrovoTheme.fontFamily,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 11,
-                    color: hi ? TrovoColors.found : TrovoColors.textMuted,
-                  ),
-                ),
-              ),
-            ));
+            );
           }
         }
-      }
 
-      return InteractiveViewer(
-        transformationController: _transform,
-        constrained: false,
-        minScale: 0.5,
-        maxScale: 4,
-        panEnabled: !widget.editing,
-        boundaryMargin: const EdgeInsets.all(200),
-        child: SizedBox(width: math.max(canvasW, c.maxWidth), height: canvasH, child: Stack(children: children)),
-      );
-    });
+        // Mobili visti dall'alto.
+        for (final room in store.rooms) {
+          final roomRect = rooms[room.id]!;
+          for (final shelf in room.shelves) {
+            final f = furn[shelf.id];
+            if (f == null) continue;
+            final px = rectPx(f);
+            final hi = shelf.id == widget.highlightShelfId;
+            children.add(
+              Positioned.fromRect(
+                rect: px,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    if (widget.editing) return;
+                    HapticFeedback.selectionClick();
+                    widget.onOpenShelf(shelf);
+                  },
+                  onDoubleTap: !widget.editing
+                      ? null
+                      : () {
+                          // Ruota di 90°: scambia larghezza e profondità.
+                          final cur = _dragFurn[shelf.id] ?? f;
+                          final c = cur.center;
+                          _dragFurn[shelf.id] = Rect.fromCenter(
+                            center: c,
+                            width: cur.height,
+                            height: cur.width,
+                          );
+                          _commitFurniture(room, shelf, roomRect);
+                        },
+                  onPanUpdate: !widget.editing
+                      ? null
+                      : (d) => setState(() {
+                          final cur = _dragFurn[shelf.id] ?? f;
+                          var next = cur.shift(d.delta / scale);
+                          // Resta dentro la stanza.
+                          final dx = next.left < roomRect.left
+                              ? roomRect.left - next.left
+                              : (next.right > roomRect.right
+                                    ? roomRect.right - next.right
+                                    : 0.0);
+                          final dy = next.top < roomRect.top
+                              ? roomRect.top - next.top
+                              : (next.bottom > roomRect.bottom
+                                    ? roomRect.bottom - next.bottom
+                                    : 0.0);
+                          next = next.shift(Offset(dx, dy));
+                          _dragFurn[shelf.id] = next;
+                        }),
+                  onPanEnd: !widget.editing
+                      ? null
+                      : (_) => _commitFurniture(room, shelf, roomRect),
+                  child: AnimatedBuilder(
+                    animation: _pulse,
+                    builder: (context, _) => CustomPaint(
+                      painter: _FurnitureTopPainter(
+                        shelf: shelf,
+                        color: TrovoColors.shelf(shelf.colorIndex),
+                        highlight: hi ? 1 : 0,
+                        pulse: hi ? _pulse.value : 0,
+                        editing: widget.editing,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+            // Nome sotto il mobile.
+            if (px.width > 36) {
+              children.add(
+                Positioned(
+                  left: px.left - 20,
+                  width: px.width + 40,
+                  top: px.bottom + 2,
+                  child: IgnorePointer(
+                    child: Text(
+                      shelf.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: TrovoTheme.fontFamily,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
+                        color: hi ? TrovoColors.found : TrovoColors.textMuted,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }
+          }
+        }
+
+        return InteractiveViewer(
+          transformationController: _transform,
+          constrained: false,
+          minScale: 0.5,
+          maxScale: 4,
+          panEnabled: !widget.editing,
+          boundaryMargin: const EdgeInsets.all(200),
+          child: SizedBox(
+            width: math.max(canvasW, c.maxWidth),
+            height: canvasH,
+            child: Stack(children: children),
+          ),
+        );
+      },
+    );
   }
 
   void _commitRoom(Room room) {
@@ -415,7 +504,7 @@ class _HouseMapViewState extends State<HouseMapView> with SingleTickerProviderSt
 class _DotsPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final p = Paint()..color = Colors.white.withValues(alpha: 0.06);
+    final p = Paint()..color = PaperColors.ink.withValues(alpha: 0.10);
     for (var x = 8.0; x < size.width; x += 16) {
       for (var y = 8.0; y < size.height; y += 16) {
         canvas.drawCircle(Offset(x, y), 1, p);
@@ -453,7 +542,10 @@ class _FurnitureTopPainter extends CustomPainter {
       for (final k in [0.0, 0.5]) {
         final t = (pulse + k) % 1.0;
         canvas.drawRRect(
-          RRect.fromRectAndRadius(r.inflate(4 + 26 * t), Radius.circular(6 + 20 * t)),
+          RRect.fromRectAndRadius(
+            r.inflate(4 + 26 * t),
+            Radius.circular(6 + 20 * t),
+          ),
           Paint()
             ..style = PaintingStyle.stroke
             ..strokeWidth = 2.5
@@ -463,18 +555,21 @@ class _FurnitureTopPainter extends CustomPainter {
     }
 
     canvas.drawRRect(
-      rr,
-      Paint()
-        ..color = Colors.black.withValues(alpha: 0.4)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+      rr.shift(const Offset(0, 2)),
+      Paint()..color = PaperColors.ink.withValues(alpha: 0.16),
     );
-    canvas.drawRRect(rr, Paint()..color = Color.lerp(TrovoColors.surfaceHigher, color, 0.55)!);
+    canvas.drawRRect(
+      rr,
+      Paint()..color = Color.lerp(color, Colors.white, 0.35)!,
+    );
     canvas.drawRRect(
       rr,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = highlight > 0 ? 2.5 : 1.5
-        ..color = highlight > 0 ? TrovoColors.found : color,
+        ..color = highlight > 0
+            ? TrovoColors.found
+            : PaperColors.ink.withValues(alpha: 0.85),
     );
 
     final line = Paint()
@@ -515,14 +610,30 @@ class _FurnitureTopPainter extends CustomPainter {
           ..color = TrovoColors.metalLight
           ..strokeWidth = 1.5;
         if (horizontal) {
-          canvas.drawLine(Offset(4, size.height / 2), Offset(size.width - 4, size.height / 2), rod);
+          canvas.drawLine(
+            Offset(4, size.height / 2),
+            Offset(size.width - 4, size.height / 2),
+            rod,
+          );
           for (var x = 8.0; x < size.width - 6; x += 7) {
-            canvas.drawLine(Offset(x, size.height * 0.25), Offset(x + 2, size.height * 0.75), line);
+            canvas.drawLine(
+              Offset(x, size.height * 0.25),
+              Offset(x + 2, size.height * 0.75),
+              line,
+            );
           }
         } else {
-          canvas.drawLine(Offset(size.width / 2, 4), Offset(size.width / 2, size.height - 4), rod);
+          canvas.drawLine(
+            Offset(size.width / 2, 4),
+            Offset(size.width / 2, size.height - 4),
+            rod,
+          );
           for (var y = 8.0; y < size.height - 6; y += 7) {
-            canvas.drawLine(Offset(size.width * 0.25, y), Offset(size.width * 0.75, y + 2), line);
+            canvas.drawLine(
+              Offset(size.width * 0.25, y),
+              Offset(size.width * 0.75, y + 2),
+              line,
+            );
           }
         }
       case FurnitureKind.drawers:
@@ -533,9 +644,17 @@ class _FurnitureTopPainter extends CustomPainter {
           ..strokeWidth = 2
           ..strokeCap = StrokeCap.round;
         if (horizontal) {
-          canvas.drawLine(Offset(size.width * 0.35, size.height - 3), Offset(size.width * 0.65, size.height - 3), h);
+          canvas.drawLine(
+            Offset(size.width * 0.35, size.height - 3),
+            Offset(size.width * 0.65, size.height - 3),
+            h,
+          );
         } else {
-          canvas.drawLine(Offset(size.width - 3, size.height * 0.35), Offset(size.width - 3, size.height * 0.65), h);
+          canvas.drawLine(
+            Offset(size.width - 3, size.height * 0.35),
+            Offset(size.width - 3, size.height * 0.65),
+            h,
+          );
         }
     }
 

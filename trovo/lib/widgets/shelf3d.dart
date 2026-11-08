@@ -8,8 +8,8 @@ import '../models.dart';
 import '../store_scope.dart';
 import '../theme.dart';
 import 'common.dart';
-import 'furniture_art.dart' show paintPanelSide;
-import 'shelf_art.dart' show paintUpright;
+import 'furniture_art.dart' show paintPanelSide, paintWoodPost;
+import 'pantry_art.dart';
 
 /// Quello che si trascina: un oggetto con tutti i suoi posti.
 class DragPayload {
@@ -49,9 +49,9 @@ class LevelGeometry {
     colW = math.max(natural, minColW);
     contentW = colW * slotCount;
     scrolls = contentW > colsW + 0.5;
-    unit = (colW * 0.8).clamp(16.0, 52.0);
-    step = unit * 0.25;
-    floorDepth = unit * 0.3 + 6;
+    unit = (colW * 1.05).clamp(20.0, 66.0);
+    step = unit * 0.16;
+    floorDepth = 6;
     if (rail) {
       // Asta in alto, grucce, vestiti appesi, nome sotto.
       height = math.max(150.0, rodY + 10 + unit * 0.4 + unit * 1.35 + 18 + lipH);
@@ -77,7 +77,7 @@ class LevelGeometry {
   static const top = 8.0;
 
   /// Quante unità si vedono in fila, una dietro l'altra.
-  static const maxVisible = 6;
+  static const maxVisible = 4;
 
   late final double frameW;
   late final double colsW;
@@ -277,7 +277,7 @@ class _Columns extends StatelessWidget {
                 fontWeight: FontWeight.w800,
                 fontSize: 11,
                 height: 1,
-                color: TrovoColors.onColor(color).withValues(alpha: 0.75),
+                color: PaperColors.ink.withValues(alpha: 0.6),
               ),
             ),
           ),
@@ -383,7 +383,8 @@ class _EmptySlot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = g.unit * 0.92;
+    final w = math.min(g.colW * 0.74, g.unit * 0.8);
+    final h = g.unit * 0.8;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () {
@@ -400,19 +401,19 @@ class _EmptySlot extends StatelessWidget {
         child: Align(
           alignment: Alignment.bottomCenter,
           child: Padding(
-            padding: EdgeInsets.only(bottom: 3),
+            padding: const EdgeInsets.only(bottom: 3),
             child: CustomPaint(
               painter: _DashedBoxPainter(
-                color: Color.lerp(TrovoColors.metalDark, TrovoColors.found, glow)!,
-                radius: size * 0.24,
+                color: Color.lerp(PaperColors.ink.withValues(alpha: 0.35), TrovoColors.found, glow)!,
+                radius: w * 0.18,
               ),
               child: SizedBox(
-                width: size,
-                height: size,
+                width: w,
+                height: h,
                 child: Icon(
                   Icons.add_rounded,
-                  size: size * 0.5,
-                  color: Color.lerp(TrovoColors.metal, TrovoColors.found, glow),
+                  size: w * 0.5,
+                  color: Color.lerp(PaperColors.ink.withValues(alpha: 0.45), TrovoColors.found, glow),
                 ),
               ),
             ),
@@ -486,7 +487,7 @@ class _DraggableBlockState extends State<_DraggableBlock> {
   }
 }
 
-/// Le unità di un oggetto in fila, dalla più lontana alla più vicina.
+/// Le confezioni di un oggetto in fila, dalla più lontana alla più vicina.
 class _BlockVisual extends StatelessWidget {
   const _BlockVisual({required this.item, required this.span, required this.g, required this.glow, required this.pulse});
 
@@ -501,10 +502,9 @@ class _BlockVisual extends StatelessWidget {
     final perColumn = splitQuantity(item.quantity, span);
     final width = span * g.colW;
     final showName = width >= 38;
-    // Il nome sta subito sopra la fila più alta.
     final tallest = math.min(perColumn.reduce(math.max), LevelGeometry.maxVisible);
-    final stackTop = 3 + (tallest - 1) * g.step + g.unit * (1 - 0.075 * (tallest - 1));
-    final nameBottom = math.min(stackTop + 3, g.floorFrontY - 18);
+    final stackTop = 3 + (tallest - 1) * g.step + g.unit;
+    final nameBottom = math.min(stackTop + 4, g.floorFrontY - 18);
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -523,10 +523,11 @@ class _BlockVisual extends StatelessWidget {
             bottom: nameBottom,
             child: Center(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                 decoration: BoxDecoration(
-                  color: TrovoColors.background.withValues(alpha: 0.72),
-                  borderRadius: BorderRadius.circular(8),
+                  color: TrovoColors.surface,
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: PaperColors.ink.withValues(alpha: 0.7), width: 1),
                 ),
                 child: Text(
                   item.name,
@@ -545,24 +546,8 @@ class _BlockVisual extends StatelessWidget {
         if (item.quantity > 1)
           Positioned(
             right: 0,
-            bottom: g.unit * 0.85,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-              decoration: BoxDecoration(
-                color: TrovoColors.primary,
-                borderRadius: BorderRadius.circular(9),
-                border: Border.all(color: TrovoColors.background, width: 1.5),
-              ),
-              child: Text(
-                '${item.quantity}',
-                style: const TextStyle(
-                  fontFamily: TrovoTheme.fontFamily,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 12,
-                  color: TrovoColors.onPrimary,
-                ),
-              ),
-            ),
+            bottom: g.unit * 0.72,
+            child: QuantityTag(quantity: item.quantity),
           ),
       ],
     );
@@ -582,24 +567,27 @@ class _Column extends StatelessWidget {
   Widget build(BuildContext context) {
     final visible = math.min(count, LevelGeometry.maxVisible);
     final extra = count - visible;
+    // Il contenitore non deve uscire dal suo posto.
+    final w1 = VesselView.widthFor(item, 1);
+    final size = math.min(g.unit, g.colW * 0.92 / w1);
     final units = <Widget>[];
-    // Disegna dal fondo verso davanti, così quella davanti copre le altre.
+    // Dal fondo verso davanti: quella davanti copre le altre.
     for (var j = visible - 1; j >= 0; j--) {
-      final scale = 1 - 0.075 * j;
-      final size = g.unit * scale;
-      final darken = 0.13 * j;
+      final s = size * (1 - 0.06 * j);
+      final w = s * w1;
       units.add(Positioned(
-        bottom: 3 + j * g.step,
-        left: (g.colW - size) / 2,
+        bottom: 2 + j * g.step,
+        left: (g.colW - w) / 2 + j * g.colW * 0.06,
         child: Transform.scale(
           scale: j == 0 ? 1 + 0.16 * pulse : 1,
-          child: _Unit(item: item, size: size, darken: darken, glow: j == 0 ? glow : glow * 0.5),
+          alignment: Alignment.bottomCenter,
+          child: VesselView(item: item, size: s, glow: j == 0 ? glow : 0, faded: j / LevelGeometry.maxVisible),
         ),
       ));
     }
     if (extra > 0) {
       units.add(Positioned(
-        bottom: 3 + visible * g.step + g.unit * 0.55,
+        bottom: 2 + visible * g.step + size * 0.9,
         left: 0,
         right: 0,
         child: Center(
@@ -616,43 +604,6 @@ class _Column extends StatelessWidget {
       ));
     }
     return Stack(clipBehavior: Clip.none, children: units);
-  }
-}
-
-/// Una singola confezione: adesivo con l'emoji.
-class _Unit extends StatelessWidget {
-  const _Unit({required this.item, required this.size, required this.darken, required this.glow});
-  final Item item;
-  final double size;
-  final double darken;
-  final double glow;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      alignment: Alignment.center,
-      foregroundDecoration: darken > 0
-          ? BoxDecoration(
-              color: Colors.black.withValues(alpha: darken),
-              borderRadius: BorderRadius.circular(size * 0.26),
-            )
-          : null,
-      decoration: BoxDecoration(
-        color: TrovoColors.surfaceHigher,
-        borderRadius: BorderRadius.circular(size * 0.26),
-        border: Border.all(
-          color: Color.lerp(Colors.white.withValues(alpha: 0.85), TrovoColors.found, glow)!,
-          width: size > 30 ? 2 : 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 4, offset: const Offset(0, 2)),
-          if (glow > 0) BoxShadow(color: TrovoColors.found.withValues(alpha: 0.7 * glow), blurRadius: 16 * glow),
-        ],
-      ),
-      child: Text(item.emoji, style: TextStyle(fontSize: size * 0.55, height: 1.1)),
-    );
   }
 }
 
@@ -676,83 +627,66 @@ class _FramePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     const uw = LevelGeometry.uprightW;
-    final inner = Rect.fromLTRB(uw, 0, size.width - uw, g.floorBackY);
+    final ink = Paint()
+      ..color = PaperColors.ink.withValues(alpha: 0.85)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
 
-    // Parete di fondo.
+    // Il fondo è aperto: si vede la carta da parati. Solo l'ombra del ripiano sopra.
+    final shadow = Rect.fromLTRB(uw, 0, size.width - uw, 16);
     canvas.drawRect(
-      inner,
+      shadow,
       Paint()
         ..shader = LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Color.lerp(TrovoColors.background, color, 0.03)!,
-            Color.lerp(const Color(0xFF1A1D23), color, 0.08)!,
-          ],
-        ).createShader(inner),
+          colors: [PaperColors.ink.withValues(alpha: 0.14), PaperColors.ink.withValues(alpha: 0)],
+        ).createShader(shadow),
     );
+    if (glow > 0) {
+      canvas.drawRect(
+        Rect.fromLTRB(uw, 0, size.width - uw, g.floorFrontY),
+        Paint()..color = TrovoColors.found.withValues(alpha: 0.14 * glow),
+      );
+    }
 
     if (g.rail) {
-      // Asta di metallo con le grucce.
+      // Asta di legno con le grucce.
       final rod = Rect.fromLTRB(uw - 2, LevelGeometry.rodY - 3, size.width - uw + 2, LevelGeometry.rodY + 3);
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(rod, const Radius.circular(3)),
-        Paint()
-          ..shader = const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [TrovoColors.metalLight, TrovoColors.metal, TrovoColors.metalDark],
-          ).createShader(rod),
-      );
+      canvas.drawRRect(RRect.fromRectAndRadius(rod, const Radius.circular(3)), Paint()..color = PaperColors.woodDark);
+      canvas.drawRRect(RRect.fromRectAndRadius(rod, const Radius.circular(3)), ink);
+    } else {
+      // Ripiano di legno: piano superiore chiaro e bordo davanti.
+      final top = Rect.fromLTRB(uw - 4, g.floorBackY, size.width - uw + 4, g.floorFrontY);
+      canvas.drawRect(top, Paint()..color = PaperColors.woodLight);
+      canvas.drawLine(top.topLeft, top.topRight, ink);
     }
 
-    // Pavimento visto un po' dall'alto: più stretto dietro, più largo davanti.
-    const inset = 10.0;
-    final floor = Path()
-      ..moveTo(uw + inset, g.floorBackY)
-      ..lineTo(size.width - uw - inset, g.floorBackY)
-      ..lineTo(size.width - uw + 2, g.floorFrontY)
-      ..lineTo(uw - 2, g.floorFrontY)
-      ..close();
-    canvas.drawPath(
-      floor,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF2E333D), Color(0xFF4A5160)],
-        ).createShader(Rect.fromLTRB(0, g.floorBackY, size.width, g.floorFrontY)),
-    );
-
-    if (glow > 0) {
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(Rect.fromLTRB(uw + 2, 2, size.width - uw - 2, g.floorFrontY), const Radius.circular(10)),
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2
-          ..color = TrovoColors.found.withValues(alpha: 0.55 * glow),
-      );
+    final edge = Rect.fromLTWH(uw - 4, g.floorFrontY, size.width - 2 * uw + 8, LevelGeometry.lipH);
+    final edgeColor = Color.lerp(PaperColors.wood, TrovoColors.found, glow * 0.5)!;
+    canvas.drawRect(edge, Paint()..color = edgeColor);
+    // Venature del legno.
+    final grain = Paint()
+      ..color = PaperColors.woodEdge.withValues(alpha: 0.35)
+      ..strokeWidth = 1
+      ..style = PaintingStyle.stroke;
+    for (var k = 0; k < 2; k++) {
+      final y = edge.top + edge.height * (0.35 + 0.3 * k);
+      final path = Path()..moveTo(edge.left + 6, y);
+      for (var x = edge.left + 6; x < edge.right - 6; x += 40) {
+        path.quadraticBezierTo(x + 10, y + (k.isEven ? 1.5 : -1.5), x + 20, y);
+        path.quadraticBezierTo(x + 30, y + (k.isEven ? -1.5 : 1.5), x + 40, y);
+      }
+      canvas.drawPath(path, grain);
     }
-
-    // Bordo frontale nel colore del piano.
-    final lip = Rect.fromLTWH(uw - 6, g.floorFrontY, size.width - 2 * uw + 12, LevelGeometry.lipH);
-    final lipColor = Color.lerp(color, TrovoColors.found, glow * 0.6)!;
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(lip, const Radius.circular(5)),
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [lipColor, Color.lerp(lipColor, Colors.black, 0.22)!],
-        ).createShader(lip),
-    );
+    canvas.drawRect(edge, ink);
 
     if (panel) {
       paintPanelSide(canvas, Rect.fromLTWH(0, 0, uw, size.height), panelColor, left: true);
       paintPanelSide(canvas, Rect.fromLTWH(size.width - uw, 0, uw, size.height), panelColor, left: false);
     } else {
-      paintUpright(canvas, Rect.fromLTWH(0, 0, uw, size.height), holeOffset: yOffset);
-      paintUpright(canvas, Rect.fromLTWH(size.width - uw, 0, uw, size.height), holeOffset: yOffset);
+      paintWoodPost(canvas, Rect.fromLTWH(0, 0, uw, size.height));
+      paintWoodPost(canvas, Rect.fromLTWH(size.width - uw, 0, uw, size.height));
     }
   }
 
@@ -777,39 +711,18 @@ class _FloorGridPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final cx = size.width / 2;
-    // Punto di fuga: le righe convergono un poco verso il fondo.
-    double backX(double x) => cx + (x - cx) * 0.94;
-
     final h = hover;
-    final top = g.rail ? LevelGeometry.rodY + 6 : g.floorBackY;
+    final top = g.rail ? LevelGeometry.rodY + 6 : 4.0;
     for (var pos = 0; pos < count; pos++) {
       final l = pos * g.colW;
-      final r = l + g.colW;
-      final cell = g.rail
-          ? (Path()..addRRect(RRect.fromRectAndRadius(Rect.fromLTRB(l + 2, top, r - 2, g.floorFrontY - 2), const Radius.circular(8))))
-          : (Path()
-            ..moveTo(backX(l), g.floorBackY)
-            ..lineTo(backX(r), g.floorBackY)
-            ..lineTo(r, g.floorFrontY)
-            ..lineTo(l, g.floorFrontY)
-            ..close());
+      final cell = RRect.fromRectAndRadius(Rect.fromLTRB(l + 2, top, l + g.colW - 2, g.floorFrontY - 1), const Radius.circular(8));
       Color? fill;
       if (h != null && pos >= h.start && pos < h.start + h.span) {
-        fill = (h.ok ? TrovoColors.primary : TrovoColors.danger).withValues(alpha: 0.45);
+        fill = (h.ok ? TrovoColors.primary : TrovoColors.danger).withValues(alpha: 0.28);
       } else if (glow > 0 && glowPositions.contains(pos)) {
-        fill = TrovoColors.found.withValues(alpha: 0.5 * glow);
+        fill = TrovoColors.found.withValues(alpha: 0.35 * glow);
       }
-      if (fill != null) canvas.drawPath(cell, Paint()..color = fill);
-    }
-
-    if (g.rail) return;
-    final line = Paint()
-      ..color = Colors.black.withValues(alpha: 0.28)
-      ..strokeWidth = 1.2;
-    for (var pos = 1; pos < count; pos++) {
-      final x = pos * g.colW;
-      canvas.drawLine(Offset(backX(x), g.floorBackY), Offset(x, g.floorFrontY), line);
+      if (fill != null) canvas.drawRRect(cell, Paint()..color = fill);
     }
   }
 
@@ -912,7 +825,7 @@ class _HangingVisual extends StatelessWidget {
                   width: math.min(g.colW * 0.9, cardW),
                   height: hangerH,
                   child: CustomPaint(
-                    painter: _HangerPainter(color: Color.lerp(TrovoColors.metalLight, TrovoColors.found, glow)!),
+                    painter: _HangerPainter(color: Color.lerp(PaperColors.ink, TrovoColors.found, glow)!),
                   ),
                 ),
                 Transform.scale(
@@ -923,14 +836,14 @@ class _HangingVisual extends StatelessWidget {
                     height: cardH,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: Color.lerp(TrovoColors.surfaceHigher, color, 0.22),
+                      color: Color.lerp(Colors.white, color, 0.35),
                       borderRadius: BorderRadius.vertical(top: Radius.circular(g.unit * 0.12), bottom: Radius.circular(g.unit * 0.3)),
                       border: Border.all(
-                        color: Color.lerp(Colors.white.withValues(alpha: 0.8), TrovoColors.found, glow)!,
-                        width: glow > 0 ? 2.5 : 2,
+                        color: Color.lerp(PaperColors.ink.withValues(alpha: 0.85), TrovoColors.found, glow)!,
+                        width: glow > 0 ? 2.5 : 1.5,
                       ),
                       boxShadow: [
-                        BoxShadow(color: Colors.black.withValues(alpha: 0.45), blurRadius: 6, offset: const Offset(0, 3)),
+                        BoxShadow(color: PaperColors.ink.withValues(alpha: 0.16), offset: const Offset(0, 2)),
                         if (glow > 0) BoxShadow(color: TrovoColors.found.withValues(alpha: 0.7 * glow), blurRadius: 18 * glow),
                       ],
                     ),
@@ -1009,7 +922,7 @@ class _EmptyHanger extends StatelessWidget {
                 height: g.unit * 0.4,
                 child: CustomPaint(
                   painter: _HangerPainter(
-                    color: Color.lerp(TrovoColors.metal.withValues(alpha: 0.6), TrovoColors.found, glow)!,
+                    color: Color.lerp(PaperColors.ink.withValues(alpha: 0.35), TrovoColors.found, glow)!,
                   ),
                 ),
               ),
@@ -1017,7 +930,7 @@ class _EmptyHanger extends StatelessWidget {
               Icon(
                 Icons.add_rounded,
                 size: g.unit * 0.5,
-                color: Color.lerp(TrovoColors.metal, TrovoColors.found, glow),
+                color: Color.lerp(PaperColors.ink.withValues(alpha: 0.45), TrovoColors.found, glow),
               ),
             ],
           ),

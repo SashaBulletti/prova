@@ -50,9 +50,8 @@ class _TrovoAppState extends State<TrovoApp> {
       child: MaterialApp(
         title: 'Trovo',
         debugShowCheckedModeBanner: false,
-        theme: TrovoTheme.dark(),
-        darkTheme: TrovoTheme.dark(),
-        themeMode: ThemeMode.dark,
+        theme: TrovoTheme.paper(),
+        themeMode: ThemeMode.light,
         locale: _locale == null ? null : Locale(_locale!),
         supportedLocales: S.supportedLocales,
         localizationsDelegates: const [

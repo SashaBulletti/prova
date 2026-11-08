@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import '../furniture_templates.dart';
 import '../models.dart';
+import '../widgets/wallpaper.dart';
 
 /// Tutti i testi dell'app, in italiano e in inglese.
 /// Frasi corte e semplici: è un'app pensata anche per chi ha ADHD o dislessia.
@@ -236,6 +237,16 @@ class S {
       "I can't read photos here: use the app on your phone.");
 
   // Mobili
+  String get wallpaperLabel => _t('Carta da parati', 'Wallpaper');
+  String wallpaperName(Wallpaper w) => switch (w) {
+        Wallpaper.flowers => _t('Fiori', 'Flowers'),
+        Wallpaper.dots => _t('Puntini', 'Dots'),
+        Wallpaper.tiles => _t('Piastrelle', 'Tiles'),
+        Wallpaper.bricks => _t('Mattoni', 'Bricks'),
+        Wallpaper.stripes => _t('Righe', 'Stripes'),
+        Wallpaper.beadboard => _t('Perline', 'Panels'),
+        Wallpaper.plain => _t('Carta', 'Plain'),
+      };
   String get newFurniture => _t('Nuovo mobile', 'New furniture');
   String get whatFurniture => _t('Che mobile è?', 'What kind of furniture?');
   String templateName(TemplateId id) => switch (id) {
@@ -317,8 +328,8 @@ class S {
   String get restore => _t('Ripristina', 'Restore');
   String get aboutTitle => _t('Informazioni', 'About');
   String get aboutBody => _t(
-      'Trovo 1.4 · I tuoi dati restano solo su questo telefono.',
-      'Trovo 1.4 · Your data stays on this phone only.');
+      'Trovo 1.5 · I tuoi dati restano solo su questo telefono.',
+      'Trovo 1.5 · Your data stays on this phone only.');
 }
 
 class _SDelegate extends LocalizationsDelegate<S> {

@@ -29,6 +29,9 @@ Pensata per chi si dimentica le cose (ADHD, dislessia, o semplicemente troppi sc
 - 🗺️ **Mappa della casa vista dall'alto**: le stanze e i mobili come su una piantina.
   Tocchi un mobile e si apre. Con "Sistema la mappa" sposti stanze e mobili come nella realtà.
 - 🎨 **Ogni piano ha un colore e un numero grande**: ti ricordi "il piano rosa".
+- 🖌️ **Stile illustrato**: mensole di legno, barattoli di vetro con dentro il cibo, bottiglie,
+  scatolette, cesti di vimini, contorni a china.
+- 🌸 **Carta da parati per ogni stanza**: fiori, piastrelle, mattoni, righe, perline, puntini.
 - 🔎 **Ricerca che perdona gli errori**: "pasatta" trova la passata, "pomodori" trova i pelati.
 - 🎤 **Ricerca a voce**: "Dov'è la passata?". Trovo ti risponde a voce:
   "Passata: Dispensa, Scaffale Blu, piano 2". Niente AI esterne: usa la voce del telefono.

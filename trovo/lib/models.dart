@@ -299,7 +299,7 @@ class Shelf {
 }
 
 class Room {
-  Room({String? id, required this.name, this.emoji = '🏠', this.mapBox, List<Shelf>? shelves})
+  Room({String? id, required this.name, this.emoji = '🏠', this.mapBox, this.wallpaper, List<Shelf>? shelves})
       : id = id ?? newId(),
         shelves = shelves ?? [];
 
@@ -311,6 +311,9 @@ class Room {
   /// Dove sta la stanza sulla mappa della casa. null = posizione automatica.
   MapBox? mapBox;
 
+  /// Carta da parati scelta. null = una adatta alla stanza.
+  String? wallpaper;
+
   int get itemCount => shelves.fold(0, (sum, s) => sum + s.itemCount);
 
   Map<String, dynamic> toJson() => {
@@ -318,6 +321,7 @@ class Room {
         'name': name,
         'emoji': emoji,
         if (mapBox != null) 'map': mapBox!.toJson(),
+        if (wallpaper != null) 'wallpaper': wallpaper,
         'shelves': shelves.map((s) => s.toJson()).toList(),
       };
 
@@ -326,6 +330,7 @@ class Room {
         name: (j['name'] as String?) ?? '',
         emoji: (j['emoji'] as String?) ?? '🏠',
         mapBox: MapBox.fromJson(j['map']),
+        wallpaper: j['wallpaper'] as String?,
         shelves: ((j['shelves'] as List?) ?? [])
             .map((e) => Shelf.fromJson(Map<String, dynamic>.from(e as Map)))
             .toList(),

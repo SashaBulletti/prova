@@ -127,9 +127,10 @@ class PantryStore extends ChangeNotifier {
     return room;
   }
 
-  void updateRoom(Room room, {String? name, String? emoji}) {
+  void updateRoom(Room room, {String? name, String? emoji, String? wallpaper}) {
     if (name != null && name.trim().isNotEmpty) room.name = name.trim();
     if (emoji != null) room.emoji = emoji;
+    if (wallpaper != null) room.wallpaper = wallpaper;
     _changed();
   }
 

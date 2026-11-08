@@ -125,10 +125,10 @@ class _CompartmentScreenState extends State<CompartmentScreen> with SingleTicker
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
-                  color: Color.lerp(TrovoColors.surface, color, 0.06),
-                  border: Border.all(color: color.withValues(alpha: 0.6), width: 3),
+                  color: const Color(0xFFF3E7D3),
+                  border: Border.all(color: PaperColors.ink.withValues(alpha: 0.85), width: 2),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withValues(alpha: 0.45), blurRadius: 16, offset: const Offset(0, 8)),
+                    BoxShadow(color: PaperColors.ink.withValues(alpha: 0.16), offset: const Offset(0, 4)),
                   ],
                 ),
                 child: GridView.builder(
@@ -214,7 +214,7 @@ class _EmptyCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.black.withValues(alpha: 0.25),
+      color: PaperColors.ink.withValues(alpha: 0.05),
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -225,7 +225,7 @@ class _EmptyCell extends StatelessWidget {
         onLongPress: onLongPress,
         child: Stack(
           children: [
-            const Center(child: Icon(Icons.add_rounded, color: TrovoColors.metal, size: 30)),
+            Center(child: Icon(Icons.add_rounded, color: PaperColors.ink.withValues(alpha: 0.4), size: 30)),
             Positioned(
               left: 8,
               top: 6,
@@ -262,7 +262,7 @@ class _ItemCell extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: glow > 0 ? TrovoColors.found.withValues(alpha: glow) : Colors.white.withValues(alpha: 0.12),
+              color: glow > 0 ? TrovoColors.found.withValues(alpha: glow) : PaperColors.ink.withValues(alpha: 0.5),
               width: glow > 0 ? 2.5 : 1,
             ),
             boxShadow: glow > 0 ? [BoxShadow(color: TrovoColors.found.withValues(alpha: 0.6 * glow), blurRadius: 18 * glow)] : null,

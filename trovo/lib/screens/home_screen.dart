@@ -12,6 +12,7 @@ import '../widgets/house_map.dart';
 import '../widgets/labels_sheet.dart';
 import '../widgets/new_furniture_sheet.dart';
 import '../widgets/sheets.dart';
+import '../widgets/wallpaper.dart';
 import '../widgets/shelf_art.dart';
 import '../widgets/voice_sheet.dart';
 import 'scan_screen.dart';
@@ -61,238 +62,243 @@ class _HomeScreenState extends State<HomeScreen> {
     final theme = Theme.of(context);
     final room = store.selectedRoom;
 
-    return Scaffold(
-      floatingActionButton:
-          FloatingActionButton.extended(
-            onPressed: () => _newShelf(context),
-            icon: const Icon(Icons.add_rounded, size: 28),
-            label: Text(s.newFurniture),
-          ).animate().scale(
-            delay: Motion.of(context, 300),
-            curve: Curves.easeOutBack,
-            duration: Motion.of(context, 400),
-          ),
-      body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 12, 0),
-              sliver: SliverToBoxAdapter(
-                child: Row(
-                  children: [
-                    const _Logo(),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            s.appName,
-                            style: theme.textTheme.headlineMedium,
-                          ),
-                          Text(s.tagline, style: theme.textTheme.bodySmall),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: s.labels,
-                      iconSize: 28,
-                      onPressed: () => showLabelsSheet(context, room: room),
-                      icon: const Icon(Icons.qr_code_2_rounded),
-                    ),
-                    IconButton(
-                      tooltip: s.settings,
-                      iconSize: 28,
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const SettingsScreen(),
-                        ),
-                      ),
-                      icon: const Icon(Icons.settings_rounded),
-                    ),
-                  ],
-                ),
-              ),
+    return WallpaperBackground(
+      wallpaper: wallpaperOf(room),
+      veil: 0.45,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        floatingActionButton:
+            FloatingActionButton.extended(
+              onPressed: () => _newShelf(context),
+              icon: const Icon(Icons.add_rounded, size: 28),
+              label: Text(s.newFurniture),
+            ).animate().scale(
+              delay: Motion.of(context, 300),
+              curve: Curves.easeOutBack,
+              duration: Motion.of(context, 400),
             ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-              sliver: SliverToBoxAdapter(
-                child: _SearchBar(
-                  onTap: () => _openSearch(context),
-                  onMic: () => _openSearch(context, voice: true),
-                  onScan: () => Navigator.of(
-                    context,
-                  ).push(MaterialPageRoute(builder: (_) => const ScanScreen())),
-                ),
-              ),
-            ),
-            // Mobili | Mappa
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 6, 20, 2),
-              sliver: SliverToBoxAdapter(
-                child: SegmentedButton<bool>(
-                  showSelectedIcon: false,
-                  segments: [
-                    ButtonSegment(
-                      value: false,
-                      icon: const Icon(Icons.grid_view_rounded),
-                      label: Text(s.furnitureView),
-                    ),
-                    ButtonSegment(
-                      value: true,
-                      icon: const Icon(Icons.map_rounded),
-                      label: Text(s.mapView),
-                    ),
-                  ],
-                  selected: {_map},
-                  onSelectionChanged: (v) {
-                    HapticFeedback.selectionClick();
-                    setState(() {
-                      _map = v.first;
-                      _editing = false;
-                    });
-                  },
-                  style: SegmentedButton.styleFrom(
-                    selectedBackgroundColor: TrovoColors.primary,
-                    selectedForegroundColor: TrovoColors.onPrimary,
-                    textStyle: theme.textTheme.labelLarge,
-                  ),
-                ),
-              ),
-            ),
-            if (_map)
-              SliverFillRemaining(
-                hasScrollBody: true,
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Stack(
+        body: SafeArea(
+          child: CustomScrollView(
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 12, 0),
+                sliver: SliverToBoxAdapter(
+                  child: Row(
                     children: [
-                      Positioned.fill(
-                        child: HouseMapView(
-                          editing: _editing,
-                          highlightRoomId: room.id,
-                          onOpenShelf: (shelf) => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => ShelfScreen(shelfId: shelf.id),
-                            ),
-                          ),
-                          onSelectRoom: (r) => store.selectRoom(r),
-                        ),
-                      ),
-                      Positioned(
-                        left: 16,
-                        right: 16,
-                        top: 4,
-                        child: Row(
+                      const _Logo(),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: AnimatedSwitcher(
-                                duration: Motion.of(context, 200),
-                                child: _editing
-                                    ? Container(
-                                        key: const ValueKey('hint'),
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 8,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: TrovoColors.surfaceHigh,
-                                          borderRadius: BorderRadius.circular(
-                                            14,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          s.editMapHint,
-                                          style: theme.textTheme.bodySmall,
-                                        ),
-                                      )
-                                    : const SizedBox.shrink(),
-                              ),
+                            Text(
+                              s.appName,
+                              style: theme.textTheme.headlineMedium,
                             ),
-                            const SizedBox(width: 8),
-                            FilledButton.tonalIcon(
-                              onPressed: () {
-                                HapticFeedback.selectionClick();
-                                setState(() => _editing = !_editing);
-                              },
-                              icon: Icon(
-                                _editing
-                                    ? Icons.check_rounded
-                                    : Icons.edit_rounded,
-                              ),
-                              label: Text(_editing ? s.done : s.editMap),
-                              style: FilledButton.styleFrom(
-                                minimumSize: const Size(48, 44),
-                              ),
-                            ),
+                            Text(s.tagline, style: theme.textTheme.bodySmall),
                           ],
                         ),
+                      ),
+                      IconButton(
+                        tooltip: s.labels,
+                        iconSize: 28,
+                        onPressed: () => showLabelsSheet(context, room: room),
+                        icon: const Icon(Icons.qr_code_2_rounded),
+                      ),
+                      IconButton(
+                        tooltip: s.settings,
+                        iconSize: 28,
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const SettingsScreen(),
+                          ),
+                        ),
+                        icon: const Icon(Icons.settings_rounded),
                       ),
                     ],
                   ),
                 ),
               ),
-            if (!_map) ...[
-              const SliverToBoxAdapter(child: _RoomBar()),
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
                 sliver: SliverToBoxAdapter(
-                  child: Text(
-                    '${room.emoji}  ${s.shelvesCount(room.shelves.length)} · ${s.itemsCount(room.itemCount)}',
-                    style: theme.textTheme.bodySmall,
+                  child: _SearchBar(
+                    onTap: () => _openSearch(context),
+                    onMic: () => _openSearch(context, voice: true),
+                    onScan: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ScanScreen()),
+                    ),
                   ),
                 ),
               ),
-              if (room.shelves.isEmpty)
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Center(
-                    child: EmptyState(
-                      art: const _EmptyShelfArt(),
-                      title: s.emptyRoomTitle,
-                      body: s.emptyRoomBody,
-                      action: FilledButton.icon(
-                        onPressed: () => _newShelf(context),
-                        icon: const Icon(Icons.add_rounded),
-                        label: Text(s.newFurniture),
+              // Mobili | Mappa
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 6, 20, 2),
+                sliver: SliverToBoxAdapter(
+                  child: SegmentedButton<bool>(
+                    showSelectedIcon: false,
+                    segments: [
+                      ButtonSegment(
+                        value: false,
+                        icon: const Icon(Icons.grid_view_rounded),
+                        label: Text(s.furnitureView),
                       ),
-                    ),
-                  ),
-                )
-              else
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
-                  sliver: SliverGrid(
-                    gridDelegate:
-                        const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 260,
-                          mainAxisSpacing: 14,
-                          crossAxisSpacing: 14,
-                          childAspectRatio: 0.72,
-                        ),
-                    delegate: SliverChildBuilderDelegate(
-                      (context, i) =>
-                          _DraggableShelfCard(
-                                key: ValueKey(room.shelves[i].id),
-                                room: room,
-                                index: i,
-                              )
-                              .animate()
-                              .fadeIn(
-                                delay: Motion.of(context, 50 * i),
-                                duration: Motion.of(context, 260),
-                              )
-                              .slideY(
-                                begin: 0.15,
-                                curve: Curves.easeOutCubic,
-                                duration: Motion.of(context, 320),
-                              ),
-                      childCount: room.shelves.length,
+                      ButtonSegment(
+                        value: true,
+                        icon: const Icon(Icons.map_rounded),
+                        label: Text(s.mapView),
+                      ),
+                    ],
+                    selected: {_map},
+                    onSelectionChanged: (v) {
+                      HapticFeedback.selectionClick();
+                      setState(() {
+                        _map = v.first;
+                        _editing = false;
+                      });
+                    },
+                    style: SegmentedButton.styleFrom(
+                      selectedBackgroundColor: TrovoColors.primary,
+                      selectedForegroundColor: TrovoColors.onPrimary,
+                      textStyle: theme.textTheme.labelLarge,
                     ),
                   ),
                 ),
+              ),
+              if (_map)
+                SliverFillRemaining(
+                  hasScrollBody: true,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: HouseMapView(
+                            editing: _editing,
+                            highlightRoomId: room.id,
+                            onOpenShelf: (shelf) => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => ShelfScreen(shelfId: shelf.id),
+                              ),
+                            ),
+                            onSelectRoom: (r) => store.selectRoom(r),
+                          ),
+                        ),
+                        Positioned(
+                          left: 16,
+                          right: 16,
+                          top: 4,
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: AnimatedSwitcher(
+                                  duration: Motion.of(context, 200),
+                                  child: _editing
+                                      ? Container(
+                                          key: const ValueKey('hint'),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 8,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: TrovoColors.surfaceHigh,
+                                            borderRadius: BorderRadius.circular(
+                                              14,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            s.editMapHint,
+                                            style: theme.textTheme.bodySmall,
+                                          ),
+                                        )
+                                      : const SizedBox.shrink(),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              FilledButton.tonalIcon(
+                                onPressed: () {
+                                  HapticFeedback.selectionClick();
+                                  setState(() => _editing = !_editing);
+                                },
+                                icon: Icon(
+                                  _editing
+                                      ? Icons.check_rounded
+                                      : Icons.edit_rounded,
+                                ),
+                                label: Text(_editing ? s.done : s.editMap),
+                                style: FilledButton.styleFrom(
+                                  minimumSize: const Size(48, 44),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              if (!_map) ...[
+                const SliverToBoxAdapter(child: _RoomBar()),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                  sliver: SliverToBoxAdapter(
+                    child: Text(
+                      '${room.emoji}  ${s.shelvesCount(room.shelves.length)} · ${s.itemsCount(room.itemCount)}',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ),
+                ),
+                if (room.shelves.isEmpty)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: EmptyState(
+                        art: const _EmptyShelfArt(),
+                        title: s.emptyRoomTitle,
+                        body: s.emptyRoomBody,
+                        action: FilledButton.icon(
+                          onPressed: () => _newShelf(context),
+                          icon: const Icon(Icons.add_rounded),
+                          label: Text(s.newFurniture),
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
+                    sliver: SliverGrid(
+                      gridDelegate:
+                          const SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: 260,
+                            mainAxisSpacing: 14,
+                            crossAxisSpacing: 14,
+                            childAspectRatio: 0.72,
+                          ),
+                      delegate: SliverChildBuilderDelegate(
+                        (context, i) =>
+                            _DraggableShelfCard(
+                                  key: ValueKey(room.shelves[i].id),
+                                  room: room,
+                                  index: i,
+                                )
+                                .animate()
+                                .fadeIn(
+                                  delay: Motion.of(context, 50 * i),
+                                  duration: Motion.of(context, 260),
+                                )
+                                .slideY(
+                                  begin: 0.15,
+                                  curve: Curves.easeOutCubic,
+                                  duration: Motion.of(context, 320),
+                                ),
+                        childCount: room.shelves.length,
+                      ),
+                    ),
+                  ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -348,10 +354,13 @@ class _SearchBar extends StatelessWidget {
     return Hero(
       tag: 'search-bar',
       child: Material(
-        color: TrovoColors.surfaceHigh,
-        borderRadius: BorderRadius.circular(22),
+        color: TrovoColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(color: PaperColors.ink.withValues(alpha: 0.85), width: 1.5),
+        ),
         child: InkWell(
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(18),
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 8, 8, 8),
@@ -540,11 +549,16 @@ class _ShelfCard extends StatelessWidget {
     final theme = Theme.of(context);
     final shelfColor = TrovoColors.shelf(shelf.colorIndex);
 
+    // Scheda di carta con contorno a china e ombra "stampata".
     Widget closed(VoidCallback? open) => Material(
       color: TrovoColors.surface,
-      borderRadius: BorderRadius.circular(20),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: PaperColors.ink.withValues(alpha: 0.85), width: 1.5),
+      ),
+      shadowColor: PaperColors.ink,
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         onTap: open == null
             ? null
             : () {
@@ -608,7 +622,7 @@ class _ShelfCard extends StatelessWidget {
       closedElevation: 0,
       openElevation: 0,
       closedShape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
       ),
       closedBuilder: (context, open) => closed(open),
       openBuilder: (context, _) => ShelfScreen(shelfId: shelf.id),

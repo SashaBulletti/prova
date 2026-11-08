@@ -88,27 +88,17 @@ class _DrawerRowState extends State<DrawerRow> {
                       },
                       child: AnimatedContainer(
                         duration: Motion.of(context, 180),
+                        // Frontale del cassetto: legno verniciato, contorno a china.
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Color.lerp(TrovoColors.surfaceHigher, body, 0.22)!,
-                              Color.lerp(TrovoColors.surfaceHigh, body, 0.12)!,
-                            ],
-                          ),
+                          borderRadius: BorderRadius.circular(6),
+                          color: Color.lerp(body, Colors.white, 0.5),
                           border: Border.all(
-                            color: _hover
-                                ? TrovoColors.primary
-                                : (glow > 0
-                                    ? TrovoColors.found.withValues(alpha: glow)
-                                    : Colors.black.withValues(alpha: 0.35)),
-                            width: _hover || glow > 0 ? 2.5 : 1.5,
+                            color: _hover ? TrovoColors.primary : (glow > 0 ? TrovoColors.found : PaperColors.ink.withValues(alpha: 0.85)),
+                            width: _hover || glow > 0 ? 2.6 : 1.6,
                           ),
                           boxShadow: [
-                            BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 6, offset: const Offset(0, 3)),
-                            if (glow > 0) BoxShadow(color: TrovoColors.found.withValues(alpha: 0.5 * glow), blurRadius: 20 * glow),
+                            BoxShadow(color: PaperColors.ink.withValues(alpha: 0.18), offset: const Offset(0, 3)),
+                            if (glow > 0) BoxShadow(color: TrovoColors.found.withValues(alpha: 0.55 * glow), blurRadius: 18 * glow),
                           ],
                         ),
                         child: Stack(
@@ -131,18 +121,16 @@ class _DrawerRowState extends State<DrawerRow> {
                               top: 12,
                               left: 0,
                               right: 0,
+                              // Pomello di legno.
                               child: Center(
                                 child: Container(
-                                  width: 56,
-                                  height: 7,
+                                  width: 16,
+                                  height: 16,
                                   decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(4),
-                                    gradient: const LinearGradient(
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
-                                      colors: [TrovoColors.metalLight, TrovoColors.metalDark],
-                                    ),
-                                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 3, offset: const Offset(0, 2))],
+                                    shape: BoxShape.circle,
+                                    color: PaperColors.woodDark,
+                                    border: Border.all(color: PaperColors.ink, width: 1.4),
+                                    boxShadow: [BoxShadow(color: PaperColors.ink.withValues(alpha: 0.2), offset: const Offset(0, 2))],
                                   ),
                                 ),
                               ),
@@ -209,7 +197,7 @@ class _SidesPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     const uw = LevelGeometry.uprightW;
     // Fondo del vano, dietro il cassetto.
-    canvas.drawRect(Rect.fromLTRB(uw, 0, size.width - uw, size.height), Paint()..color = Colors.black.withValues(alpha: 0.30));
+    canvas.drawRect(Rect.fromLTRB(uw, 0, size.width - uw, size.height), Paint()..color = Color.lerp(tint, PaperColors.ink, 0.45)!.withValues(alpha: 0.35));
     paintPanelSide(canvas, Rect.fromLTWH(0, 0, uw, size.height), tint, left: true);
     paintPanelSide(canvas, Rect.fromLTWH(size.width - uw, 0, uw, size.height), tint, left: false);
   }
@@ -248,13 +236,10 @@ class CubesGrid extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color.lerp(TrovoColors.surfaceHigher, body, 0.4)!, Color.lerp(TrovoColors.surface, body, 0.25)!],
-          ),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.45), blurRadius: 14, offset: const Offset(0, 8))],
+          borderRadius: BorderRadius.circular(6),
+          color: Color.lerp(body, Colors.white, 0.35),
+          border: Border.all(color: PaperColors.ink.withValues(alpha: 0.85), width: 1.6),
+          boxShadow: PaperColors.printShadow(4),
         ),
         child: GridView.builder(
           shrinkWrap: true,
@@ -335,18 +320,17 @@ class _CubeCellState extends State<_CubeCell> {
           },
           child: AnimatedContainer(
             duration: Motion.of(context, 180),
+            // Vano del cubo: fondo chiaro di legno, contorno a china.
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              gradient: LinearGradient(
+              borderRadius: BorderRadius.circular(4),
+              gradient: const LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Colors.black.withValues(alpha: 0.55), Colors.black.withValues(alpha: 0.30)],
+                colors: [Color(0xFFE2CDAE), Color(0xFFEFE1CA)],
               ),
               border: Border.all(
-                color: _hover
-                    ? TrovoColors.primary
-                    : (glow > 0 ? TrovoColors.found.withValues(alpha: glow) : color.withValues(alpha: 0.55)),
-                width: _hover || glow > 0 ? 2.5 : 1.5,
+                color: _hover ? TrovoColors.primary : (glow > 0 ? TrovoColors.found : PaperColors.ink.withValues(alpha: 0.8)),
+                width: _hover || glow > 0 ? 2.5 : 1.4,
               ),
               boxShadow: glow > 0 ? [BoxShadow(color: TrovoColors.found.withValues(alpha: 0.5 * glow), blurRadius: 18 * glow)] : null,
             ),
@@ -357,7 +341,7 @@ class _CubeCellState extends State<_CubeCell> {
                 children: [
                   Positioned(left: 6, top: 6, child: LevelTag(number: widget.number, color: color, size: 22, glow: glow)),
                   if (items.isEmpty)
-                    Center(child: Icon(Icons.add_rounded, color: TrovoColors.metal, size: tile * 0.7))
+                    Center(child: Icon(Icons.add_rounded, color: PaperColors.ink.withValues(alpha: 0.4), size: tile * 0.7))
                   else
                     Positioned(
                       left: 6,

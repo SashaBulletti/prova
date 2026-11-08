@@ -12,6 +12,7 @@ import 'common.dart';
 import 'fly.dart';
 import 'shelf_art.dart';
 import 'voice_sheet.dart';
+import 'wallpaper.dart';
 
 Future<T?> _sheet<T>(BuildContext context, Widget child) => showModalBottomSheet<T>(
       context: context,
@@ -427,6 +428,8 @@ class _RoomSheet extends StatefulWidget {
 class _RoomSheetState extends State<_RoomSheet> {
   late final TextEditingController _name = TextEditingController(text: widget.room?.name ?? '');
   late String _emoji = widget.room?.emoji ?? '🏠';
+  late Wallpaper _wallpaper = widget.room == null ? Wallpaper.dots : wallpaperOf(widget.room!);
+  bool _wallpaperChosen = false;
 
   @override
   void dispose() {
@@ -440,9 +443,11 @@ class _RoomSheetState extends State<_RoomSheet> {
     final store = context.store;
     HapticFeedback.mediumImpact();
     if (widget.room == null) {
-      Navigator.pop(context, store.addRoom(name, _emoji));
+      final room = store.addRoom(name, _emoji);
+      if (_wallpaperChosen) store.updateRoom(room, wallpaper: _wallpaper.name);
+      Navigator.pop(context, room);
     } else {
-      store.updateRoom(widget.room!, name: name, emoji: _emoji);
+      store.updateRoom(widget.room!, name: name, emoji: _emoji, wallpaper: _wallpaperChosen ? _wallpaper.name : null);
       Navigator.pop(context, widget.room);
     }
   }
@@ -492,6 +497,27 @@ class _RoomSheetState extends State<_RoomSheet> {
                     ),
                     child: Text(e, style: const TextStyle(fontSize: 28)),
                   ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          _Label(s.wallpaperLabel),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              for (final w in Wallpaper.values)
+                WallpaperSwatch(
+                  wallpaper: w,
+                  label: s.wallpaperName(w),
+                  selected: w == _wallpaper,
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    setState(() {
+                      _wallpaper = w;
+                      _wallpaperChosen = true;
+                    });
+                  },
                 ),
             ],
           ),

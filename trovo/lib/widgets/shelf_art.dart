@@ -6,32 +6,27 @@ import '../theme.dart';
 
 /// Disegno degli scaffali in ferro: montanti forati, piani con il bordo colorato.
 
-const _holeSpacing = 13.0;
 
 /// Montante forato dello scaffale.
 void paintUpright(Canvas canvas, Rect rect, {double holeOffset = 0}) {
-  final r = RRect.fromRectAndRadius(rect, const Radius.circular(3));
-  final paint = Paint()
-    ..shader = const LinearGradient(
-      colors: [TrovoColors.metalLight, TrovoColors.metal, TrovoColors.metalDark],
-      stops: [0, 0.45, 1],
-    ).createShader(rect);
-  canvas.drawRRect(r, paint);
-
-  // Fori del montante, come negli scaffali veri.
-  final holePaint = Paint()..color = TrovoColors.background.withValues(alpha: 0.75);
-  final hw = math.max(2.0, rect.width * 0.36);
-  final hh = math.max(3.0, rect.width * 0.62);
-  final start = rect.top + ((_holeSpacing - holeOffset % _holeSpacing) % _holeSpacing) + 3;
-  for (var y = start; y < rect.bottom - hh - 1; y += _holeSpacing) {
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(rect.center.dx - hw / 2, y, hw, hh),
-        Radius.circular(hw / 2),
-      ),
-      holePaint,
+  // Montante di legno con il contorno a china.
+  canvas.drawRect(rect, Paint()..color = PaperColors.wood);
+  if (rect.width > 6) {
+    canvas.drawLine(
+      Offset(rect.left + rect.width * 0.4, rect.top + 2),
+      Offset(rect.left + rect.width * 0.4, rect.bottom - 2),
+      Paint()
+        ..color = PaperColors.woodEdge.withValues(alpha: 0.3)
+        ..strokeWidth = 1,
     );
   }
+  canvas.drawRect(
+    rect.deflate(0.5),
+    Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = math.max(1.0, rect.width * 0.12).clamp(1.0, 1.6)
+      ..color = PaperColors.ink.withValues(alpha: 0.85),
+  );
 }
 
 /// Scaffale in miniatura (Home, risultati di ricerca, anteprima).
@@ -92,20 +87,36 @@ class MiniShelfPainter extends CustomPainter {
           final x = innerLeft + p * colW + (colW - blockW) / 2;
           final rect = Rect.fromLTWH(x, boardY - h, blockW, h);
           final hiBlock = isHi && (highlightPositions.isEmpty || highlightPositions.contains(p));
+          // Barattolino: vetro, contenuto colorato, coperchio di legno.
+          final body = RRect.fromRectAndRadius(rect, Radius.circular(math.min(blockW * 0.22, 3)));
+          canvas.drawRRect(body, Paint()..color = const Color(0xFFEEF3F2));
+          canvas.drawRect(
+            Rect.fromLTRB(rect.left, rect.top + rect.height * 0.35, rect.right, rect.bottom),
+            Paint()..color = (hiBlock ? Color.lerp(color, TrovoColors.found, glow)! : color).withValues(alpha: 0.85),
+          );
+          canvas.drawRect(
+            Rect.fromLTWH(rect.left + blockW * 0.12, rect.top - math.max(1.5, h * 0.12), blockW * 0.76, math.max(1.5, h * 0.12)),
+            Paint()..color = PaperColors.woodDark,
+          );
           canvas.drawRRect(
-            RRect.fromRectAndRadius(rect, Radius.circular(math.min(blockW * 0.22, 3))),
+            body,
             Paint()
-              ..color = (hiBlock ? Color.lerp(color, TrovoColors.found, glow)! : color)
-                  .withValues(alpha: hiBlock ? 0.55 + 0.4 * glow : 0.55),
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = hiBlock && glow > 0 ? 1.6 : 0.8
+              ..color = hiBlock && glow > 0 ? TrovoColors.found : PaperColors.ink.withValues(alpha: 0.75),
           );
         }
       }
 
-      // Ripiano: bordo frontale colorato.
+      // Ripiano di legno (giallo miele quando è quello trovato).
       final lip = Rect.fromLTWH(innerLeft - uw * 0.3, boardY, innerW + uw * 0.6, boardH);
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(lip, Radius.circular(boardH * 0.3)),
-        Paint()..color = isHi ? Color.lerp(color, TrovoColors.found, glow)! : color,
+      canvas.drawRect(lip, Paint()..color = isHi ? Color.lerp(PaperColors.wood, TrovoColors.found, glow)! : PaperColors.wood);
+      canvas.drawRect(
+        lip,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 0.9
+          ..color = PaperColors.ink.withValues(alpha: 0.8),
       );
     }
 

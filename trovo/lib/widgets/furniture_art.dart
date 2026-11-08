@@ -101,35 +101,22 @@ class _MiniFurniturePainter extends CustomPainter {
 
     // Ombra sul pavimento e piedini.
     canvas.drawOval(
-      Rect.fromLTWH(-2, size.height - 9, size.width + 4, 10),
-      Paint()
-        ..color = Colors.black.withValues(alpha: 0.35)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+      Rect.fromLTWH(-2, size.height - 7, size.width + 4, 8),
+      Paint()..color = PaperColors.ink.withValues(alpha: 0.12),
     );
-    final feet = Paint()..color = TrovoColors.metalDark;
+    final feet = Paint()..color = PaperColors.woodEdge;
     canvas.drawRect(Rect.fromLTWH(body.left + side, body.bottom, side, 5), feet);
     canvas.drawRect(Rect.fromLTWH(body.right - 2 * side, body.bottom, side, 5), feet);
 
     // Corpo del mobile.
     final bodyRR = RRect.fromRectAndRadius(body, Radius.circular(radius));
-    canvas.drawRRect(
-      bodyRR,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color.lerp(TrovoColors.surfaceHigher, bodyColor, 0.30)!,
-            Color.lerp(TrovoColors.surface, bodyColor, 0.18)!,
-          ],
-        ).createShader(body),
-    );
+    canvas.drawRRect(bodyRR, Paint()..color = Color.lerp(bodyColor, Colors.white, 0.4)!);
     canvas.drawRRect(
       bodyRR,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5
-        ..color = Color.lerp(TrovoColors.metalDark, bodyColor, 0.4)!,
+        ..strokeWidth = 1.4
+        ..color = PaperColors.ink.withValues(alpha: 0.85),
     );
 
     final inner = body.deflate(side);
@@ -180,21 +167,21 @@ class _MiniFurniturePainter extends CustomPainter {
 
   void _drawer(Canvas canvas, Rect r, MiniCompartment c, bool hi) {
     final rr = RRect.fromRectAndRadius(r, Radius.circular(math.min(4, r.height * 0.2)));
-    canvas.drawRRect(rr, Paint()..color = Color.lerp(TrovoColors.surfaceHigh, c.color, hi ? 0.35 * glow + 0.12 : 0.12)!);
+    canvas.drawRRect(rr, Paint()..color = Color.lerp(bodyColor, Colors.white, hi ? 0.6 - 0.3 * glow : 0.6)!);
+    canvas.drawRRect(
+      rr,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.9
+        ..color = PaperColors.ink.withValues(alpha: 0.75),
+    );
     // Filo colorato in alto.
     canvas.drawRRect(
       RRect.fromRectAndRadius(Rect.fromLTWH(r.left, r.top, r.width, math.max(1.5, r.height * 0.12)), const Radius.circular(2)),
       Paint()..color = _hiColor(c.color, hi),
     );
-    // Maniglia.
-    final hw = r.width * 0.3;
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromCenter(center: r.center.translate(0, r.height * 0.06), width: hw, height: math.max(1.5, r.height * 0.12)),
-        const Radius.circular(2),
-      ),
-      Paint()..color = TrovoColors.metalLight,
-    );
+    // Pomello.
+    canvas.drawCircle(r.center.translate(0, r.height * 0.06), math.max(1.5, r.height * 0.14), Paint()..color = PaperColors.woodDark);
     if (hi && glow > 0) {
       canvas.drawRRect(
         rr,
@@ -208,7 +195,7 @@ class _MiniFurniturePainter extends CustomPainter {
 
   void _board(Canvas canvas, Rect r, MiniCompartment c, bool hi) {
     // Vano aperto: fondo più scuro, oggetti, ripiano colorato.
-    canvas.drawRect(r, Paint()..color = Colors.black.withValues(alpha: 0.22));
+    canvas.drawRect(r, Paint()..color = const Color(0xFFEFE3CF));
     final boardH = math.max(1.5, r.height * 0.1);
     final boardY = r.bottom - boardH;
     final n = c.slots.length;
@@ -224,17 +211,17 @@ class _MiniFurniturePainter extends CustomPainter {
         );
       }
     }
-    canvas.drawRect(Rect.fromLTWH(r.left, boardY, r.width, boardH), Paint()..color = _hiColor(c.color, hi));
+    canvas.drawRect(Rect.fromLTWH(r.left, boardY, r.width, boardH), Paint()..color = hi ? _hiColor(PaperColors.wood, hi) : PaperColors.wood);
   }
 
   void _rail(Canvas canvas, Rect r, MiniCompartment c, bool hi) {
-    canvas.drawRect(r, Paint()..color = Colors.black.withValues(alpha: 0.22));
+    canvas.drawRect(r, Paint()..color = const Color(0xFFEFE3CF));
     final rodY = r.top + math.max(3, r.height * 0.1);
     canvas.drawLine(
       Offset(r.left + 1, rodY),
       Offset(r.right - 1, rodY),
       Paint()
-        ..color = TrovoColors.metalLight
+        ..color = PaperColors.woodDark
         ..strokeWidth = math.max(1.5, r.height * 0.03),
     );
     final n = c.slots.length;
@@ -243,7 +230,7 @@ class _MiniFurniturePainter extends CustomPainter {
     for (var p = 0; p < n; p++) {
       final cx = r.left + p * cw + cw / 2;
       final hook = Paint()
-        ..color = TrovoColors.metalLight.withValues(alpha: 0.8)
+        ..color = PaperColors.ink.withValues(alpha: 0.6)
         ..strokeWidth = 1
         ..style = PaintingStyle.stroke;
       final hy = rodY + math.max(3, r.height * 0.08);
@@ -262,7 +249,7 @@ class _MiniFurniturePainter extends CustomPainter {
 
   void _cube(Canvas canvas, Rect r, MiniCompartment c, bool hi) {
     final rr = RRect.fromRectAndRadius(r, Radius.circular(math.min(3, r.width * 0.08)));
-    canvas.drawRRect(rr, Paint()..color = Colors.black.withValues(alpha: 0.28));
+    canvas.drawRRect(rr, Paint()..color = const Color(0xFFE6D5BB));
     final used = c.slots.where((s) => s).length;
     if (used > 0) {
       final box = Rect.fromLTWH(r.left + r.width * 0.12, r.top + r.height * 0.3, r.width * 0.76, r.height * 0.62);
@@ -276,7 +263,7 @@ class _MiniFurniturePainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = hi && glow > 0 ? 2 : 1
-        ..color = hi && glow > 0 ? TrovoColors.found.withValues(alpha: glow) : c.color.withValues(alpha: 0.5),
+        ..color = hi && glow > 0 ? TrovoColors.found.withValues(alpha: glow) : PaperColors.ink.withValues(alpha: 0.7),
     );
   }
 
@@ -284,27 +271,31 @@ class _MiniFurniturePainter extends CustomPainter {
   bool shouldRepaint(_MiniFurniturePainter old) => true;
 }
 
-/// Fianco di un mobile chiuso (laminato), al posto del montante in ferro.
+/// Fianco di un mobile chiuso: legno verniciato nel colore del mobile, contorno a china.
 void paintPanelSide(Canvas canvas, Rect rect, Color tint, {required bool left}) {
-  final rr = RRect.fromRectAndRadius(rect, const Radius.circular(3));
-  canvas.drawRRect(
-    rr,
+  canvas.drawRect(rect, Paint()..color = Color.lerp(tint, Colors.white, 0.35)!);
+  canvas.drawRect(
+    rect.deflate(0.75),
     Paint()
-      ..shader = LinearGradient(
-        begin: left ? Alignment.centerLeft : Alignment.centerRight,
-        end: left ? Alignment.centerRight : Alignment.centerLeft,
-        colors: [
-          Color.lerp(TrovoColors.surfaceHigher, tint, 0.45)!,
-          Color.lerp(TrovoColors.surface, tint, 0.25)!,
-        ],
-      ).createShader(rect),
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..color = PaperColors.ink.withValues(alpha: 0.85),
   );
-  canvas.drawLine(
-    Offset(left ? rect.right - 0.5 : rect.left + 0.5, rect.top),
-    Offset(left ? rect.right - 0.5 : rect.left + 0.5, rect.bottom),
+}
+
+/// Montante di legno dello scaffale aperto.
+void paintWoodPost(Canvas canvas, Rect rect) {
+  canvas.drawRect(rect, Paint()..color = PaperColors.wood);
+  final grain = Paint()
+    ..color = PaperColors.woodEdge.withValues(alpha: 0.3)
+    ..strokeWidth = 1;
+  canvas.drawLine(Offset(rect.left + rect.width * 0.35, rect.top + 3), Offset(rect.left + rect.width * 0.35, rect.bottom - 3), grain);
+  canvas.drawRect(
+    rect.deflate(0.75),
     Paint()
-      ..color = Colors.black.withValues(alpha: 0.35)
-      ..strokeWidth = 1,
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..color = PaperColors.ink.withValues(alpha: 0.85),
   );
 }
 
@@ -316,14 +307,13 @@ class PanelCapPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final r = Rect.fromLTWH(-4, 0, size.width + 8, size.height);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(r, const Radius.circular(5)),
+    canvas.drawRect(r, Paint()..color = Color.lerp(tint, Colors.white, 0.25)!);
+    canvas.drawRect(
+      r.deflate(0.75),
       Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color.lerp(TrovoColors.surfaceHigher, tint, 0.55)!, Color.lerp(TrovoColors.surface, tint, 0.3)!],
-        ).createShader(r),
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5
+        ..color = PaperColors.ink.withValues(alpha: 0.85),
     );
   }
 
@@ -339,15 +329,17 @@ class PanelFeetPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     canvas.drawOval(
-      Rect.fromLTWH(-10, size.height - 6, size.width + 20, 12),
-      Paint()
-        ..color = Colors.black.withValues(alpha: 0.35)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
+      Rect.fromLTWH(-10, size.height - 6, size.width + 20, 10),
+      Paint()..color = PaperColors.ink.withValues(alpha: 0.12),
     );
     final r = Rect.fromLTWH(0, 0, size.width, size.height - 6);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(r, const Radius.circular(4)),
-      Paint()..color = Color.lerp(TrovoColors.surface, tint, 0.2)!,
+    canvas.drawRect(r, Paint()..color = Color.lerp(tint, PaperColors.ink, 0.15)!);
+    canvas.drawRect(
+      r.deflate(0.75),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5
+        ..color = PaperColors.ink.withValues(alpha: 0.85),
     );
   }
 
