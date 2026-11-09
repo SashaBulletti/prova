@@ -83,6 +83,20 @@ td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
 .status li{list-style:none;margin-left:-1.1rem}
 .ok{color:var(--ok);font-weight:700}
 .wn{color:var(--warn);font-weight:700}
+.modes{display:flex;flex-wrap:wrap;gap:.5rem;margin:.75rem 0}
+.modes button{font:700 .95rem var(--f-body);padding:.55rem .95rem;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.modes button[aria-pressed="true"]{background:var(--mercury);border-color:var(--mercury);color:#fff}
+.modes button:focus-visible{outline:2px solid var(--scale);outline-offset:2px}
+.v3d{position:relative;width:100%;aspect-ratio:4/3;min-height:340px;max-height:75vh;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.v3d canvas{display:block;width:100%;height:100%}
+.v3d .fb[hidden]{display:none}
+.v3d .fb{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:1rem;margin:0;text-align:center;color:var(--mute)}
+.opts{display:flex;flex-wrap:wrap;gap:.5rem 1.25rem;margin:.7rem 0 .2rem}
+.opts label{display:flex;gap:.45rem;align-items:center;cursor:pointer}
+.opts input{width:1.1rem;height:1.1rem;accent-color:var(--mercury)}
+.cap{color:var(--mute);min-height:3.2em}
+.legend{display:flex;flex-wrap:wrap;gap:.35rem 1rem;list-style:none;padding:0;margin:.4rem 0 0;font-size:.9rem}
+.legend i{display:inline-block;width:.8rem;height:.8rem;border-radius:50%;margin-right:.35rem;vertical-align:-1px;border:1px solid var(--line)}
 svg text.s{font-size:12px;fill:var(--mute)}
 svg text.b{font-weight:700}
 .fig2{margin:1.25rem 0;min-width:0}
@@ -145,6 +159,29 @@ footer{margin-top:3rem;color:var(--mute);font-size:.9rem}
     <figcaption>vista frontale, in scala (1 mm = 2 unità)</figcaption>
   </figure>
 </header>
+
+<section>
+  <div class="phase"><span class="n">3D</span><h2>Il modello da girare e aprire</h2></div>
+  <p>Trascina per girarlo e usa la rotella o due dita per ingrandire. I gusci sono quelli veri dei file da stampare. Sul telefono scorri la pagina toccando fuori dal disegno.</p>
+  <div class="modes" role="group" aria-label="Modo di visione">
+    <button type="button" data-m="chiuso" aria-pressed="true">Chiuso</button>
+    <button type="button" data-m="aperto" aria-pressed="false">Aperto</button>
+    <button type="button" data-m="esploso" aria-pressed="false">Smontato</button>
+    <button type="button" data-m="sezione" aria-pressed="false">Tagliato a metà</button>
+  </div>
+  <div class="v3d" id="v3d"><p class="fb" id="v3dfb" hidden>Il modello 3D non si è caricato. Servono una connessione a internet e un browser con WebGL. I file da stampare sono comunque in <code>hardware/stl/</code>.</p></div>
+  <div class="opts">
+    <label><input type="checkbox" id="vcomp" checked> Mostra i componenti</label>
+    <label><input type="checkbox" id="vtr"> Gusci trasparenti</label>
+  </div>
+  <p class="cap" id="vcap">Così appare quando è montato.</p>
+  <ul class="legend" aria-label="Legenda">
+    <li><i style="background:#6c4fe0"></i>Fronte</li><li><i style="background:#4a3aa6"></i>Retro</li>
+    <li><i style="background:#0b0f1a"></i>Schermo</li><li><i style="background:#d62839"></i>Bottone</li>
+    <li><i style="background:#1f6b4a"></i>ESP32</li><li><i style="background:#222"></i>Cavo USB</li>
+    <li><i style="background:#9aa0a8"></i>Viti</li><li><i style="background:#fff"></i>Occhietti</li>
+  </ul>
+</section>
 
 <section>
   <div class="phase"><span class="n">Regole</span><h2>Come si misura la mostruosità</h2></div>
@@ -262,7 +299,7 @@ footer{margin-top:3rem;color:var(--mute);font-size:.9rem}
       <tr><td><b>Schermo 1,3"</b></td><td class="num">Circuito 28 × 34 × 4 mm, parte visibile 23,4 mm</td><td>Nicchia nel fronte, finestra 24,6 × 24,6 mm</td><td>Quasi zero. Aggiungi 0,4 mm alle misure del circuito</td></tr>
       <tr><td><b>Bottone arcade</b></td><td class="num">Flangia Ø33, canna Ø24, corpo 21–25 mm</td><td>Foro Ø24,2 mm nel bulbo, pannello spesso 2,4 mm</td><td>10–14 mm dietro, per fili e cavo USB</td></tr>
       <tr><td><b>Viti M3 × 30</b></td><td class="num">Testa Ø5,5 mm</td><td>3 piantoni Ø7 mm, sede della testa Ø6,4 mm</td><td>Entrano 10 mm nel fronte</td></tr>
-      <tr><td><b>Cavo USB</b></td><td class="num">Spina 20–25 mm, cavo Ø3–4 mm</td><td>Passa dietro al bottone, esce da una tacca 12 × 8 mm in basso</td><td>Poco. Usa una spina corta e un cavo sottile</td></tr>
+      <tr><td><b>Cavo USB</b></td><td class="num">Spina 20–25 mm, cavo Ø3–4 mm</td><td>Passa dietro al bottone, esce da una tacca 12 × 13 mm in basso</td><td>Poco. Usa una spina corta e un cavo sottile</td></tr>
       <tr><td><b>Occhietti</b></td><td class="num">Ø12 mm</td><td>Due sedi Ø12 mm, profonde 1 mm</td><td>Si incollano sopra</td></tr>
       <tr><td><b>Termometro finito</b></td><td class="num">70 × 200 × 40 mm</td><td>Tubo largo 42 mm, bulbo Ø70 mm, fondo piatto</td><td>Sta su un piatto da 220 mm</td></tr>
     </tbody>
@@ -397,9 +434,154 @@ footer{margin-top:3rem;color:var(--mute);font-size:.9rem}
 <footer>I file del progetto sono nella cartella <code>mostrometro/</code> del repository. Le spunte restano salvate solo su questo dispositivo.</footer>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="modello.js"></script>
+<script>
+// Visualizzatore 3D. Unità: mm. y verso l'alto, il fronte guarda l'osservatore (+z).
+(function(){
+  var box=document.getElementById('v3d'),fb=document.getElementById('v3dfb');
+  var R;
+  if(!window.THREE||!THREE.OrbitControls||!window.MOSTRO_MODELLO){fb.hidden=false;return}
+  try{R=new THREE.WebGLRenderer({antialias:true,alpha:true})}catch(e){fb.hidden=false;return}
+  R.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  R.localClippingEnabled=true;
+  box.insertBefore(R.domElement,fb);
+
+  var scene=new THREE.Scene(),cam=new THREE.PerspectiveCamera(35,1,5,3000);
+  scene.add(new THREE.HemisphereLight(0xffffff,0x4a5560,.95));
+  var l1=new THREE.DirectionalLight(0xffffff,.8);l1.position.set(120,220,260);scene.add(l1);
+  var l2=new THREE.DirectionalLight(0xffffff,.35);l2.position.set(-160,60,-220);scene.add(l2);
+  var ctl=new THREE.OrbitControls(cam,R.domElement);
+  ctl.enableDamping=true;ctl.enablePan=false;ctl.minDistance=150;ctl.maxDistance=1400;
+  ctl.target.set(0,70,20);
+  cam.position.copy(ctl.target).addScaledVector(new THREE.Vector3(.5,.22,1).normalize(),440);
+
+  var clip=new THREE.Plane(new THREE.Vector3(-1,0,0),1000);   // 1000 = niente taglio, 0 = taglia a metà
+  function mat(c,o){return new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.55,metalness:.05,flatShading:true,side:THREE.DoubleSide,clippingPlanes:[clip]},o||{}))}
+  function geo(b64){
+    var s=atob(b64),n=s.length,u=new Uint8Array(n);
+    for(var i=0;i<n;i++)u[i]=s.charCodeAt(i);
+    var h=new Int16Array(u.buffer),f=new Float32Array(h.length);
+    for(i=0;i<h.length;i++)f[i]=h[i]/100;
+    var g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(f,3));g.computeVertexNormals();return g}
+  function cube(w,h,d,m,x,y,z){var o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);return o}
+  function cylZ(r,h,m,x,y,z){var o=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,40),m);o.rotation.x=Math.PI/2;o.position.set(x,y,z);return o}
+
+  var root=new THREE.Group();scene.add(root);
+  var back=new THREE.Group();root.add(back);
+  var pivot=new THREE.Group();pivot.position.set(37,0,20);root.add(pivot);
+  var front=new THREE.Group();front.position.set(-37,0,-20);pivot.add(front);
+
+  var parts=[];            // dz = di quanto si sposta nella vista "Smontato"
+  function add(g,o,dz,comp){g.add(o);parts.push({o:o,dz:dz,comp:comp})}
+
+  var mFront=mat(0x6c4fe0),mBack=mat(0x4a3aa6);
+  add(front,new THREE.Mesh(geo(MOSTRO_MODELLO.fronte),mFront),60,false);
+  add(back,new THREE.Mesh(geo(MOSTRO_MODELLO.retro),mBack),-40,false);
+
+  // ESP32 (appoggiata nel retro, porta USB in basso) e cavo
+  var g=new THREE.Group();
+  g.add(cube(29,53,1.6,mat(0x1f6b4a),0,66.5,11.7));
+  g.add(cube(2.5,48,8.5,mat(0x111111),-12.5,66.5,6.65));
+  g.add(cube(2.5,48,8.5,mat(0x111111),12.5,66.5,6.65));
+  g.add(cube(18,25.5,3.2,mat(0xc3c8ce,{metalness:.8,roughness:.35}),0,80,14.1));
+  g.add(cube(8,6,3,mat(0x9aa0a8,{metalness:.8}),0,41.5,14));
+  add(back,g,0,true);
+  g=new THREE.Group();
+  g.add(cube(11,23,8,mat(0x222222),0,27.5,14.2));
+  var cab=new THREE.Mesh(new THREE.CylinderGeometry(1.8,1.8,75,20),mat(0x222222));cab.position.set(0,-22,14.2);g.add(cab);
+  add(back,g,0,true);
+
+  // viti M3 x 30, entrano dal retro
+  g=new THREE.Group();var mScrew=mat(0x9aa0a8,{metalness:.8,roughness:.35});
+  [[-26,0],[26,0],[0,140]].forEach(function(p){
+    g.add(cylZ(2.75,2,mScrew,p[0],p[1],1.4));
+    g.add(cylZ(1.5,28,mScrew,p[0],p[1],16.4));
+  });
+  add(back,g,-80,true);
+
+  // schermo 1,3" con la sua immagine
+  function immagine(){
+    var c=document.createElement('canvas');c.width=c.height=240;var x=c.getContext('2d');
+    x.fillStyle='#000';x.fillRect(0,0,240,240);
+    x.fillStyle='#2a2342';x.fillRect(26,16,30,160);
+    var gr=x.createLinearGradient(0,176,0,16);gr.addColorStop(0,'#52e08a');gr.addColorStop(.5,'#ffd84a');gr.addColorStop(1,'#ff3d5a');
+    x.fillStyle=gr;x.fillRect(34,60,14,120);
+    x.fillStyle='#ff3d5a';x.beginPath();x.arc(41,200,26,0,7);x.fill();
+    x.fillStyle='#ff6b78';x.font='bold 56px sans-serif';x.fillText('73%',80,66);
+    x.fillStyle='#d9a441';x.beginPath();x.arc(160,128,36,0,7);x.fill();
+    x.fillStyle='#fff';x.beginPath();x.arc(146,120,9,0,7);x.arc(174,120,9,0,7);x.fill();
+    x.fillStyle='#000';x.beginPath();x.arc(148,120,4,0,7);x.arc(172,120,4,0,7);x.fill();
+    x.fillRect(144,138,32,14);x.fillStyle='#fff';
+    for(var i=0;i<4;i++){x.beginPath();x.moveTo(144+i*8,138);x.lineTo(148+i*8,146);x.lineTo(152+i*8,138);x.fill()}
+    return new THREE.CanvasTexture(c)}
+  g=new THREE.Group();
+  g.add(cube(28,34,1.6,mat(0x1a2a6c),0,116,37));
+  g.add(cube(26,26,1.2,mat(0x05070a),0,116,38.4));
+  var pl=new THREE.Mesh(new THREE.PlaneGeometry(23.4,23.4),new THREE.MeshBasicMaterial({map:immagine(),clippingPlanes:[clip]}));
+  pl.position.set(0,116,39.03);g.add(pl);
+  add(front,g,25,true);
+
+  // bottone arcade da 30 mm
+  g=new THREE.Group();
+  g.add(cylZ(16.5,2.5,mat(0xd62839),0,0,41.25));
+  g.add(cylZ(13.5,3,mat(0xff4a5c),0,0,44));
+  g.add(cylZ(12,2.4,mat(0x222222),0,0,38.8));
+  g.add(cylZ(14,21,mat(0x1b1b1f),0,0,27.1));
+  add(front,g,90,true);
+
+  // occhietti adesivi
+  g=new THREE.Group();var mW=mat(0xffffff,{roughness:.3}),mB=mat(0x111111);
+  [-8.5,8.5].forEach(function(x){
+    var e=new THREE.Mesh(new THREE.SphereGeometry(6,24,12,0,Math.PI*2,0,Math.PI/2),mW);   // mezza sfera appoggiata sulla sede
+    e.scale.y=.5;e.rotation.x=Math.PI/2;e.position.set(x,148,39);g.add(e);
+    var p=new THREE.Mesh(new THREE.SphereGeometry(2.3,16,12),mB);p.position.set(x+.6,147,41.4);g.add(p)});
+  add(front,g,90,true);
+
+  // modi
+  // t = punto guardato, d = distanza, dir = da dove si guarda, o = aperto, e = smontato, c = taglio
+  var VIEW={chiuso:{t:[0,70,20],d:440,dir:[.5,.22,1],o:0,e:0,c:0},
+            aperto:{t:[37,70,10],d:540,dir:[.3,.2,1],o:1,e:0,c:0},
+            esploso:{t:[0,70,25],d:760,dir:[1,.3,.35],o:0,e:1,c:0},
+            sezione:{t:[0,70,20],d:420,dir:[1,.2,.4],o:0,e:0,c:1}};
+  var CAP={chiuso:'Così appare quando è montato. Trascinalo per vederlo da tutti i lati.',
+    aperto:'I due gusci aperti come un libro. A sinistra il retro con l\'ESP32 e il cavo USB, a destra il fronte con lo schermo e il bottone.',
+    esploso:'Tutti i pezzi separati, nell\'ordine di montaggio: le viti entrano dal retro, l\'ESP32 sta nel retro, lo schermo va dentro il fronte, bottone e occhietti si mettono da davanti.',
+    sezione:'Tagliato a metà per vedere lo spazio dentro. Il cavo USB passa dietro al corpo del bottone e esce dalla tacca in basso.'};
+  var mode='chiuso',S={o:0,e:0},moving=0;
+  var btns=[].slice.call(document.querySelectorAll('.modes button'));
+  btns.forEach(function(b){b.addEventListener('click',function(){
+    mode=b.getAttribute('data-m');moving=100;
+    btns.forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false')});
+    document.getElementById('vcap').textContent=CAP[mode];
+    clip.constant=VIEW[mode].c?0:1000})});
+  var cb=document.getElementById('vcomp'),tr=document.getElementById('vtr');
+  function opzioni(){
+    parts.forEach(function(p){if(p.comp)p.o.visible=cb.checked});
+    [mFront,mBack].forEach(function(m){m.transparent=tr.checked;m.opacity=tr.checked?.3:1;m.depthWrite=!tr.checked;m.needsUpdate=true})}
+  cb.addEventListener('change',opzioni);tr.addEventListener('change',opzioni);opzioni();
+
+  function size(){var w=box.clientWidth,h=box.clientHeight;if(!w||!h)return;R.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}
+  window.addEventListener('resize',size);size();
+  var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  (function frame(){
+    var v=VIEW[mode],k=reduce?1:.12;
+    S.o+=(v.o-S.o)*k;S.e+=(v.e-S.e)*k;
+    pivot.rotation.y=S.o*Math.PI;
+    parts.forEach(function(p){p.o.position.z=p.dz*S.e});
+    if(moving>0){
+      moving--;
+      var kk=reduce?1:.1,off=cam.position.clone().sub(ctl.target),len=off.length();
+      var dir=off.normalize().lerp(new THREE.Vector3(v.dir[0],v.dir[1],v.dir[2]).normalize(),kk).normalize();
+      ctl.target.lerp(new THREE.Vector3(v.t[0],v.t[1],v.t[2]),kk);
+      cam.position.copy(ctl.target).addScaledVector(dir,len+(v.d-len)*kk)}
+    ctl.update();R.render(scene,cam);requestAnimationFrame(frame)})();
+})();
+</script>
 <script>
 (function(){
-  var boxes=[].slice.call(document.querySelectorAll('input[type=checkbox]'));
+  var boxes=[].slice.call(document.querySelectorAll('.chk input[type=checkbox]'));
   var fill=document.getElementById('fill'),pct=document.getElementById('pct');
   var KEY='mostrometro-progetto',saved={};
   try{saved=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){}

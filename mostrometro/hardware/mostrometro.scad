@@ -127,7 +127,7 @@ module retro() {
             translate([p[0], p[1], -0.01]) cylinder(d = screw_head, h = wall - 0.4);
         }
         // uscita del cavo USB, in basso
-        translate([-6, -bulb_d/2 + flat - 1, half - 7]) cube([12, wall + 2, 8]);
+        translate([-6, -bulb_d/2 + flat - 1, half - 12]) cube([12, wall + 2, 13]);
     }
 }
 
