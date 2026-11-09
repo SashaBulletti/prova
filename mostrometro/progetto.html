@@ -122,10 +122,10 @@ footer{margin-top:3rem;color:var(--mute);font-size:.9rem}
   <div>
     <div class="kicker">Progetto di famiglia</div>
     <h1>Mostrometro</h1>
-    <p class="lead">Un termometro stampato in 3D che misura quanto sei mostro. Premi il bottone: il mercurio sale sullo schermino e si ferma sulla tua percentuale. Dal telefono guardi la classifica di tutta la famiglia.</p>
+    <p class="lead">Un termometro stampato in 3D, a batteria, che misura quanto sei mostro. Premi il bottone: il mercurio sale sullo schermino e si ferma sulla tua percentuale. Dal telefono guardi la classifica di tutta la famiglia.</p>
     <dl class="facts">
       <div><dt>Misure</dt><dd>200 × 70 × 40 mm</dd></div>
-      <div><dt>Spesa</dt><dd>circa 20 €</dd></div>
+      <div><dt>Spesa</dt><dd>circa 30 €</dd></div>
       <div><dt>Tempo</dt><dd>un weekend</dd></div>
     </dl>
   </div>
@@ -139,7 +139,7 @@ footer{margin-top:3rem;color:var(--mute);font-size:.9rem}
         <rect x="219.5" y="63" width="81" height="299"/><circle cx="260" cy="62" r="40.5"/><circle cx="260" cy="362" r="68.5"/>
       </g>
       <path d="M224 274H231M224 254H231M224 234H231M224 214H231M224 174H231M224 154H231M224 134H231M224 114H231M219 294H231M219 194H231M219 94H231M289 274H296M289 254H296M289 234H296M289 214H296M289 174H296M289 154H296M289 134H296M289 114H296M289 294H301M289 194H301M289 94H301" stroke="var(--scale)" stroke-width="2" fill="none"/>
-      <rect x="231" y="176" width="58" height="106" fill="none" stroke="var(--mute)" stroke-width="1.5" stroke-dasharray="5 4"/>
+      <rect x="234" y="178" width="52" height="116" fill="none" stroke="var(--mute)" stroke-width="1.5" stroke-dasharray="5 4"/>
       <rect x="235.4" y="105.5" width="49.2" height="49" rx="3" fill="#0b1319" stroke="var(--ink)" stroke-width="2"/>
       <text x="260" y="138" text-anchor="middle" style="fill:#ff6b78;font-family:var(--f-mono);font-size:17px;font-weight:500">73%</text>
       <circle cx="260" cy="362" r="24" fill="var(--mercury)" stroke="var(--ink)" stroke-width="2"/>
@@ -154,7 +154,7 @@ footer{margin-top:3rem;color:var(--mute);font-size:.9rem}
       <text x="350" y="135">Schermo</text>
       <text x="350" y="234">ESP32 dentro</text>
       <text x="350" y="367">Bottone</text>
-      <text x="10" y="436">Cavo USB</text>
+      <text x="10" y="436">Porta ricarica</text>
     </svg>
     <figcaption>vista frontale, in scala (1 mm = 2 unità)</figcaption>
   </figure>
@@ -178,7 +178,7 @@ footer{margin-top:3rem;color:var(--mute);font-size:.9rem}
   <ul class="legend" aria-label="Legenda">
     <li><i style="background:#6c4fe0"></i>Fronte</li><li><i style="background:#4a3aa6"></i>Retro</li>
     <li><i style="background:#0b0f1a"></i>Schermo</li><li><i style="background:#d62839"></i>Bottone</li>
-    <li><i style="background:#1f6b4a"></i>ESP32</li><li><i style="background:#222"></i>Cavo USB</li>
+    <li><i style="background:#1f6b4a"></i>ESP32</li><li><i style="background:#e0a030"></i>Batteria</li><li><i style="background:#222"></i>Prolunga USB</li>
     <li><i style="background:#9aa0a8"></i>Viti</li><li><i style="background:#fff"></i>Occhietti</li>
   </ul>
 </section>
@@ -209,11 +209,13 @@ footer{margin-top:3rem;color:var(--mute);font-size:.9rem}
 
 <section>
   <div class="phase"><span class="n">Fase 1</span><h2>Compra i pezzi</h2></div>
-  <label class="chk"><input type="checkbox" id="c1"><span class="t"><b>ESP32 DevKit, 38 pin</b><small>Circa 51 × 28 mm. È il cervello e fa anche il WiFi.</small></span></label>
+  <label class="chk"><input type="checkbox" id="c1"><span class="t"><b>ESP32 con caricabatteria LiPo, tipo LOLIN D32</b><small>Circa 58 × 25 mm, con il connettore JST per la batteria. È il cervello, fa il WiFi e ricarica la batteria. Una ESP32 normale non va bene.</small></span></label>
   <label class="chk"><input type="checkbox" id="c2"><span class="t"><b>Schermo ST7789 da 1,3", 240 × 240</b><small>Quello con 7 pin (SPI). Ordina quello con i fili Dupont femmina, se lo trovi.</small></span></label>
   <label class="chk"><input type="checkbox" id="c3"><span class="t"><b>Bottone arcade da 30 mm</b><small>Il foro nel termometro è da 24 mm. Quelli con il microswitch già montato vanno bene.</small></span></label>
   <label class="chk"><input type="checkbox" id="c4"><span class="t"><b>3 viti M3 lunghe 30 mm</b><small>Chiudono i due gusci da dietro.</small></span></label>
-  <label class="chk"><input type="checkbox" id="c5"><span class="t"><b>Cavo USB e caricatore da telefono</b><small>Il Mostrometro si alimenta così, senza batteria.</small></span></label>
+  <label class="chk"><input type="checkbox" id="c5"><span class="t"><b>Cavo USB e caricatore da telefono</b><small>Servono solo per ricaricare la batteria.</small></span></label>
+  <label class="chk"><input type="checkbox" id="c8"><span class="t"><b>Batteria LiPo piatta da 3,7 V, tipo 603048</b><small>6 × 30 × 48 mm, circa 850 mAh, con circuito di protezione e connettore JST. Più spessa di 7 mm non entra.</small></span></label>
+  <label class="chk"><input type="checkbox" id="c9"><span class="t"><b>Prolunga USB femmina da pannello</b><small>Micro-USB o USB-C, uguale alla porta della scheda. Serve per ricaricare senza aprire il termometro.</small></span></label>
   <label class="chk"><input type="checkbox" id="c6"><span class="t"><b>2 occhietti adesivi da 12 mm</b><small>Servono a rendere il termometro un mostro.</small></span></label>
   <label class="chk"><input type="checkbox" id="c7"><span class="t"><b>Filo di stampa PLA, circa 130 g</b><small>Stima per i due gusci. Scegli un colore da mostro.</small></span></label>
 </section>
@@ -242,31 +244,33 @@ footer{margin-top:3rem;color:var(--mute);font-size:.9rem}
       <circle cx="312" cy="362" r="7" fill="var(--tube)" stroke="var(--ink)" stroke-width="2"/>
       <rect x="232" y="96" width="56" height="68" rx="2" fill="var(--mercury)" fill-opacity=".18" stroke="var(--mercury)" stroke-width="2"/>
       <rect x="235.4" y="105.5" width="49.2" height="49" fill="var(--ink)" fill-opacity=".85"/>
-      <rect x="231" y="176" width="58" height="106" rx="2" fill="var(--scale)" fill-opacity=".22" stroke="var(--scale)" stroke-width="2"/>
-      <text x="260" y="234" text-anchor="middle" class="b" style="font-size:14px">ESP32</text>
-      <rect x="252" y="282" width="16" height="138" fill="none" stroke="var(--mute)" stroke-width="1.5" stroke-dasharray="5 4"/>
+      <rect x="234" y="178" width="52" height="116" rx="2" fill="var(--scale)" fill-opacity=".22" stroke="var(--scale)" stroke-width="2"/>
+      <text x="260" y="240" text-anchor="middle" class="b" style="font-size:14px">ESP32</text>
+      <rect x="230" y="310" width="60" height="96" rx="2" fill="var(--warn)" fill-opacity=".25" stroke="var(--warn)" stroke-width="2"/>
+      <rect x="252" y="294" width="16" height="126" fill="none" stroke="var(--mute)" stroke-width="1.5" stroke-dasharray="5 4"/>
       <circle cx="260" cy="362" r="24.2" fill="var(--mercury)" fill-opacity=".3" stroke="var(--mercury)" stroke-width="2"/>
       <circle cx="260" cy="362" r="33" fill="none" stroke="var(--mute)" stroke-width="1.5" stroke-dasharray="5 4"/>
       <g stroke="var(--mute)" stroke-width="1.2" fill="none">
-        <path d="M290 130H345"/><path d="M290 229H345"/><path d="M284 362H345"/><path d="M283 385L345 398"/>
+        <path d="M290 130H345"/><path d="M290 229H345"/><path d="M284 362H345"/><path d="M283 385L345 398"/><path d="M290 322H345"/>
         <path d="M150 82H253"/><path d="M130 366H201"/><path d="M118 395H252"/>
       </g>
       <text x="350" y="125" class="b">Schermo</text><text x="350" y="141" class="s">circuito 28 × 34 mm</text>
-      <text x="350" y="224" class="b">ESP32</text><text x="350" y="240" class="s">alloggio 53 × 29 mm</text>
+      <text x="350" y="224" class="b">ESP32</text><text x="350" y="240" class="s">alloggio 58 × 26 mm</text>
+      <text x="350" y="317" class="b">Batteria</text><text x="350" y="333" class="s">30 × 48 mm, sotto il bottone</text>
       <text x="350" y="357" class="b">Bottone</text><text x="350" y="373" class="s">foro Ø24,2 mm</text>
       <text x="350" y="410" class="s">flangia Ø33 mm, davanti</text>
       <text x="10" y="78" class="b">Piantoni viti</text><text x="10" y="94" class="s">Ø7 mm, ce ne sono 3</text>
       <text x="10" y="370" class="s">piantone</text>
-      <text x="10" y="399" class="s">percorso cavo USB</text>
+      <text x="10" y="399" class="s">cavetto USB</text>
       <text x="10" y="435" class="s">Spazio utile: tubo 37,2 mm · bulbo Ø65,2 mm</text>
     </svg>
     <figcaption>pianta del retro con il guscio aperto, in scala (1 mm = 2 unità)</figcaption>
   </figure>
 
   <figure class="fig2">
-    <svg viewBox="0 0 500 300" role="img" aria-label="Sezione laterale in profondità con le quote dei componenti da 0 a 40 millimetri">
-      <line x1="240" y1="14" x2="240" y2="262" stroke="var(--mute)" stroke-width="1.2" stroke-dasharray="5 4"/>
-      <text x="244" y="22" class="s">chiusura dei gusci (20 mm)</text>
+    <svg viewBox="0 0 500 354" role="img" aria-label="Sezione laterale in profondità con le quote dei componenti da 0 a 40 millimetri">
+      <line x1="240" y1="14" x2="240" y2="316" stroke="var(--mute)" stroke-width="1.2" stroke-dasharray="5 4"/>
+      <text x="244" y="22" class="s">chiusura (20 mm)</text>
       <text x="40" y="22" class="s b">FRONTE</text><text x="440" y="22" text-anchor="end" class="s b">RETRO</text>
 
       <text x="40" y="52" class="b">Pareti e vuoto interno</text>
@@ -277,17 +281,20 @@ footer{margin-top:3rem;color:var(--mute);font-size:.9rem}
       <rect x="30" y="112" width="10" height="20" fill="var(--mercury)" fill-opacity=".5" stroke="var(--mercury)"/>
       <rect x="64" y="112" width="190" height="20" fill="var(--mercury)" fill-opacity=".3" stroke="var(--mercury)" stroke-width="1.5"/>
 
-      <text x="40" y="160" class="b">Schermo</text><text x="105" y="160" class="s">circuito circa 4 mm</text>
+      <text x="40" y="160" class="b">Schermo</text><text x="114" y="160" class="s">circuito circa 4 mm</text>
       <rect x="50" y="166" width="40" height="20" fill="var(--mercury)" fill-opacity=".3" stroke="var(--mercury)" stroke-width="1.5"/>
 
       <text x="40" y="214" class="b">ESP32</text><text x="95" y="214" class="s">13 mm con i pin, appoggiata sul retro</text>
       <rect x="286" y="220" width="130" height="20" fill="var(--scale)" fill-opacity=".25" stroke="var(--scale)" stroke-width="1.5"/>
 
-      <text x="40" y="268" class="b">Vite M3</text><text x="105" y="268" class="s">30 mm, entra 10 mm nel fronte</text>
-      <rect x="140" y="274" width="300" height="10" fill="var(--ink)" fill-opacity=".6"/>
+      <text x="40" y="268" class="b">Batteria</text><text x="105" y="268" class="s">6–7 mm, sul fondo del retro</text>
+      <rect x="64" y="274" width="70" height="20" fill="var(--warn)" fill-opacity=".3" stroke="var(--warn)" stroke-width="1.5"/>
 
-      <g stroke="var(--mute)" stroke-width="1"><path d="M40 292V296M90 292V296M140 292V296M190 292V296M240 292V296M290 292V296M340 292V296M390 292V296M440 292V296"/></g>
-      <g class="s" text-anchor="middle"><text x="40" y="299" style="font-size:10px">0</text><text x="140" y="299" style="font-size:10px">10</text><text x="240" y="299" style="font-size:10px">20</text><text x="340" y="299" style="font-size:10px">30</text><text x="440" y="299" style="font-size:10px">40 mm</text></g>
+      <text x="40" y="322" class="b">Vite M3</text><text x="105" y="322" class="s">30 mm, entra 10 mm nel fronte</text>
+      <rect x="140" y="328" width="300" height="10" fill="var(--ink)" fill-opacity=".6"/>
+
+      <g stroke="var(--mute)" stroke-width="1"><path d="M40 346V350M90 346V350M140 346V350M190 346V350M240 346V350M290 346V350M340 346V350M390 346V350M440 346V350"/></g>
+      <g class="s" text-anchor="middle"><text x="40" y="353" style="font-size:10px">0</text><text x="140" y="353" style="font-size:10px">10</text><text x="240" y="353" style="font-size:10px">20</text><text x="340" y="353" style="font-size:10px">30</text><text x="440" y="353" style="font-size:10px">40 mm</text></g>
     </svg>
     <figcaption>sezione laterale, in scala (1 mm = 10 unità). Il bottone e l'ESP32 si sovrappongono in profondità ma non in pianta.</figcaption>
   </figure>
@@ -295,16 +302,17 @@ footer{margin-top:3rem;color:var(--mute);font-size:.9rem}
   <div class="tablewrap"><table>
     <thead><tr><th>Componente</th><th>Misura tipica</th><th>Dove sta nel modello</th><th>Spazio che resta</th></tr></thead>
     <tbody>
-      <tr><td><b>ESP32 DevKit</b></td><td class="num">51–54 × 28 × 13 mm, con i pin</td><td>Nel tubo, sul retro, porta USB in basso. Alloggio 53 × 29 mm</td><td>4,6 mm in altezza, circa 4 mm per lato</td></tr>
+      <tr><td><b>ESP32 con caricabatteria</b></td><td class="num">Circa 58 × 25 × 13 mm, con i pin</td><td>Nel tubo, sul retro, porta USB in basso. Alloggio 58 × 26 mm</td><td>4,6 mm in altezza, circa 5 mm per lato</td></tr>
+      <tr><td><b>Batteria LiPo piatta</b></td><td class="num">6 × 30 × 48 mm (tipo 603048)</td><td>Nel bulbo, sul fondo del retro, dietro al bottone</td><td>Fino a 7 mm di spessore. Le batterie più grandi non entrano</td></tr>
       <tr><td><b>Schermo 1,3"</b></td><td class="num">Circuito 28 × 34 × 4 mm, parte visibile 23,4 mm</td><td>Nicchia nel fronte, finestra 24,6 × 24,6 mm</td><td>Quasi zero. Aggiungi 0,4 mm alle misure del circuito</td></tr>
       <tr><td><b>Bottone arcade</b></td><td class="num">Flangia Ø33, canna Ø24, corpo 21–25 mm</td><td>Foro Ø24,2 mm nel bulbo, pannello spesso 2,4 mm</td><td>10–14 mm dietro, per fili e cavo USB</td></tr>
       <tr><td><b>Viti M3 × 30</b></td><td class="num">Testa Ø5,5 mm</td><td>3 piantoni Ø7 mm, sede della testa Ø6,4 mm</td><td>Entrano 10 mm nel fronte</td></tr>
-      <tr><td><b>Cavo USB</b></td><td class="num">Spina 20–25 mm, cavo Ø3–4 mm</td><td>Passa dietro al bottone, esce da una tacca 12 × 13 mm in basso</td><td>Poco. Usa una spina corta e un cavo sottile</td></tr>
+      <tr><td><b>Prolunga USB da pannello</b></td><td class="num">Presa femmina, cavetto Ø3–4 mm</td><td>Incollata nella tacca 14 × 13 mm in basso. Il cavetto va alla porta della scheda</td><td>6 mm sopra la batteria. Usa un cavetto sottile</td></tr>
       <tr><td><b>Occhietti</b></td><td class="num">Ø12 mm</td><td>Due sedi Ø12 mm, profonde 1 mm</td><td>Si incollano sopra</td></tr>
       <tr><td><b>Termometro finito</b></td><td class="num">70 × 200 × 40 mm</td><td>Tubo largo 42 mm, bulbo Ø70 mm, fondo piatto</td><td>Sta su un piatto da 220 mm</td></tr>
     </tbody>
   </table></div>
-  <div class="note"><b>Il punto più stretto è il cavo USB dietro al bottone.</b> Se il tuo bottone ha il corpo più lungo di 25 mm, il cavo non passa. Misura il corpo del bottone prima di stampare, oppure aumenta <code>depth</code> nel file.</div>
+  <div class="note"><b>Il punto più stretto è lo spazio dietro al bottone.</b> La batteria e il cavetto USB passano nei 14 mm che restano dietro al corpo del bottone. Se il tuo bottone ha il corpo più lungo di 25 mm, non ci stanno. Misuralo prima di stampare, oppure aumenta <code>depth</code> nel file.</div>
 </section>
 
 <section>
@@ -358,10 +366,11 @@ footer{margin-top:3rem;color:var(--mute);font-size:.9rem}
     </tbody>
   </table></div>
   <label class="chk"><input type="checkbox" id="f1"><span class="t"><b>Arduino IDE pronto</b><small>Installa il pacchetto <i>esp32</i> di Espressif e le librerie <i>Adafruit GFX</i> e <i>Adafruit ST7735 and ST7789</i>.</small></span></label>
-  <label class="chk"><input type="checkbox" id="f2"><span class="t"><b>Carica <code>firmware/mostrometro/mostrometro.ino</code></b><small>Scheda: ESP32 Dev Module.</small></span></label>
+  <label class="chk"><input type="checkbox" id="f2"><span class="t"><b>Carica <code>firmware/mostrometro/mostrometro.ino</code></b><small>Scheda: LOLIN D32 (o ESP32 Dev Module).</small></span></label>
   <label class="chk"><input type="checkbox" id="f3"><span class="t"><b>Lo schermo mostra il WiFi e la password</b><small>Dopo 4 secondi arriva il termometro con il punto interrogativo.</small></span></label>
   <label class="chk"><input type="checkbox" id="f4"><span class="t"><b>Il bottone fa salire il mercurio</b></span></label>
   <label class="chk"><input type="checkbox" id="f5"><span class="t"><b>Il telefono vede la classifica</b><small>Collegati al WiFi <code>Mostrometro</code>, password <code>mostro1234</code>. La pagina si apre da sola, oppure vai su <code>http://192.168.4.1</code>.</small></span></label>
+<label class="chk"><input type="checkbox" id="f6"><span class="t"><b>Prova a batteria</b><small>Scollega l'USB: lo schermo deve restare acceso e l'icona della batteria compare in alto a destra.</small></span></label>
 </section>
 
 <section>
@@ -393,10 +402,32 @@ footer{margin-top:3rem;color:var(--mute);font-size:.9rem}
 </section>
 
 <section>
+  <div class="phase"><span class="n">Energia</span><h2>Funziona a batteria</h2></div>
+  <p>Dentro c'è una batteria LiPo piatta. La scheda sceglie da sola se usare la batteria o l'USB e la ricarica quando colleghi un cavo alla presa in basso.</p>
+  <div class="cols">
+    <div><h3>Ricarica</h3><p>Collega un cavo USB alla presa in basso. La carica compare in percentuale sullo schermo e sulla pagina del telefono. Sotto il 15% diventa rossa.</p></div>
+    <div><h3>Standby</h3><p>Dopo 5 minuti senza che nessuno faccia niente, schermo e WiFi si spengono. Premi il bottone: il Mostrometro si sveglia e misura subito l'ultima persona scelta.</p></div>
+    <div><h3>Niente interruttore</h3><p>In standby consuma pochissimo, quindi non serve. Se non lo usi per mesi, scollega il connettore della batteria.</p></div>
+  </div>
+  <div class="tablewrap" style="margin-top:1rem"><table>
+    <thead><tr><th>Cosa sta facendo</th><th>Consumo (stima)</th><th>Durata con 850 mAh (stima)</th></tr></thead>
+    <tbody>
+      <tr><td>Misura, WiFi e schermo accesi</td><td class="num">120–150 mA</td><td class="num">circa 6 ore</td></tr>
+      <tr><td>Standby</td><td class="num">meno di 1 mA</td><td class="num">settimane</td></tr>
+    </tbody>
+  </table></div>
+  <p>Con il WiFi spento il telefono non vede più il Mostrometro. Basta premere il bottone per svegliarlo e ricollegarsi.</p>
+  <div class="note"><b>Sicurezza.</b> Scegli una batteria con circuito di protezione. Prima di collegarla controlla che + e − coincidano con quelli della scheda: i connettori JST di batterie diverse possono avere la polarità invertita, e al contrario la scheda si brucia. Non schiacciare né forare la batteria, non lasciarla al sole e tienila lontano dai bambini piccoli. Se si gonfia, smetti di usarla.</div>
+</section>
+
+<section>
   <div class="phase"><span class="n">Fase 5</span><h2>Monta e chiudi</h2></div>
   <label class="chk"><input type="checkbox" id="a1"><span class="t"><b>Schermo nel fronte</b><small>La finestra è davanti e il circuito sta nella nicchia sul retro. Fermalo con qualche goccia di colla a caldo sui bordi.</small></span></label>
   <label class="chk"><input type="checkbox" id="a2"><span class="t"><b>Bottone nel foro del bulbo</b><small>Si avvita con la ghiera da dietro.</small></span></label>
-  <label class="chk"><input type="checkbox" id="a3"><span class="t"><b>ESP32 nel retro</b><small>Nella gabbietta, con la porta USB verso il basso. Il cavo esce dalla tacca sotto il bulbo.</small></span></label>
+  <label class="chk"><input type="checkbox" id="a8"><span class="t"><b>Batteria nel bulbo</b><small>Sul fondo del retro, tra i quattro blocchetti, fermata con nastro biadesivo. Non collegarla ancora.</small></span></label>
+  <label class="chk"><input type="checkbox" id="a3"><span class="t"><b>ESP32 nel retro</b><small>Nella gabbietta, con la porta USB verso il basso.</small></span></label>
+  <label class="chk"><input type="checkbox" id="a9"><span class="t"><b>Prolunga USB nella tacca in basso</b><small>Incollala con la colla a caldo e collega il suo cavetto alla porta della scheda, sopra la batteria.</small></span></label>
+  <label class="chk"><input type="checkbox" id="a10"><span class="t"><b>Batteria collegata alla scheda</b><small>Prima controlla che il filo rosso vada sul + e il nero sul − della scheda. Se sono invertiti, non collegarla.</small></span></label>
   <label class="chk"><input type="checkbox" id="a4"><span class="t"><b>Fili sistemati senza pizzicarli</b><small>Passa i fili dietro al bottone e piegali verso il retro, poi accosta i due gusci.</small></span></label>
   <label class="chk"><input type="checkbox" id="a5"><span class="t"><b>Tre viti M3 × 30 da dietro</b><small>Due ai lati del bulbo e una in alto. Stringi piano: è plastica.</small></span></label>
   <label class="chk"><input type="checkbox" id="a6"><span class="t"><b>Occhietti incollati in cima</b></span></label>
@@ -412,6 +443,9 @@ footer{margin-top:3rem;color:var(--mute);font-size:.9rem}
       <tr><td>Immagine girata o specchiata</td><td>Cambia <code>ROTAZIONE</code> da 0 a 1, 2 o 3.</td></tr>
       <tr><td>Non compare il WiFi Mostrometro</td><td>L'ESP32 non è acceso o il firmware non è stato caricato. Guarda il monitor seriale.</td></tr>
       <tr><td>La pagina non si apre</td><td>Scrivi <code>http://192.168.4.1</code> a mano. Spegni i dati mobili: alcuni telefoni non usano un WiFi senza internet.</td></tr>
+      <tr><td>Lo schermo si spegne da solo</td><td>È lo standby: dopo 5 minuti senza uso il Mostrometro dorme per risparmiare la batteria. Premi il bottone per svegliarlo.</td></tr>
+      <tr><td>La batteria non si carica</td><td>Controlla il cavetto tra la prolunga e la scheda, e prova un altro caricatore. Molte schede accendono un led mentre caricano.</td></tr>
+      <tr><td>La percentuale della batteria è sbagliata</td><td>Il pin che legge la batteria può essere diverso sulla tua scheda. Cambia <code>PIN_BAT</code> nel firmware (di solito GPIO35).</td></tr>
       <tr><td>Il bottone non entra</td><td>Allarga <code>btn_d</code> nel file e stampa di nuovo il fronte.</td></tr>
       <tr><td>I gusci non combaciano</td><td>Passa una limetta sulla linguetta. Se il guscio si è curvato, riduci la velocità di stampa e l'aria intorno.</td></tr>
     </tbody>
@@ -424,9 +458,10 @@ footer{margin-top:3rem;color:var(--mute);font-size:.9rem}
     <div><h3>Controllato</h3><ul>
       <li><span class="ok">Sì</span> Modello 3D: STL validi e ingombri misurati</li>
       <li><span class="ok">Sì</span> Pagina web: provata nel browser</li>
-      <li><span class="ok">Sì</span> Regole di misura: provate al computer con una ESP32 simulata</li></ul></div>
+      <li><span class="ok">Sì</span> Regole di misura, batteria e standby: provati al computer con una ESP32 simulata</li></ul></div>
     <div><h3>Da verificare con te</h3><ul>
       <li><span class="wn">No</span> Firmware: non compilato su una vera ESP32</li>
+      <li><span class="wn">No</span> Batteria vera: autonomia e ricarica non misurate</li>
       <li><span class="wn">No</span> Stampa: le misure vanno confrontate con i tuoi pezzi</li></ul></div>
   </div>
 </section>
@@ -482,16 +517,22 @@ footer{margin-top:3rem;color:var(--mute);font-size:.9rem}
 
   // ESP32 (appoggiata nel retro, porta USB in basso) e cavo
   var g=new THREE.Group();
-  g.add(cube(29,53,1.6,mat(0x1f6b4a),0,66.5,11.7));
-  g.add(cube(2.5,48,8.5,mat(0x111111),-12.5,66.5,6.65));
-  g.add(cube(2.5,48,8.5,mat(0x111111),12.5,66.5,6.65));
-  g.add(cube(18,25.5,3.2,mat(0xc3c8ce,{metalness:.8,roughness:.35}),0,80,14.1));
-  g.add(cube(8,6,3,mat(0x9aa0a8,{metalness:.8}),0,41.5,14));
-  add(back,g,0,true);
+  g.add(cube(26,58,1.6,mat(0x1f6b4a),0,63,11.7));
+  g.add(cube(2.5,52,8.5,mat(0x111111),-11,63,6.65));
+  g.add(cube(2.5,52,8.5,mat(0x111111),11,63,6.65));
+  g.add(cube(18,25.5,3.2,mat(0xc3c8ce,{metalness:.8,roughness:.35}),0,78,14.1));
+  g.add(cube(8,6,3,mat(0x9aa0a8,{metalness:.8}),0,36,14));
+  // cavetto di ricarica: dalla porta della scheda alla prolunga USB in basso
+  var cab=new THREE.Mesh(new THREE.CylinderGeometry(1.8,1.8,52,20),mat(0x222222));cab.position.set(0,8,14.2);g.add(cab);
+  g.add(cube(9,10,6,mat(0x222222),0,-22.5,14.2));
+  g.add(cube(14,1.5,9,mat(0x9aa0a8,{metalness:.8,roughness:.35}),0,-28.2,14.2));
+  add(back,g,10,true);
+
+  // batteria LiPo piatta nel bulbo, dietro al bottone
   g=new THREE.Group();
-  g.add(cube(11,23,8,mat(0x222222),0,27.5,14.2));
-  var cab=new THREE.Mesh(new THREE.CylinderGeometry(1.8,1.8,75,20),mat(0x222222));cab.position.set(0,-22,14.2);g.add(cab);
-  add(back,g,0,true);
+  g.add(cube(30,48,6,mat(0xe0a030,{roughness:.6}),0,2,5.4));
+  [-1.5,1.5].forEach(function(x,i){var w=new THREE.Mesh(new THREE.CylinderGeometry(.8,.8,10,10),mat(i?0x111111:0xd62839));w.position.set(x,31,9);g.add(w)});
+  add(back,g,-10,true);
 
   // viti M3 x 30, entrano dal retro
   g=new THREE.Group();var mScrew=mat(0x9aa0a8,{metalness:.8,roughness:.35});
@@ -546,9 +587,9 @@ footer{margin-top:3rem;color:var(--mute);font-size:.9rem}
             esploso:{t:[0,70,25],d:760,dir:[1,.3,.35],o:0,e:1,c:0},
             sezione:{t:[0,70,20],d:420,dir:[1,.2,.4],o:0,e:0,c:1}};
   var CAP={chiuso:'Così appare quando è montato. Trascinalo per vederlo da tutti i lati.',
-    aperto:'I due gusci aperti come un libro. A sinistra il retro con l\'ESP32 e il cavo USB, a destra il fronte con lo schermo e il bottone.',
-    esploso:'Tutti i pezzi separati, nell\'ordine di montaggio: le viti entrano dal retro, l\'ESP32 sta nel retro, lo schermo va dentro il fronte, bottone e occhietti si mettono da davanti.',
-    sezione:'Tagliato a metà per vedere lo spazio dentro. Il cavo USB passa dietro al corpo del bottone e esce dalla tacca in basso.'};
+    aperto:'I due gusci aperti come un libro. A sinistra il retro con la batteria, l\'ESP32 e il cavetto della ricarica USB, a destra il fronte con lo schermo e il bottone.',
+    esploso:'Tutti i pezzi separati, nell\'ordine di montaggio: le viti entrano dal retro, batteria ed ESP32 stanno nel retro, lo schermo va dentro il fronte, bottone e occhietti si mettono da davanti.',
+    sezione:'Tagliato a metà per vedere lo spazio dentro. Il cavetto USB passa sopra la batteria e dietro al corpo del bottone, fino alla porta di ricarica in basso.'};
   var mode='chiuso',S={o:0,e:0},moving=0;
   var btns=[].slice.call(document.querySelectorAll('.modes button'));
   btns.forEach(function(b){b.addEventListener('click',function(){

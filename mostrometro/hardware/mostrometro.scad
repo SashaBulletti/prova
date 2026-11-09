@@ -30,10 +30,18 @@ screen_y = 116;   // altezza del centro dello schermo sul tubo
 // ---------- bottone ----------
 btn_d = 24.2;     // foro per bottone arcade da 30 mm (corpo sotto pannello ~ 21 mm)
 
-// ---------- ESP32 (scheda tipo DevKit 38 pin) ----------
-esp_w = 29;       // larghezza scheda
-esp_l = 53;       // lunghezza scheda (con porta USB)
-esp_y0 = 40;      // dove inizia la scheda (porta USB rivolta verso il basso)
+// ---------- ESP32 con caricabatteria LiPo (tipo LOLIN D32, circa 58 x 25 mm) ----------
+esp_w = 26;       // larghezza scheda
+esp_l = 58;       // lunghezza scheda (con porta USB)
+esp_y0 = 34;      // dove inizia la scheda (porta USB rivolta verso il basso)
+
+// ---------- batteria LiPo piatta (es. 603048: 6 x 30 x 48 mm, al massimo 7 mm di spessore) ----------
+bat_w = 30;       // larghezza
+bat_l = 48;       // lunghezza
+bat_cy = 2;       // altezza del centro (nel bulbo, dietro al bottone)
+
+// ---------- porta di ricarica: prolunga USB femmina da pannello, in basso ----------
+usb_w = 14;       // larghezza della tacca
 
 // ---------- decorazioni ----------
 eye_d = 12;       // sede per occhietti adesivi (googly eyes)
@@ -118,6 +126,9 @@ module retro() {
             // gabbietta per l'ESP32
             for (sx = [-1, 1], yy = [esp_y0 + 3, esp_y0 + esp_l - 3])
                 translate([sx * (esp_w/2 + 0.8), yy, wall + 3.5]) cube([1.6, 6, 7], center = true);
+            // alloggio per la batteria LiPo (nel bulbo, dietro al bottone)
+            for (sx = [-1, 1], sy = [-1, 1])
+                translate([sx * (bat_w/2 + 0.8), bat_cy + sy * (bat_l/2 - 6), wall + 3]) cube([1.6, 6, 6], center = true);
         }
         // scanalatura per la linguetta del fronte
         translate([0, 0, half - 2.2]) linear_extrude(3) ring(0.5, 1.9);
@@ -126,8 +137,8 @@ module retro() {
             translate([p[0], p[1], -1]) cylinder(d = screw_hole, h = half + 2);
             translate([p[0], p[1], -0.01]) cylinder(d = screw_head, h = wall - 0.4);
         }
-        // uscita del cavo USB, in basso
-        translate([-6, -bulb_d/2 + flat - 1, half - 12]) cube([12, wall + 2, 13]);
+        // porta di ricarica USB, in basso
+        translate([-usb_w/2, -bulb_d/2 + flat - 1, half - 12]) cube([usb_w, wall + 2, 13]);
     }
 }
 

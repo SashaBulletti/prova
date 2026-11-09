@@ -17,6 +17,8 @@
 // Collegamenti:
 //   Schermo  GND->GND  VCC->3V3  SCL->GPIO18  SDA->GPIO23  RES->GPIO17  DC->GPIO16  BLK->GPIO4  (CS->GPIO5 se c'e')
 //   Bottone  un filo a GPIO27, l'altro a GND
+//   Batteria LiPo nel connettore JST della scheda (controlla + e - !). Ricarica dalla porta USB della scheda.
+//   (Con la LOLIN D32 i pin sopra sono tutti disponibili e la carica si legge su GPIO35.)
 
 #include <WiFi.h>
 #include <WebServer.h>
@@ -25,7 +27,18 @@
 #include <SPI.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_ST7789.h>
+#include "driver/rtc_io.h"
+#include "esp_sleep.h"
 
+// ALIMENTAZIONE A BATTERIA
+//  - Serve una ESP32 con caricabatteria LiPo e connettore JST (tipo LOLIN D32 o Adafruit Feather ESP32):
+//    la batteria si collega alla scheda, che la ricarica dalla sua porta USB.
+//  - Dopo IDLE_MS senza che nessuno faccia niente il Mostrometro va in standby profondo
+//    (schermo e WiFi spenti) e si risveglia premendo il bottone: parte subito una misura.
+//  - La carica si legge dal pin PIN_BAT (partitore della scheda, di solito GPIO35).
+
+#define PIN_BAT  35
+#define IDLE_MS  300000UL   // 5 minuti
 #define TFT_CS   5      // se il tuo schermo non ha il pin CS metti -1
 #define TFT_DC   16
 #define TFT_RST  17
@@ -52,6 +65,19 @@ String chi = "";            // chi si sta misurando
 int ultimo = -1;            // ultimo risultato (-1 = nessuno)
 bool misurando = false;
 bool richiestaMisura = false;
+uint32_t ultimaAttivita = 0;   // ultimo momento in cui qualcuno ha fatto qualcosa (serve per lo standby)
+void attivita() { ultimaAttivita = millis(); }
+
+// Carica della batteria in %, dalla tensione (curva tipica delle LiPo da 3,7 V).
+int batteriaPct() {
+  float v = analogReadMilliVolts(PIN_BAT) * 2 / 1000.0;     // il partitore della scheda dimezza la tensione
+  static const float V[] = {3.30, 3.50, 3.65, 3.75, 3.85, 4.00, 4.15};
+  static const int   P[] = {0,    5,    15,   35,   55,   80,   100};
+  if (v <= V[0]) return 0;
+  for (int i = 1; i < 7; i++)
+    if (v <= V[i]) return P[i - 1] + (int)((v - V[i - 1]) * (P[i] - P[i - 1]) / (V[i] - V[i - 1]));
+  return 100;
+}
 
 // ---------- colori e layout schermo ----------
 const uint16_t BG = 0x0000, GRIGIO = 0x4A49, SCURO = 0x1082, BIANCO = 0xFFFF, NERO = 0x0000;
@@ -113,12 +139,21 @@ void disegnaPercentuale(int v) {
 }
 
 void disegnaNome() {
-  tft.fillRect(80, 4, 160, 20, BG);
+  tft.fillRect(80, 4, 124, 20, BG);
   tft.setTextSize(2);
   tft.setTextColor(BIANCO, BG);
   tft.setCursor(84, 6);
   String n = chi.length() ? chi : String("Ospite");
-  tft.print(n.substring(0, 13));
+  tft.print(n.substring(0, 10));
+}
+
+void disegnaBatteria() {                                   // iconcina in alto a destra
+  int p = batteriaPct();
+  uint16_t c = p < 15 ? 0xF800 : (p < 40 ? 0xFD20 : 0x07E0);
+  tft.drawRect(208, 8, 24, 12, BIANCO);
+  tft.fillRect(232, 11, 3, 6, BIANCO);
+  tft.fillRect(209, 9, 22, 10, BG);
+  tft.fillRect(209, 9, p * 22 / 100, 10, c);
 }
 
 void disegnaFrase(const char* s, uint16_t col) {
@@ -177,6 +212,7 @@ void schermataCompleta(int v) {
   disegnaTubo();
   disegnaMercurio(v < 0 ? 0 : v);
   disegnaNome();
+  disegnaBatteria();
   disegnaPercentuale(v);
   disegnaMostro(v);
   if (v < 0) disegnaFrase("Premi il bottone!", BIANCO);
@@ -260,8 +296,25 @@ String pulisci(String s) {
 // ---------- misura ----------
 void servizi() { dns.processNextRequest(); server.handleClient(); }
 
+// Standby profondo: schermo e WiFi spenti. Si risveglia premendo il bottone (e il programma riparte da capo).
+void dormi() {
+  tft.fillScreen(BG);
+  tft.setTextSize(3); tft.setTextColor(GRIGIO, BG);
+  tft.setCursor(70, 100); tft.print("Zzz...");
+  delay(1200);
+  digitalWrite(TFT_BL, LOW);
+  tft.enableDisplay(false);
+  tft.enableSleep(true);
+  WiFi.mode(WIFI_OFF);
+  rtc_gpio_pullup_en((gpio_num_t)PIN_BTN);               // il pull-up deve restare attivo durante il sonno
+  rtc_gpio_pulldown_dis((gpio_num_t)PIN_BTN);
+  esp_sleep_enable_ext0_wakeup((gpio_num_t)PIN_BTN, 0);  // si sveglia quando il bottone va a GND
+  esp_deep_sleep_start();
+}
+
 void misura() {
   misurando = true;
+  attivita();
   String nome = chi.length() ? chi : String("Ospite");
   int idx = trova(nome); if (idx < 0) idx = crea(nome);
   int target = valoreAttuale(idx);            // sempre uguale, finche' non guadagni punti
@@ -286,7 +339,9 @@ void misura() {
   idx = trova(nome); if (idx < 0) idx = crea(nome);   // qualcuno puo' averti tolto dalla lista mentre misuravi
   fam[idx].val = target;
   salva();
+  disegnaBatteria();
   misurando = false;
+  attivita();
 }
 
 // ---------- pagina web ----------
@@ -305,7 +360,7 @@ button:disabled{opacity:.5}.big{font-size:3.2rem;font-weight:900;text-align:cent
 .x{width:auto;padding:2px 8px;margin:0;background:none;font-size:1rem;color:#b9a6dd}.s{text-align:center;color:#b9a6dd;margin-top:8px}
 .a{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.a button{width:auto;margin:0;padding:10px 12px;font-size:.95rem;background:#4a3480}
 .p{color:#ffd84a;font-size:.8rem;font-weight:400}h3{margin:0}
-</style></head><body><main><h1>&#128121; MOSTROMETRO</h1>
+</style></head><body><main><h1>&#128121; MOSTROMETRO</h1><div class="s" id="bat"></div>
 <div class="c"><input id="nome" list="l" maxlength="14" placeholder="Chi si misura?" autocomplete="off"><datalist id="l"></datalist>
 <div class="big" id="pct">--%</div><div class="m" id="msg">Scrivi il tuo nome e premi il bottone (anche sul Mostrometro!)</div>
 <button id="go">MISURA LA MOSTRUOSITA'</button></div>
@@ -319,10 +374,11 @@ const FR=['Angioletto? Sospetto...','Mostriciattolo da divano','Mostro medio','M
 const liv=v=>v<10?0:v<30?1:v<50?2:v<70?3:v<90?4:5;
 let ult=-1,aspetto=false;
 async function api(p){const r=await fetch(p,{method:'POST'});return r.json()}
-async function stato(){try{const d=await(await fetch('/api/stato')).json();disegna(d)}catch(e){$('#msg').textContent='Non sei collegato al WiFi Mostrometro'}}
+async function stato(){try{const d=await(await fetch('/api/stato')).json();disegna(d)}catch(e){$('#msg').textContent='Nessuna risposta. Collegati al WiFi Mostrometro. Se lo sei, il Mostrometro dorme: premi il bottone per svegliarlo.'}}
 function disegna(d){
   const nm=$('#nome');if(document.activeElement!==nm&&!nm.value)nm.value=d.chi;
   $('#go').disabled=d.misurando;
+  $('#bat').textContent='Batteria '+d.bat+'%'+(d.bat<15?' - da ricaricare!':'');
   if(d.misurando){$('#pct').textContent='...';$('#msg').textContent='Misuro...';aspetto=true}
   else if(d.val>=0){$('#pct').textContent=d.val+'%';$('#msg').textContent=FR[liv(d.val)]}
   $('#l').innerHTML=d.fam.map(f=>'<option value="'+f.n+'">').join('');
@@ -356,7 +412,7 @@ stato();setInterval(stato,1000);
 </script></body></html>)=====";
 
 String statoJson() {
-  String j = "{\"chi\":\"" + chi + "\",\"val\":" + String(ultimo) + ",\"misurando\":" +
+  String j = "{\"bat\":" + String(batteriaPct()) + ",\"chi\":\"" + chi + "\",\"val\":" + String(ultimo) + ",\"misurando\":" +
              (misurando || richiestaMisura ? "true" : "false") + ",\"fam\":[";
   for (int i = 0; i < nFam; i++) {
     if (i) j += ",";
@@ -378,6 +434,7 @@ void setup() {
 
   prefs.begin("mostro", false);
   carica();
+  chi = prefs.getString("chi", "");
 
   WiFi.mode(WIFI_AP);
   WiFi.softAP(WIFI_SSID, WIFI_PASS);
@@ -387,12 +444,15 @@ void setup() {
   server.on("/api/stato", HTTP_GET, []() { server.send(200, "application/json", statoJson()); });
   server.on("/api/chi", HTTP_POST, []() {
     chi = pulisci(server.arg("nome"));
+    prefs.putString("chi", chi);                         // dopo lo standby si riparte dalla stessa persona
+    attivita();
     if (!misurando) disegnaNome();
     server.send(200, "application/json", "{\"ok\":true}");
   });
   server.on("/api/misura", HTTP_POST, []() {
     if (misurando || richiestaMisura) { server.send(409, "application/json", "{\"ok\":false}"); return; }
     richiestaMisura = true;
+    attivita();
     server.send(200, "application/json", "{\"ok\":true}");
   });
   server.on("/api/azione", HTTP_POST, []() {            // azione da mostro: +punti (o -punti per annullare)
@@ -402,10 +462,12 @@ void setup() {
     int i = trova(nome); if (i < 0) i = crea(nome);
     fam[i].bonus = constrain(fam[i].bonus + punti, 0, 100);
     salva();
+    attivita();
     server.send(200, "application/json", "{\"ok\":true}");
   });
   server.on("/api/elimina", HTTP_POST, []() {
     elimina(pulisci(server.arg("nome")));
+    attivita();
     server.send(200, "application/json", "{\"ok\":true}");
   });
   server.onNotFound([]() {                               // portale "captive": rimanda alla pagina
@@ -413,6 +475,14 @@ void setup() {
     server.send(302, "text/plain", "");
   });
   server.begin();
+
+  attivita();
+  if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT0) {   // svegliato dal bottone: niente benvenuto, misura subito
+    while (digitalRead(PIN_BTN) == LOW) delay(10);
+    schermataCompleta(-1);
+    richiestaMisura = true;
+    return;
+  }
 
   // schermata di benvenuto
   tft.setTextColor(BIANCO, BG); tft.setTextSize(3);
@@ -430,6 +500,7 @@ void setup() {
 void loop() {
   servizi();
   if (richiestaMisura) { richiestaMisura = false; misura(); }
+  if (!misurando && !richiestaMisura && millis() - ultimaAttivita > IDLE_MS) dormi();   // risparmia la batteria
   static uint32_t ultimoTasto = 0;
   if (digitalRead(PIN_BTN) == LOW && millis() - ultimoTasto > 500) {
     ultimoTasto = millis();

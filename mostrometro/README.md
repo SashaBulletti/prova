@@ -14,11 +14,13 @@ firmware/mostrometro/mostrometro.ino firmware ESP32
 ## Cosa serve (circa 20 €)
 | Pezzo | Note |
 |---|---|
-| ESP32 DevKit (38 pin) | ~51×28 mm |
+| ESP32 con caricabatteria LiPo (tipo LOLIN D32) | ~58×25 mm, connettore JST per la batteria. Una ESP32 normale non va bene |
+| Batteria LiPo piatta 3,7 V, tipo 603048 | 6×30×48 mm (~850 mAh), con circuito di protezione e connettore JST. Max 7 mm di spessore |
+| Prolunga USB femmina da pannello | micro-USB o USB-C come la scheda; per ricaricare senza aprire |
 | Schermo ST7789 1.3" 240×240 | SPI, 7 pin |
 | Bottone arcade 30 mm | foro 24 mm |
 | 3 viti M3×30 | per chiudere i gusci |
-| Cavo USB + caricatore | alimentazione |
+| Cavo USB + caricatore | solo per ricaricare la batteria |
 | 2 occhietti adesivi da 12 mm | opzionali ma obbligatori 😈 |
 
 ## Collegamenti
@@ -49,6 +51,12 @@ Bottone: un filo a **GPIO27**, l'altro a **GND**.
 L'ESP32 crea il WiFi **Mostrometro** (password `mostro1234`, cambiala nel `.ino`).
 Collegati dal telefono: la pagina si apre da sola, oppure vai su `http://192.168.4.1`.
 Scrivi chi si misura e premi il bottone (sul telefono o sul termometro). La classifica resta salvata anche senza corrente (max 12 persone).
+
+## A batteria
+- La batteria LiPo va nel bulbo, dietro al bottone, e si collega al connettore JST della scheda. **Prima controlla che rosso e nero coincidano con + e − della scheda**: la polarità dei connettori non è sempre la stessa.
+- Si ricarica dalla prolunga USB in basso. La carica si vede sull'iconcina in alto a destra dello schermo e sulla pagina del telefono (il pin di lettura è `PIN_BAT`, di solito GPIO35).
+- Dopo 5 minuti senza uso va in **standby profondo** (schermo e WiFi spenti). Premendo il bottone si sveglia e misura subito l'ultima persona scelta. Non serve un interruttore.
+- Durata (stime): circa 6 ore di uso continuo con una batteria da 850 mAh, settimane in standby. Non misurata su una batteria vera.
 
 ## Come si misura la mostruosità
 Non è a caso:
