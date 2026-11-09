@@ -83,6 +83,18 @@ td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
 .status li{list-style:none;margin-left:-1.1rem}
 .ok{color:var(--ok);font-weight:700}
 .wn{color:var(--warn);font-weight:700}
+svg text.s{font-size:12px;fill:var(--mute)}
+svg text.b{font-weight:700}
+.fig2{margin:1.25rem 0;min-width:0}
+.fig2 svg{width:100%;height:auto;max-height:36rem;background:var(--panel);border:1px solid var(--line);border-radius:10px}
+.fig2 figcaption{font:400 .8rem var(--f-mono);color:var(--mute);margin-top:.4rem}
+.flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:.5rem;margin:1rem 0}
+.flow>div{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:.7rem .9rem;flex:1 1 9rem;min-width:0}
+.flow .ar{flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:none;border:0;padding:0 .1rem;font:500 1.2rem var(--f-mono);color:var(--scale)}
+.flow b{display:block}
+.flow small{color:var(--mute)}
+ol.steps{padding-left:1.3rem;max-width:65ch}
+ol.steps li{margin:.5rem 0}
 footer{margin-top:3rem;color:var(--mute);font-size:.9rem}
 </style>
 
@@ -146,6 +158,95 @@ footer{margin-top:3rem;color:var(--mute);font-size:.9rem}
 </section>
 
 <section>
+  <div class="phase"><span class="n">Misure</span><h2>Quanto spazio occupa ogni pezzo</h2></div>
+  <p>Il Mostrometro è cavo dentro. Qui vedi dove sta ogni componente e quanto spazio gli resta. Le misure dei pezzi sono quelle tipiche dei negozi online: controlla le tue con un calibro.</p>
+
+  <figure class="fig2">
+    <svg viewBox="0 0 520 450" role="img" aria-label="Pianta del retro aperto con la posizione di ESP32, schermo, bottone, viti e cavo USB">
+      <defs>
+        <clipPath id="cutO"><rect x="0" y="0" width="520" height="420"/></clipPath>
+        <clipPath id="cutI"><rect x="0" y="0" width="520" height="415.2"/></clipPath>
+      </defs>
+      <g clip-path="url(#cutO)" fill="var(--tube)" stroke="var(--ink)" stroke-width="3">
+        <rect x="218" y="62" width="84" height="300"/><circle cx="260" cy="62" r="42"/><circle cx="260" cy="362" r="70"/>
+      </g>
+      <g clip-path="url(#cutO)" fill="var(--tube)">
+        <rect x="219.5" y="63" width="81" height="299"/><circle cx="260" cy="62" r="40.5"/><circle cx="260" cy="362" r="68.5"/>
+      </g>
+      <g clip-path="url(#cutI)" fill="var(--panel)">
+        <rect x="222.8" y="62" width="74.4" height="300"/><circle cx="260" cy="62" r="37.2"/><circle cx="260" cy="362" r="65.2"/>
+      </g>
+      <circle cx="260" cy="82" r="7" fill="var(--tube)" stroke="var(--ink)" stroke-width="2"/>
+      <circle cx="208" cy="362" r="7" fill="var(--tube)" stroke="var(--ink)" stroke-width="2"/>
+      <circle cx="312" cy="362" r="7" fill="var(--tube)" stroke="var(--ink)" stroke-width="2"/>
+      <rect x="232" y="96" width="56" height="68" rx="2" fill="var(--mercury)" fill-opacity=".18" stroke="var(--mercury)" stroke-width="2"/>
+      <rect x="235.4" y="105.5" width="49.2" height="49" fill="var(--ink)" fill-opacity=".85"/>
+      <rect x="231" y="176" width="58" height="106" rx="2" fill="var(--scale)" fill-opacity=".22" stroke="var(--scale)" stroke-width="2"/>
+      <text x="260" y="234" text-anchor="middle" class="b" style="font-size:14px">ESP32</text>
+      <rect x="252" y="282" width="16" height="138" fill="none" stroke="var(--mute)" stroke-width="1.5" stroke-dasharray="5 4"/>
+      <circle cx="260" cy="362" r="24.2" fill="var(--mercury)" fill-opacity=".3" stroke="var(--mercury)" stroke-width="2"/>
+      <circle cx="260" cy="362" r="33" fill="none" stroke="var(--mute)" stroke-width="1.5" stroke-dasharray="5 4"/>
+      <g stroke="var(--mute)" stroke-width="1.2" fill="none">
+        <path d="M290 130H345"/><path d="M290 229H345"/><path d="M284 362H345"/><path d="M283 385L345 398"/>
+        <path d="M150 82H253"/><path d="M130 366H201"/><path d="M118 395H252"/>
+      </g>
+      <text x="350" y="125" class="b">Schermo</text><text x="350" y="141" class="s">circuito 28 × 34 mm</text>
+      <text x="350" y="224" class="b">ESP32</text><text x="350" y="240" class="s">alloggio 53 × 29 mm</text>
+      <text x="350" y="357" class="b">Bottone</text><text x="350" y="373" class="s">foro Ø24,2 mm</text>
+      <text x="350" y="410" class="s">flangia Ø33 mm, davanti</text>
+      <text x="10" y="78" class="b">Piantoni viti</text><text x="10" y="94" class="s">Ø7 mm, ce ne sono 3</text>
+      <text x="10" y="370" class="s">piantone</text>
+      <text x="10" y="399" class="s">percorso cavo USB</text>
+      <text x="10" y="435" class="s">Spazio utile: tubo 37,2 mm · bulbo Ø65,2 mm</text>
+    </svg>
+    <figcaption>pianta del retro con il guscio aperto, in scala (1 mm = 2 unità)</figcaption>
+  </figure>
+
+  <figure class="fig2">
+    <svg viewBox="0 0 500 300" role="img" aria-label="Sezione laterale in profondità con le quote dei componenti da 0 a 40 millimetri">
+      <line x1="240" y1="14" x2="240" y2="262" stroke="var(--mute)" stroke-width="1.2" stroke-dasharray="5 4"/>
+      <text x="244" y="22" class="s">chiusura dei gusci (20 mm)</text>
+      <text x="40" y="22" class="s b">FRONTE</text><text x="440" y="22" text-anchor="end" class="s b">RETRO</text>
+
+      <text x="40" y="52" class="b">Pareti e vuoto interno</text>
+      <rect x="40" y="58" width="24" height="20" fill="var(--ink)"/><rect x="64" y="58" width="352" height="20" fill="var(--panel)" stroke="var(--line)"/><rect x="416" y="58" width="24" height="20" fill="var(--ink)"/>
+      <text x="240" y="73" text-anchor="middle" class="s">vuoto 35,2 mm</text>
+
+      <text x="40" y="106" class="b">Bottone</text><text x="100" y="106" class="s">corpo 21–25 mm dietro il pannello</text>
+      <rect x="30" y="112" width="10" height="20" fill="var(--mercury)" fill-opacity=".5" stroke="var(--mercury)"/>
+      <rect x="64" y="112" width="190" height="20" fill="var(--mercury)" fill-opacity=".3" stroke="var(--mercury)" stroke-width="1.5"/>
+
+      <text x="40" y="160" class="b">Schermo</text><text x="105" y="160" class="s">circuito circa 4 mm</text>
+      <rect x="50" y="166" width="40" height="20" fill="var(--mercury)" fill-opacity=".3" stroke="var(--mercury)" stroke-width="1.5"/>
+
+      <text x="40" y="214" class="b">ESP32</text><text x="95" y="214" class="s">13 mm con i pin, appoggiata sul retro</text>
+      <rect x="286" y="220" width="130" height="20" fill="var(--scale)" fill-opacity=".25" stroke="var(--scale)" stroke-width="1.5"/>
+
+      <text x="40" y="268" class="b">Vite M3</text><text x="105" y="268" class="s">30 mm, entra 10 mm nel fronte</text>
+      <rect x="140" y="274" width="300" height="10" fill="var(--ink)" fill-opacity=".6"/>
+
+      <g stroke="var(--mute)" stroke-width="1"><path d="M40 292V296M90 292V296M140 292V296M190 292V296M240 292V296M290 292V296M340 292V296M390 292V296M440 292V296"/></g>
+      <g class="s" text-anchor="middle"><text x="40" y="299" style="font-size:10px">0</text><text x="140" y="299" style="font-size:10px">10</text><text x="240" y="299" style="font-size:10px">20</text><text x="340" y="299" style="font-size:10px">30</text><text x="440" y="299" style="font-size:10px">40 mm</text></g>
+    </svg>
+    <figcaption>sezione laterale, in scala (1 mm = 10 unità). Il bottone e l'ESP32 si sovrappongono in profondità ma non in pianta.</figcaption>
+  </figure>
+
+  <div class="tablewrap"><table>
+    <thead><tr><th>Componente</th><th>Misura tipica</th><th>Dove sta nel modello</th><th>Spazio che resta</th></tr></thead>
+    <tbody>
+      <tr><td><b>ESP32 DevKit</b></td><td class="num">51–54 × 28 × 13 mm, con i pin</td><td>Nel tubo, sul retro, porta USB in basso. Alloggio 53 × 29 mm</td><td>4,6 mm in altezza, circa 4 mm per lato</td></tr>
+      <tr><td><b>Schermo 1,3"</b></td><td class="num">Circuito 28 × 34 × 4 mm, parte visibile 23,4 mm</td><td>Nicchia nel fronte, finestra 24,6 × 24,6 mm</td><td>Quasi zero. Aggiungi 0,4 mm alle misure del circuito</td></tr>
+      <tr><td><b>Bottone arcade</b></td><td class="num">Flangia Ø33, canna Ø24, corpo 21–25 mm</td><td>Foro Ø24,2 mm nel bulbo, pannello spesso 2,4 mm</td><td>10–14 mm dietro, per fili e cavo USB</td></tr>
+      <tr><td><b>Viti M3 × 30</b></td><td class="num">Testa Ø5,5 mm</td><td>3 piantoni Ø7 mm, sede della testa Ø6,4 mm</td><td>Entrano 10 mm nel fronte</td></tr>
+      <tr><td><b>Cavo USB</b></td><td class="num">Spina 20–25 mm, cavo Ø3–4 mm</td><td>Passa dietro al bottone, esce da una tacca 12 × 8 mm in basso</td><td>Poco. Usa una spina corta e un cavo sottile</td></tr>
+      <tr><td><b>Occhietti</b></td><td class="num">Ø12 mm</td><td>Due sedi Ø12 mm, profonde 1 mm</td><td>Si incollano sopra</td></tr>
+      <tr><td><b>Termometro finito</b></td><td class="num">70 × 200 × 40 mm</td><td>Tubo largo 42 mm, bulbo Ø70 mm, fondo piatto</td><td>Sta su un piatto da 220 mm</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><b>Il punto più stretto è il cavo USB dietro al bottone.</b> Se il tuo bottone ha il corpo più lungo di 25 mm, il cavo non passa. Misura il corpo del bottone prima di stampare, oppure aumenta <code>depth</code> nel file.</div>
+</section>
+
+<section>
   <div class="phase"><span class="n">Fase 2</span><h2>Misura prima di stampare</h2></div>
   <p>I numeri del modello sono stime per pezzi comuni. Il tuo schermo o il tuo bottone possono essere un po' diversi, e una stampa da 7 ore sbagliata di 2 mm è un peccato.</p>
   <label class="chk"><input type="checkbox" id="m1"><span class="t"><b>Schermo: misura il circuito stampato</b><small>Larghezza e altezza vanno in <code>pcb_w</code> e <code>pcb_h</code>. Misura anche la parte che si vede: <code>win_w</code> e <code>win_h</code>.</small></span></label>
@@ -200,6 +301,34 @@ footer{margin-top:3rem;color:var(--mute);font-size:.9rem}
   <label class="chk"><input type="checkbox" id="f3"><span class="t"><b>Lo schermo mostra il WiFi e la password</b><small>Dopo 4 secondi arriva il termometro con il punto interrogativo.</small></span></label>
   <label class="chk"><input type="checkbox" id="f4"><span class="t"><b>Il bottone fa salire il mercurio</b></span></label>
   <label class="chk"><input type="checkbox" id="f5"><span class="t"><b>Il telefono vede la classifica</b><small>Collegati al WiFi <code>Mostrometro</code>, password <code>mostro1234</code>. La pagina si apre da sola, oppure vai su <code>http://192.168.4.1</code>.</small></span></label>
+</section>
+
+<section>
+  <div class="phase"><span class="n">Telefono</span><h2>Come si collega al cellulare</h2></div>
+  <p><b>Con il WiFi, non con il Bluetooth.</b> Il Mostrometro crea un suo WiFi chiamato <code>Mostrometro</code>. Il telefono si collega e apre una pagina web che sta dentro la scheda. Non serve nessuna app e non serve internet.</p>
+  <div class="flow">
+    <div><b>Telefono</b><small>browser</small></div><div class="ar">⇄</div>
+    <div><b>WiFi Mostrometro</b><small>creato dalla scheda</small></div><div class="ar">⇄</div>
+    <div><b>ESP32</b><small>pagina web e classifica salvata</small></div><div class="ar">→</div>
+    <div><b>Schermino</b><small>mercurio e mostro</small></div>
+  </div>
+  <ol class="steps">
+    <li>Alimenta il Mostrometro con il cavo USB. Dopo 4 secondi lo schermo mostra il nome del WiFi e la password.</li>
+    <li>Sul telefono apri le impostazioni WiFi e scegli <code>Mostrometro</code>. La password è <code>mostro1234</code>.</li>
+    <li>Se il telefono avvisa che non c'è internet, scegli di restare collegato.</li>
+    <li>La pagina si apre da sola. Se non succede, apri il browser e scrivi <code>http://192.168.4.1</code>, con <code>http</code> e non <code>https</code>.</li>
+    <li>Scrivi il nome e premi <b>Misura</b>, oppure premi il bottone sul termometro. Il telefono si aggiorna entro un secondo.</li>
+  </ol>
+  <div class="tablewrap" style="margin-top:1rem"><table>
+    <thead><tr><th>Cosa cambia</th><th>WiFi (quello che usa il progetto)</th><th>Bluetooth</th></tr></thead>
+    <tbody>
+      <tr><td>App da installare</td><td>Nessuna, basta il browser</td><td>Da browser funziona solo su Android con Chrome, mai su iPhone. Servirebbe un'app</td></tr>
+      <tr><td>Telefoni insieme</td><td>Fino a 4</td><td>Di solito uno alla volta</td></tr>
+      <tr><td>Internet sul telefono</td><td>Si perde mentre sei collegato al Mostrometro</td><td>Resta attivo</td></tr>
+      <tr><td>Firmware</td><td>Già scritto</td><td>Da riscrivere, insieme all'app</td></tr>
+    </tbody>
+  </table></div>
+  <p>L'ESP32 ha anche il Bluetooth, quindi si potrebbe aggiungere più avanti. Per ora il WiFi è la scelta che funziona su ogni telefono.</p>
 </section>
 
 <section>
