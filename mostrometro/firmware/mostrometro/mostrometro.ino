@@ -1,8 +1,12 @@
 // MOSTROMETRO - firmware per ESP32 + schermo ST7789 240x240
 //
 // Cosa fa:
+//  - Ognuno ha una mostruosita' di BASE fissa, che dipende dal suo nome: se ti
+//    misuri due volte di fila, il risultato e' sempre lo stesso.
+//  - Dal telefono si segnano le azioni da mostro (rutto a tavola, dispetti...):
+//    danno punti, e quando premi di nuovo il bottone la tua mostruosita' sale.
 //  - Premi il bottone: il mercurio sale fino a 100 e poi scende alla tua
-//    percentuale di mostruosita' (casuale), con un mostriciattolo che si trasforma.
+//    percentuale, con un mostriciattolo che si trasforma.
 //  - L'ESP32 crea un suo WiFi "Mostrometro": dal telefono apri la pagina
 //    (si apre da sola, oppure http://192.168.4.1) e vedi la classifica di famiglia.
 //  - La classifica resta salvata nella memoria dell'ESP32 anche senza corrente.
@@ -39,7 +43,9 @@ WebServer server(80);
 DNSServer dns;
 Preferences prefs;
 
-struct Persona { String nome; int val; };
+// val   = ultima percentuale mostrata premendo il bottone (-1 = mai misurato)
+// bonus = punti guadagnati con le azioni da mostro, in attesa della prossima misura
+struct Persona { String nome; int bonus; int val; };
 Persona fam[MAX_FAM];
 int nFam = 0;
 String chi = "";            // chi si sta misurando
@@ -98,7 +104,7 @@ void disegnaMercurio(int v) {
 }
 
 void disegnaPercentuale(int v) {
-  char buf[8];
+  char buf[12];
   if (v < 0) snprintf(buf, sizeof(buf), " --%%"); else snprintf(buf, sizeof(buf), "%3d%%", v);
   tft.setTextSize(5);
   tft.setTextColor(v < 0 ? GRIGIO : coloreVal(v), BG);
@@ -116,15 +122,15 @@ void disegnaNome() {
 }
 
 void disegnaFrase(const char* s, uint16_t col) {
-  tft.fillRect(80, 176, 160, 64, BG);
+  tft.fillRect(80, 172, 160, 68, BG);
   tft.setTextSize(2);
   tft.setTextColor(col, BG);
-  tft.setCursor(84, 182);
+  tft.setCursor(84, 178);
   tft.print(s);
 }
 
 void disegnaMostro(int v) {
-  tft.fillRect(CX - 80, CY - 56, 160, 114, BG);
+  tft.fillRect(CX - 80, CY - 56, 160, 104, BG);
   if (v < 0) {                                           // punto interrogativo
     tft.setTextSize(8); tft.setTextColor(GRIGIO, BG);
     tft.setCursor(CX - 24, CY - 32); tft.print("?");
@@ -133,7 +139,7 @@ void disegnaMostro(int v) {
   uint16_t corpo = tft.color565(80 + v * 17 / 10, max(40, 220 - v * 18 / 10), 120 - v / 2);
   int l = livello(v);
   if (l >= 2) {                                          // corna
-    int hh = 8 + (v - 30) / 3;
+    int hh = min(18, 8 + (v - 30) / 3);          // le corna non devono toccare la percentuale
     tft.fillTriangle(CX - 34, CY - 20, CX - 16, CY - 34, CX - 32, CY - 34 - hh, 0xFFE0);
     tft.fillTriangle(CX + 34, CY - 20, CX + 16, CY - 34, CX + 32, CY - 34 - hh, 0xFFE0);
   }
@@ -186,25 +192,49 @@ void carica() {
     int pv = s.indexOf(';', i);
     if (pv < 0) pv = s.length();
     String r = s.substring(i, pv);
-    int c = r.lastIndexOf(':');
-    if (c > 0) { fam[nFam].nome = r.substring(0, c); fam[nFam].val = r.substring(c + 1).toInt(); nFam++; }
+    int c1 = r.indexOf(':');
+    int c2 = r.indexOf(':', c1 + 1);
+    if (c1 > 0 && c2 > c1) {
+      fam[nFam].nome = r.substring(0, c1);
+      fam[nFam].bonus = r.substring(c1 + 1, c2).toInt();
+      fam[nFam].val = r.substring(c2 + 1).toInt();
+      nFam++;
+    }
     i = pv + 1;
   }
 }
 
 void salva() {
   String s = "";
-  for (int i = 0; i < nFam; i++) { if (i) s += ";"; s += fam[i].nome + ":" + String(fam[i].val); }
+  for (int i = 0; i < nFam; i++) { if (i) s += ";"; s += fam[i].nome + ":" + String(fam[i].bonus) + ":" + String(fam[i].val); }
   prefs.putString("fam", s);
 }
 
-void impostaValore(const String& nome, int v) {
+int trova(const String& nome) {
   for (int i = 0; i < nFam; i++)
-    if (fam[i].nome.equalsIgnoreCase(nome)) { fam[i].val = v; salva(); return; }
-  if (nFam == MAX_FAM) { for (int i = 1; i < nFam; i++) fam[i - 1] = fam[i]; nFam--; }  // butta il piu' vecchio
-  fam[nFam].nome = nome; fam[nFam].val = v; nFam++;
-  salva();
+    if (fam[i].nome.equalsIgnoreCase(nome)) return i;
+  return -1;
 }
+
+int crea(const String& nome) {
+  if (nFam == MAX_FAM) { for (int i = 1; i < nFam; i++) fam[i - 1] = fam[i]; nFam--; }  // butta il piu' vecchio
+  fam[nFam].nome = nome; fam[nFam].bonus = 0; fam[nFam].val = -1;
+  nFam++;
+  salva();
+  return nFam - 1;
+}
+
+// Mostruosita' di BASE: dipende solo dal nome (maiuscole ignorate), quindi e' sempre la stessa.
+// Va da 10 a 65, cosi' c'e' spazio per salire con le azioni da mostro.
+int baseDi(String nome) {
+  nome.toLowerCase();
+  uint32_t h = 2166136261u;                       // hash FNV-1a
+  for (unsigned i = 0; i < nome.length(); i++) { h ^= (uint8_t)nome[i]; h *= 16777619u; }
+  return 10 + (int)(h % 56);
+}
+
+// Quanto sei mostro adesso = base + punti delle azioni da mostro (massimo 100).
+int valoreAttuale(int i) { return min(100, baseDi(fam[i].nome) + fam[i].bonus); }
 
 void elimina(const String& nome) {
   for (int i = 0; i < nFam; i++)
@@ -233,7 +263,9 @@ void servizi() { dns.processNextRequest(); server.handleClient(); }
 void misura() {
   misurando = true;
   String nome = chi.length() ? chi : String("Ospite");
-  int target = esp_random() % 101;
+  int idx = trova(nome); if (idx < 0) idx = crea(nome);
+  int target = valoreAttuale(idx);            // sempre uguale, finche' non guadagni punti
+  int prima = fam[idx].val;                   // -1 se non ti eri mai misurato
   disegnaFrase("Misuro...", BIANCO);
   int ultimoLiv = -1;
   for (int v = 0; v <= 100; v += 2) {                    // sale fino in cima
@@ -247,9 +279,13 @@ void misura() {
     servizi(); delay(22);
   }
   disegnaMostro(target);
-  disegnaFrase(FRASI[livello(target)], coloreVal(target));
+  String f = FRASI[livello(target)];
+  if (prima >= 0 && target > prima) f = "+" + String(target - prima) + " mostro!\n" + f;
+  disegnaFrase(f.c_str(), coloreVal(target));
   ultimo = target;
-  impostaValore(nome, target);
+  idx = trova(nome); if (idx < 0) idx = crea(nome);   // qualcuno puo' averti tolto dalla lista mentre misuravi
+  fam[idx].val = target;
+  salva();
   misurando = false;
 }
 
@@ -267,10 +303,14 @@ button:disabled{opacity:.5}.big{font-size:3.2rem;font-weight:900;text-align:cent
 .n{flex:0 0 100px;font-weight:700;overflow:hidden;text-overflow:ellipsis}.b{flex:1;height:16px;border-radius:8px;background:#120a22;overflow:hidden}
 .b i{display:block;height:100%;background:linear-gradient(90deg,#52e08a,#ffd84a,#ff9340,#ff3d5a)}.v{flex:0 0 46px;text-align:right;font-weight:800}
 .x{width:auto;padding:2px 8px;margin:0;background:none;font-size:1rem;color:#b9a6dd}.s{text-align:center;color:#b9a6dd;margin-top:8px}
+.a{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.a button{width:auto;margin:0;padding:10px 12px;font-size:.95rem;background:#4a3480}
+.p{color:#ffd84a;font-size:.8rem;font-weight:400}h3{margin:0}
 </style></head><body><main><h1>&#128121; MOSTROMETRO</h1>
 <div class="c"><input id="nome" list="l" maxlength="14" placeholder="Chi si misura?" autocomplete="off"><datalist id="l"></datalist>
 <div class="big" id="pct">--%</div><div class="m" id="msg">Scrivi il tuo nome e premi il bottone (anche sul Mostrometro!)</div>
 <button id="go">MISURA LA MOSTRUOSITA'</button></div>
+<div class="c"><h3>Cosa ha combinato?</h3><div class="a" id="az"></div>
+<div class="s" id="azmsg">Scrivi il nome, tocca cosa hai fatto e poi premi di nuovo il bottone: la tua mostruosita sale.</div></div>
 <div class="c"><div id="lista"></div><div class="s" id="crown"></div><div class="s" id="avg"></div></div></main>
 <script>
 const $=s=>document.querySelector(s);
@@ -290,13 +330,26 @@ function disegna(d){
   const o=[...d.fam].sort((a,b)=>b.v-a.v);
   if(!o.length){L.textContent='Nessun mostro ancora!';$('#crown').textContent='';$('#avg').textContent='';return}
   o.forEach(f=>{const r=document.createElement('div');r.className='r';
-    r.innerHTML='<div class="n"></div><div class="b"><i style="width:'+f.v+'%"></i></div><div class="v">'+f.v+'%</div><button class="x">&#10005;</button>';
-    r.querySelector('.n').textContent=f.n;
+    r.innerHTML='<div class="n"></div><div class="b"><i style="width:'+Math.max(0,f.v)+'%"></i></div><div class="v">'+(f.v<0?'?':f.v+'%')+'</div><button class="x">&#10005;</button>';
+    const ne=r.querySelector('.n');ne.textContent=f.n;
+    if(f.p>0){const s=document.createElement('div');s.className='p';s.textContent='+'+f.p+' in attesa';ne.appendChild(s)}
     r.querySelector('.x').onclick=async()=>{if(confirm('Togliere '+f.n+'?')){await api('/api/elimina?nome='+encodeURIComponent(f.n));stato()}};
     L.appendChild(r)});
-  $('#crown').textContent='\u{1F451} Mostro della famiglia: '+o[0].n+' ('+o[0].v+'%)';
-  $('#avg').textContent='Mostruosita media: '+Math.round(o.reduce((s,f)=>s+f.v,0)/o.length)+'%';
+  const mis=o.filter(f=>f.v>=0);
+  $('#crown').textContent=mis.length?'\u{1F451} Mostro della famiglia: '+mis[0].n+' ('+mis[0].v+'%)':'';
+  $('#avg').textContent=mis.length?'Mostruosita media: '+Math.round(mis.reduce((s,f)=>s+f.v,0)/mis.length)+'%':'';
 }
+const AZ=[['Rutto a tavola',3],['Calzini in giro',4],['Mangia con le mani',4],['Urla da mostro',5],['Non mette a posto',5],['Fa un dispetto',6],['Spaventa qualcuno',8]];
+let ultima=null;
+AZ.forEach(([t,p])=>{const b=document.createElement('button');b.textContent=t+' +'+p;b.onclick=()=>azione(p,t);$('#az').appendChild(b)});
+const un=document.createElement('button');un.textContent="Annulla l'ultima";un.onclick=()=>{if(ultima)azione(-ultima,null)};$('#az').appendChild(un);
+async function azione(p,t){
+  const n=pul($('#nome').value),m=$('#azmsg');
+  if(!n){m.textContent='Scrivi prima il tuo nome!';$('#nome').focus();return}
+  await api('/api/chi?nome='+encodeURIComponent(n));
+  await api('/api/azione?nome='+encodeURIComponent(n)+'&punti='+p);
+  if(t){ultima=p;m.textContent=n+': '+t+' (+'+p+'). Premi il bottone per vedere quanto sei salito!'}else{ultima=null;m.textContent='Annullato.'}
+  stato()}
 $('#nome').onchange=()=>api('/api/chi?nome='+encodeURIComponent(pul($('#nome').value)));
 $('#go').onclick=async()=>{await api('/api/chi?nome='+encodeURIComponent(pul($('#nome').value)));await api('/api/misura');stato()};
 stato();setInterval(stato,1000);
@@ -307,7 +360,9 @@ String statoJson() {
              (misurando || richiestaMisura ? "true" : "false") + ",\"fam\":[";
   for (int i = 0; i < nFam; i++) {
     if (i) j += ",";
-    j += "{\"n\":\"" + fam[i].nome + "\",\"v\":" + String(fam[i].val) + "}";
+    int att = valoreAttuale(i);
+    int p = (fam[i].val >= 0 && att > fam[i].val) ? att - fam[i].val : 0;   // punti in attesa del prossimo bottone
+    j += "{\"n\":\"" + fam[i].nome + "\",\"v\":" + String(fam[i].val) + ",\"p\":" + String(p) + "}";
   }
   return j + "]}";
 }
@@ -338,6 +393,15 @@ void setup() {
   server.on("/api/misura", HTTP_POST, []() {
     if (misurando || richiestaMisura) { server.send(409, "application/json", "{\"ok\":false}"); return; }
     richiestaMisura = true;
+    server.send(200, "application/json", "{\"ok\":true}");
+  });
+  server.on("/api/azione", HTTP_POST, []() {            // azione da mostro: +punti (o -punti per annullare)
+    String nome = pulisci(server.arg("nome"));
+    if (nome.length() == 0) { server.send(400, "application/json", "{\"ok\":false}"); return; }
+    int punti = constrain((int)server.arg("punti").toInt(), -10, 10);
+    int i = trova(nome); if (i < 0) i = crea(nome);
+    fam[i].bonus = constrain(fam[i].bonus + punti, 0, 100);
+    salva();
     server.send(200, "application/json", "{\"ok\":true}");
   });
   server.on("/api/elimina", HTTP_POST, []() {

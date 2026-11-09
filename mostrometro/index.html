@@ -20,36 +20,37 @@
     font-size:1rem;font-weight:700;cursor:pointer}
   nav button.on{background:var(--purple);color:#fff}
   .card{background:var(--card);border-radius:18px;padding:16px;margin-bottom:14px}
+  h3{margin:0 0 4px}
   input[type=text]{width:100%;padding:12px;border-radius:10px;border:2px solid #4a3480;background:#1b1030;
     color:var(--ink);font-size:1.1rem}
   .big{width:100%;padding:16px;border:0;border-radius:14px;font-size:1.2rem;font-weight:800;cursor:pointer;
     background:linear-gradient(90deg,var(--orange),var(--red));color:#fff;margin-top:12px}
   .big:disabled{opacity:.6}
-  .ghost{background:#4a3480;margin-top:8px}
-  /* termometro grande */
   .meter{display:flex;align-items:center;justify-content:center;gap:18px;margin:10px 0}
   .thermo{position:relative;width:70px;height:300px}
   .tube{position:absolute;left:20px;top:0;width:30px;height:300px;border-radius:15px 15px 0 0;
     background:#120a22;border:3px solid #6b4fb0;border-bottom:0;overflow:hidden}
-  .fill{position:absolute;bottom:0;left:0;right:0;height:0%;transition:height 2.2s cubic-bezier(.2,.8,.2,1);
+  .fill{position:absolute;bottom:0;left:0;right:0;height:0;transition:height 2.2s cubic-bezier(.2,.8,.2,1);
     background:linear-gradient(0deg,var(--green),var(--yellow) 40%,var(--orange) 65%,var(--red))}
-  .bulb{position:absolute;left:0;bottom:0;width:70px;height:70px;border-radius:50%;background:var(--red);z-index:2;
-    border:3px solid #6b4fb0;box-shadow:0 0 18px var(--red)}
+  .bulb{position:absolute;left:0;bottom:0;width:70px;height:70px;border-radius:50%;background:var(--red);
+    border:3px solid #6b4fb0;box-shadow:0 0 18px var(--red);z-index:2}
   .ticks{position:absolute;left:56px;top:0;height:265px;display:flex;flex-direction:column;justify-content:space-between;
     font-size:.7rem;color:var(--mute)}
   .read{text-align:center}
   .pct{font-size:4rem;font-weight:900;line-height:1}
   .lvl{font-size:1.2rem;margin-top:6px;min-height:3em;color:var(--yellow)}
-  .monster{font-size:4rem;transition:transform .3s}
+  .monster{font-size:4rem}
   .shake{animation:shake .12s infinite}
   @keyframes shake{0%{transform:translate(1px,0) rotate(-2deg)}50%{transform:translate(-1px,1px) rotate(2deg)}100%{transform:translate(0,-1px) rotate(-1deg)}}
-  /* famiglia */
+  .az{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .az button{padding:10px 12px;border:0;border-radius:10px;background:#4a3480;color:#fff;font-size:.95rem;cursor:pointer}
+  .msg{color:var(--mute);margin-top:10px;font-size:.95rem}
   .row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #3d2a68}
   .row:last-child{border:0}
-  .row .name{flex:0 0 96px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row .name{flex:0 0 104px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row .name small{display:block;color:var(--yellow);font-weight:400;font-size:.75rem}
   .bar{flex:1;height:18px;border-radius:9px;background:#120a22;overflow:hidden}
   .bar i{display:block;height:100%;border-radius:9px;background:linear-gradient(90deg,var(--green),var(--yellow),var(--orange),var(--red))}
-  .bar-wrap{flex:1}
   .row .v{flex:0 0 52px;text-align:right;font-weight:800}
   .row .x{border:0;background:none;color:var(--mute);font-size:1.1rem;cursor:pointer}
   .crown{text-align:center;font-size:1.1rem}
@@ -60,7 +61,7 @@
 <body>
 <main>
   <h1>👹 MOSTROMETRO</h1>
-  <p class="sub">Quanto sei mostro? La scienza risponde.</p>
+  <p class="sub">Anteprima: funziona come il termometro vero.</p>
   <nav>
     <button id="tabMisura" class="on">🌡️ Misura</button>
     <button id="tabFamiglia">👨‍👩‍👧‍👦 Famiglia</button>
@@ -68,7 +69,7 @@
 
   <section id="misura">
     <div class="card">
-      <input id="nome" type="text" placeholder="Come ti chiami, mostro?" maxlength="20" autocomplete="off">
+      <input id="nome" type="text" placeholder="Come ti chiami, mostro?" maxlength="14" autocomplete="off">
       <div class="meter">
         <div class="thermo">
           <div class="tube"><div class="fill" id="fill"></div></div>
@@ -78,11 +79,15 @@
         <div class="read">
           <div class="monster" id="monster">🙂</div>
           <div class="pct"><span id="pct">0</span>%</div>
-          <div class="lvl" id="lvl">Premi il pulsante per misurarti</div>
+          <div class="lvl" id="lvl">Scrivi il nome e premi il pulsante</div>
         </div>
       </div>
       <button class="big" id="misuraBtn">MISURA LA MOSTRUOSITÀ</button>
-      <button class="big ghost" id="salvaBtn" disabled>💾 Salva in famiglia</button>
+    </div>
+    <div class="card">
+      <h3>Cosa ha combinato?</h3>
+      <div class="az" id="az"></div>
+      <div class="msg" id="azmsg">Tocca cosa hai fatto e poi misura di nuovo: la tua mostruosità sale.</div>
     </div>
   </section>
 
@@ -93,21 +98,37 @@
 </main>
 
 <script>
+// Regole (le stesse del firmware):
+//  - la mostruosità di BASE dipende solo dal nome (10..65) e non cambia mai;
+//  - le azioni da mostro danno punti che restano "in attesa";
+//  - quando misuri, il valore mostrato è base + punti (massimo 100).
 const LIVELLI = [
-  [10,"🙂","Sei un angioletto. Sospetto."],
-  [25,"😏","Mostro in erba: qualche dispetto ogni tanto."],
-  [40,"😈","Piccolo mostriciattolo da divano."],
-  [55,"👹","Mostro medio: lascia i calzini in giro."],
-  [70,"👺","Mostro serio! Il papà ha ragione."],
-  [85,"🧟","Mostro gigante: tremano i vicini."],
-  [101,"👾","MOSTRO SUPREMO! Pericolo assoluto!"]
+  [10,"🙂","Angioletto? Sospetto..."],
+  [30,"😏","Mostriciattolo da divano"],
+  [50,"😈","Mostro medio"],
+  [70,"👹","Mostro serio! Papà ha ragione"],
+  [90,"👺","Mostro GIGANTE"],
+  [101,"👾","MOSTRO SUPREMO!!!"]
 ];
+const AZIONI = [["Rutto a tavola",3],["Calzini in giro",4],["Mangia con le mani",4],["Urla da mostro",5],
+                ["Non mette a posto",5],["Fa un dispetto",6],["Spaventa qualcuno",8]];
 const $ = id => document.getElementById(id);
-const livello = p => LIVELLI.find(l => p < l[0]);
-let corrente = null;
-let famiglia = [];
-try { famiglia = JSON.parse(localStorage.getItem("mostrometro") || "[]"); } catch(e){}
-const salva = () => { try { localStorage.setItem("mostrometro", JSON.stringify(famiglia)); } catch(e){} };
+const esc = s => s.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const livello = v => LIVELLI.find(l => v < l[0]);
+const pul = s => s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^\x20-\x7e]/g,"").replace(/[:;"\\<>&'%]/g,"").trim().slice(0,14);
+
+function baseDi(nome){                       // hash FNV-1a, identico al firmware
+  let h = 2166136261;
+  for (const c of nome.toLowerCase()) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
+  return 10 + (h >>> 0) % 56;
+}
+let famiglia = [];                           // {nome, bonus, val}  val = -1 se mai misurato
+try { famiglia = JSON.parse(localStorage.getItem("mostrometro2") || "[]"); } catch(e){}
+const salva = () => { try { localStorage.setItem("mostrometro2", JSON.stringify(famiglia)); } catch(e){} };
+const trova = n => famiglia.find(f => f.nome.toLowerCase() === n.toLowerCase());
+const crea = n => { const p = {nome:n, bonus:0, val:-1}; famiglia.push(p); return p; };
+const attuale = p => Math.min(100, baseDi(p.nome) + p.bonus);
+let ultima = 0;
 
 function tab(nome){
   $("misura").hidden = nome !== "misura";
@@ -119,35 +140,50 @@ function tab(nome){
 $("tabMisura").onclick = () => tab("misura");
 $("tabFamiglia").onclick = () => tab("famiglia");
 
+function nomeScelto(){ return pul($("nome").value) || "Ospite"; }
+
 $("misuraBtn").onclick = () => {
   const btn = $("misuraBtn"), m = $("monster");
-  btn.disabled = true; $("salvaBtn").disabled = true;
+  const nome = nomeScelto();
+  const p = trova(nome) || crea(nome);
+  const target = attuale(p), prima = p.val;
+  btn.disabled = true;
   $("lvl").textContent = "Misurazione in corso…";
   m.textContent = "🤔"; m.classList.add("shake");
-  const p = Math.round(Math.random() * 100);
   $("fill").style.height = "0px";
-  requestAnimationFrame(() => requestAnimationFrame(() => { $("fill").style.height = (35 + p * 2.65) + "px"; }));
+  requestAnimationFrame(() => requestAnimationFrame(() => { $("fill").style.height = (35 + target * 2.65) + "px"; }));
   const t0 = performance.now();
   (function tick(now){
     const k = Math.min(1, (now - t0) / 2200);
-    $("pct").textContent = Math.round(p * (1 - Math.pow(1 - k, 3)));
+    $("pct").textContent = Math.round(target * (1 - Math.pow(1 - k, 3)));
     if (k < 1) return requestAnimationFrame(tick);
-    const [, emoji, testo] = livello(p);
+    const [, emoji, testo] = livello(target);
     m.classList.remove("shake"); m.textContent = emoji;
-    $("lvl").textContent = testo;
-    corrente = p; btn.disabled = false; btn.textContent = "MISURA DI NUOVO";
-    $("salvaBtn").disabled = false;
+    $("lvl").textContent = (prima >= 0 && target > prima ? "+" + (target - prima) + " mostro! " : "") + testo;
+    p.val = target; salva();
+    btn.disabled = false; btn.textContent = "MISURA DI NUOVO";
   })(t0);
 };
 
-$("salvaBtn").onclick = () => {
-  const nome = $("nome").value.trim();
-  if (!nome) { $("nome").focus(); $("nome").placeholder = "Scrivi prima il tuo nome!"; return; }
-  if (corrente === null) return;
-  const i = famiglia.findIndex(f => f.nome.toLowerCase() === nome.toLowerCase());
-  if (i >= 0) famiglia[i].valore = corrente; else famiglia.push({nome, valore: corrente});
-  salva(); $("salvaBtn").disabled = true; tab("famiglia");
-};
+AZIONI.forEach(([testo, punti]) => {
+  const b = document.createElement("button");
+  b.textContent = testo + " +" + punti;
+  b.onclick = () => azione(punti, testo);
+  $("az").appendChild(b);
+});
+const annulla = document.createElement("button");
+annulla.textContent = "Annulla l'ultima";
+annulla.onclick = () => { if (ultima) azione(-ultima, null); };
+$("az").appendChild(annulla);
+
+function azione(punti, testo){
+  const nome = nomeScelto();
+  const p = trova(nome) || crea(nome);
+  p.bonus = Math.max(0, Math.min(100, p.bonus + punti));
+  salva();
+  if (testo) { ultima = punti; $("azmsg").textContent = nome + ": " + testo + " (+" + punti + "). Premi di nuovo il pulsante per vedere quanto sei salito!"; }
+  else { ultima = 0; $("azmsg").textContent = "Annullato."; }
+}
 
 function disegnaFamiglia(){
   const l = $("lista");
@@ -155,22 +191,22 @@ function disegnaFamiglia(){
     l.innerHTML = '<div class="empty">Nessun mostro ancora.<br>Fatevi misurare uno alla volta!</div>';
     $("crown").textContent = ""; $("avg").textContent = ""; return;
   }
-  const ord = [...famiglia].sort((a,b) => b.valore - a.valore);
-  l.innerHTML = ord.map(f => `
-    <div class="row">
-      <div class="name">${livello(f.valore)[1]} ${esc(f.nome)}</div>
-      <div class="bar-wrap"><div class="bar"><i style="width:${f.valore}%"></i></div></div>
-      <div class="v">${f.valore}%</div>
-      <button class="x" data-n="${esc(f.nome)}" aria-label="Elimina">✕</button>
-    </div>`).join("");
+  const ord = [...famiglia].sort((a,b) => b.val - a.val);
+  l.innerHTML = ord.map(f => {
+    const att = attuale(f), attesa = f.val >= 0 && att > f.val ? att - f.val : 0;
+    return `<div class="row">
+      <div class="name">${f.val >= 0 ? livello(f.val)[1] : "❔"} ${esc(f.nome)}${attesa ? `<small>+${attesa} in attesa</small>` : ""}</div>
+      <div class="bar"><i style="width:${Math.max(0, f.val)}%"></i></div>
+      <div class="v">${f.val < 0 ? "?" : f.val + "%"}</div>
+      <button class="x" data-n="${esc(f.nome)}" aria-label="Elimina">✕</button></div>`;
+  }).join("");
   l.querySelectorAll(".x").forEach(b => b.onclick = () => {
     famiglia = famiglia.filter(f => f.nome !== b.dataset.n); salva(); disegnaFamiglia();
   });
-  $("crown").textContent = `👑 Mostro della famiglia: ${ord[0].nome} (${ord[0].valore}%)`;
-  const media = Math.round(famiglia.reduce((s,f) => s + f.valore, 0) / famiglia.length);
-  $("avg").textContent = `Mostruosità media della famiglia: ${media}%`;
+  const mis = ord.filter(f => f.val >= 0);
+  $("crown").textContent = mis.length ? `👑 Mostro della famiglia: ${mis[0].nome} (${mis[0].val}%)` : "";
+  $("avg").textContent = mis.length ? `Mostruosità media della famiglia: ${Math.round(mis.reduce((s,f) => s + f.val, 0) / mis.length)}%` : "";
 }
-const esc = s => s.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 </script>
 </body>
 </html>

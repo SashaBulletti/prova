@@ -50,6 +50,14 @@ L'ESP32 crea il WiFi **Mostrometro** (password `mostro1234`, cambiala nel `.ino`
 Collegati dal telefono: la pagina si apre da sola, oppure vai su `http://192.168.4.1`.
 Scrivi chi si misura e premi il bottone (sul telefono o sul termometro). La classifica resta salvata anche senza corrente (max 12 persone).
 
+## Come si misura la mostruosità
+Non è a caso:
+- Ognuno ha una mostruosità **di base fissa** (10–65%) che dipende solo dal nome (maiuscole e accenti non contano). Se ti misuri due volte, esce lo stesso numero.
+- Dal telefono si segnano le **azioni da mostro** (rutto a tavola +3, spaventa qualcuno +8…). I punti restano "in attesa".
+- Alla pressione successiva del bottone il mercurio si ferma su **base + punti** (massimo 100) e lo schermo scrive di quanto sei salito, per esempio «+8 mostro!».
+
+Le azioni e i punti si cambiano nella lista `AZ` dentro `mostrometro.ino`.
+
 ## Stato della verifica
 - ✅ Modello 3D: STL validi, ingombri controllati, anteprima vista.
 - ✅ Pagina web: provata nel browser con un Mostrometro simulato.

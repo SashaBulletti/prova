@@ -147,6 +147,30 @@ footer{margin-top:3rem;color:var(--mute);font-size:.9rem}
 </header>
 
 <section>
+  <div class="phase"><span class="n">Regole</span><h2>Come si misura la mostruosità</h2></div>
+  <p>Non è a caso. Ognuno ha una mostruosità di base che dipende solo dal suo nome, quindi è sempre la stessa. Per salire bisogna fare cose da mostro.</p>
+  <div class="cols">
+    <div><h3>1. Base fissa</h3><p>Dalle lettere del nome esce un numero da 10 a 65. Maiuscole e accenti non contano: Papà, papa e PAPA sono la stessa persona. Se ti misuri due volte, esce lo stesso numero.</p></div>
+    <div><h3>2. Azioni da mostro</h3><p>Dal telefono si tocca cosa ha combinato la persona. Ogni azione dà dei punti, che restano in attesa.</p></div>
+    <div><h3>3. Il bottone</h3><p>Il mercurio sale e si ferma su base più punti, al massimo 100. Lo schermo scrive di quanto sei salito, per esempio «+8 mostro!».</p></div>
+  </div>
+  <div class="tablewrap" style="margin-top:1rem"><table>
+    <thead><tr><th>Azione da mostro</th><th>Punti</th></tr></thead>
+    <tbody>
+      <tr><td>Rutto a tavola</td><td class="num">+3</td></tr>
+      <tr><td>Lascia i calzini in giro</td><td class="num">+4</td></tr>
+      <tr><td>Mangia con le mani</td><td class="num">+4</td></tr>
+      <tr><td>Urla come un mostro</td><td class="num">+5</td></tr>
+      <tr><td>Non mette a posto</td><td class="num">+5</td></tr>
+      <tr><td>Fa un dispetto</td><td class="num">+6</td></tr>
+      <tr><td>Spaventa qualcuno</td><td class="num">+8</td></tr>
+    </tbody>
+  </table></div>
+  <p><b>Un esempio:</b> Papà parte da 39%. Se spaventa qualcuno guadagna 8 punti, ma il termometro dice ancora 39%. Quando preme il bottone sale a 47% e sullo schermo compare «+8 mostro!».</p>
+  <div class="note">I punti non scendono da soli. Il pulsante «Annulla l'ultima» serve solo a correggere un errore. Il numero di base è un gioco, non una misura scientifica. Per cambiare azioni e punti si modifica la lista <code>AZ</code> in <code>mostrometro.ino</code>.</div>
+</section>
+
+<section>
   <div class="phase"><span class="n">Fase 1</span><h2>Compra i pezzi</h2></div>
   <label class="chk"><input type="checkbox" id="c1"><span class="t"><b>ESP32 DevKit, 38 pin</b><small>Circa 51 × 28 mm. È il cervello e fa anche il WiFi.</small></span></label>
   <label class="chk"><input type="checkbox" id="c2"><span class="t"><b>Schermo ST7789 da 1,3", 240 × 240</b><small>Quello con 7 pin (SPI). Ordina quello con i fili Dupont femmina, se lo trovi.</small></span></label>
@@ -362,7 +386,8 @@ footer{margin-top:3rem;color:var(--mute);font-size:.9rem}
   <div class="cols status">
     <div><h3>Controllato</h3><ul>
       <li><span class="ok">Sì</span> Modello 3D: STL validi e ingombri misurati</li>
-      <li><span class="ok">Sì</span> Pagina web: provata nel browser</li></ul></div>
+      <li><span class="ok">Sì</span> Pagina web: provata nel browser</li>
+      <li><span class="ok">Sì</span> Regole di misura: provate al computer con una ESP32 simulata</li></ul></div>
     <div><h3>Da verificare con te</h3><ul>
       <li><span class="wn">No</span> Firmware: non compilato su una vera ESP32</li>
       <li><span class="wn">No</span> Stampa: le misure vanno confrontate con i tuoi pezzi</li></ul></div>
