@@ -1,0 +1,33 @@
+MOSTROMETRO - cartella del programma
+=====================================
+
+Questa cartella contiene il programma per la scheda Waveshare ESP32-S3-Touch-LCD-3.49 (versione V2).
+
+  mostrometro.ino   il programma: misura, WiFi e pagina del telefono, standby
+  scheda.h          tutto cio' che riguarda la scheda: schermo, audio, microfono, batteria, bottone
+  audio_dati.h      i suoni (numeri da 0 a 100, versi del mostro...). Si rigenera con ../genera_audio.py
+
+PRIMA DI CARICARLO bisogna aggiungere qui dentro alcuni file del produttore (servono per far suonare l'audio):
+
+  Dal repository  github.com/waveshareteam/ESP32-S3-Touch-LCD-3.49-V2
+  (Code > Download ZIP), nella cartella  Arduino/examples/08_Audio_Test  copia in QUESTA cartella:
+
+     i2c_bsp.c
+     i2c_bsp.h
+     user_config.h
+     src/            (poi, dentro src, tieni solo:  codec_board, esp_codec_dev, tca9554)
+
+Poi segui la guida passo passo (progetto.html, "Fase 5 - Carica il programma e prova").
+
+Impostazioni di Arduino IDE (menu Strumenti):
+  pacchetto "esp32" di Espressif versione 3.3.0
+  libreria "GFX Library for Arduino"
+  Scheda: ESP32S3 Dev Module
+  USB CDC On Boot: Enabled
+  Flash Size: 16MB
+  PSRAM: OPI PSRAM
+  Partition Scheme: Huge APP (3MB No OTA/1MB SPIFFS)
+
+ATTENZIONE: questo programma non e' mai girato su una scheda vera. I pin e le chiamate vengono dallo schema
+elettrico e dagli esempi ufficiali del produttore (07_BATT_PWR_Test, 08_Audio_Test), e la logica e' stata provata
+al computer con una scheda finta (cartella ../prova_al_computer, "sh prova.sh").

@@ -35,23 +35,35 @@ horn_h = 23;                 // quanto sporgono le corna sopra il corpo
 depth  = 30;                 // spessore totale (fronte + retro)
 wall   = 2.4;                // spessore pareti
 
-// ---------- scheda: LilyGO T-Display S3 Long (schermo lungo + ESP32-S3 + ricarica USB-C) ----------
-// MISURA LA TUA: i negozi indicano 92 x 28 mm e 14-16 mm di spessore.
-brd_w = 28;
-brd_l = 92;
-win_w = 24.4;                // finestra: area visibile dello schermo (circa 23,4 x 83 mm)
-win_h = 83.6;
-win_r = 4;                   // angoli arrotondati della finestra
-win_cy = isA ? y0 + 77 : y0 + 82;     // altezza del centro dello schermo
+// ---------- scheda: Waveshare ESP32-S3-Touch-LCD-3.49 (schermo lungo, 2 microfoni, altoparlante, USB-C, batteria) ----------
+// Misure dal modello 3D del produttore: circuito stampato 29,0 x 93,7 mm, con la presa USB-C 95,1 mm.
+// Lo spessore con lo schermo e i componenti e' circa 12-13 mm (da verificare sulla scheda vera).
+brd_w = 29.0;
+brd_l = 95.1;
+win_w = 22.9;                // finestra: area visibile dello schermo (dal produttore 84,00 x 22,58 mm, piu' un po' di gioco)
+win_h = 84.4;
+win_r = 3;                   // angoli arrotondati della finestra
+win_cy = isA ? y0 + 80 : 85; // altezza del centro dello schermo
 clear = 0.4;                 // gioco intorno alla scheda
 
 // ---------- bottone arcade da 30 mm: e' il naso, in basso ----------
 btn_d = 24.2;                // foro (corpo sotto pannello circa 21 mm)
 btn_y = isA ? y0 + 18 : 22;
 
-// ---------- batteria LiPo piatta (es. 603048: 6 x 30 x 48 mm), dietro la scheda ----------
-bat_w = 30;
-bat_l = 48;
+// ---------- batteria LiPo piatta (es. 603450: 6 x 34 x 50 mm, circa 1000 mAh), dietro la scheda, sotto ai microfoni ----------
+// La scheda carica a circa 1 A: serve una batteria da almeno 1000 mAh.
+bat_w = 34;
+bat_l = 50;
+bat_cy = win_cy - 24.5;
+
+// ---------- altoparlante rotondo da 28 mm (8 ohm, 1 W, spesso circa 5 mm), nella testa, con la griglia sul retro ----------
+spk_d = 28;
+spk_y = top_y - 22;
+
+// ---------- microfoni: due fori sul retro, uno per microfono (sulla scheda stanno a meta' lunghezza, vicino ai bordi lunghi) ----------
+mic_x = 12.5;
+mic_y = win_cy + 2.65;
+mic_d = 3;
 
 // ---------- presa USB-C: tacca in cima alla testa ----------
 usb_w = 12;
@@ -67,7 +79,7 @@ screw_hole  = 3.4;
 screw_head  = 6.4;
 post_d      = 7;
 post_x      = body_w / 2 - 11;
-posts = [[-post_x, win_cy + 13], [post_x, win_cy + 13], [-13, top_y - 18]];
+posts = [[-post_x, win_cy + 13], [post_x, win_cy + 13], [-22, top_y - 22], [22, top_y - 22]];
 
 half = depth / 2;
 
@@ -174,8 +186,17 @@ module retro() {
             posts_solid();
             // alloggio per la batteria, dietro alla scheda
             for (sx = [-1, 1], sy = [-1, 1])
-                translate([sx * (bat_w/2 + 0.8), win_cy + sy * (bat_l/2 - 6), wall + 3]) cube([1.6, 6, 6], center = true);
+                translate([sx * (bat_w/2 + 0.8), bat_cy + sy * (bat_l/2 - 6), wall + 3]) cube([1.6, 6, 6], center = true);
+            // sede dell'altoparlante: quattro blocchetti intorno
+            for (a = [45, 135, 225, 315])
+                translate([(spk_d/2 + 0.8) * cos(a), spk_y + (spk_d/2 + 0.8) * sin(a), wall + 3]) cube([1.6, 4, 6], center = true);
         }
+        // griglia dell'altoparlante: un foro al centro, 6 intorno e 12 piu' fuori
+        translate([0, spk_y, -1]) cylinder(d = 2.4, h = wall + 2);
+        for (a = [0 : 60 : 359]) translate([6 * cos(a), spk_y + 6 * sin(a), -1]) cylinder(d = 2.4, h = wall + 2);
+        for (a = [15 : 30 : 359]) translate([10.5 * cos(a), spk_y + 10.5 * sin(a), -1]) cylinder(d = 2.4, h = wall + 2);
+        // fori dei microfoni
+        for (sx = [-1, 1]) translate([sx * mic_x, mic_y, -1]) cylinder(d = mic_d, h = wall + 2);
         translate([0, 0, half - 2.2]) linear_extrude(3) ring(0.5, 1.9);     // scanalatura
         for (p = posts) {
             translate([p[0], p[1], -1]) cylinder(d = screw_hole, h = half + 2);

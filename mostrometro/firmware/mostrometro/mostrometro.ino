@@ -1,57 +1,30 @@
-// MOSTROMETRO - firmware per LilyGO T-Display S3 Long (ESP32-S3 + schermo lungo 180x640 + ricarica USB-C)
+// MOSTROMETRO - firmware per Waveshare ESP32-S3-Touch-LCD-3.49 (versione V2)
+// Schermo lungo 172x640, due microfoni, altoparlante, ricarica USB-C e batteria sulla stessa scheda.
 //
 // Cosa fa:
-//  - Ognuno ha una mostruosita' di BASE fissa, che dipende dal suo nome: se ti
-//    misuri due volte di fila, il risultato e' sempre lo stesso.
-//  - Dal telefono si segnano le azioni da mostro (rutto a tavola, dispetti...):
-//    danno punti, e quando premi di nuovo il bottone la tua mostruosita' sale.
-//  - Premi il bottone: il mercurio sale lungo lo schermo fino a 100 e poi scende alla tua
-//    percentuale, con un mostriciattolo che si trasforma.
+//  - Ognuno ha una mostruosita' di BASE fissa, che dipende dal suo nome: se ti misuri due volte
+//    di fila, il risultato e' sempre lo stesso.
+//  - Premi il naso (il bottone): il mostro fa il suo verso mentre il mercurio sale lungo lo schermo,
+//    poi scende alla tua percentuale e il mostro dice "sei al sessanta per cento".
+//  - Tieni premuto il naso per un secondo (o usa il telefono): "Urla da mostro!". Il microfono ascolta
+//    per 2 secondi e piu' urli forte, piu' punti prendi (da 0 a 10). I punti si aggiungono alla tua
+//    mostruosita' e la prossima volta che premi il naso il mercurio sale.
+//  - Dal telefono si segnano anche le altre azioni da mostro (rutto a tavola, dispetti...).
 //  - La scheda crea un suo WiFi "Mostrometro": dal telefono apri la pagina
 //    (si apre da sola, oppure http://192.168.4.1) e vedi la classifica di famiglia.
 //  - La classifica resta salvata nella memoria anche senza corrente.
-//  - Funziona a batteria: dopo 5 minuti senza uso va in standby, il bottone lo risveglia.
+//  - Funziona a batteria: dopo 5 minuti senza uso va in standby, il naso lo risveglia.
 //
-// COME PROVARLO (NON e' stato provato su una scheda vera, vedi sotto):
-//  1. Installa le librerie come spiegato nel README del produttore:
-//     https://github.com/Xinyuan-LilyGO/T-Display-S3-Long  (copia la cartella lib/ nelle librerie di Arduino:
-//     ci sono "GFX Library for Arduino" e XPowersLib).
-//  2. Apri l'esempio ufficiale  examples/GFX_AXS15231B_Image  e controlla che lo schermo funzioni.
-//  3. Se nell'esempio c'e' una parte che accende il chip di alimentazione (PMU, via I2C), copiala
-//     nella funzione schedaInit() qui sotto: potrebbe servire per far funzionare la scheda a batteria.
-//  4. Carica questo programma. Scheda: "ESP32S3 Dev Module", PSRAM "OPI PSRAM", flash 16 MB, USB CDC on boot attivo.
-//
-// Collegamenti:
-//   Schermo e ricarica USB-C: sono gia' sulla scheda, non serve collegare niente.
-//   Bottone grosso: due fili in parallelo al pulsantino BOOT della scheda (GPIO0). Premere il bottone = GPIO0 a GND.
-//     Se il bottone e' premuto mentre la scheda si accende, entra nel modo "download" (schermo nero): rilascia e riaccendi.
-//   Batteria LiPo nel connettore della scheda (controlla + e - !). La scheda ha un interruttore: deve stare su ON.
+// COME SI CARICA: leggi la guida (progetto.html) e il file LEGGIMI.txt in questa cartella.
+// Tutti i dettagli della scheda (pin, schermo, audio, accensione a batteria) sono nel file scheda.h.
+// Questo programma NON e' mai girato su una scheda vera: puo' servire qualche ritocco.
 
 #include <WiFi.h>
 #include <WebServer.h>
 #include <DNSServer.h>
 #include <Preferences.h>
-#include <Arduino_GFX_Library.h>
-#include "driver/rtc_io.h"
-#include "esp_sleep.h"
+#include "scheda.h"          // schermo, audio, batteria, bottone: tutto cio' che riguarda la scheda
 
-// Pin dello schermo, presi da pins_config.h del produttore (esempio GFX_AXS15231B_Image).
-// Nello stesso file i pin 16 e 21 compaiono anche per il touch e per un secondo pulsante: se lo schermo
-// non parte, confronta con lo schema della scheda.
-#define LCD_CS    12
-#define LCD_SCLK  17
-#define LCD_SDIO0 13
-#define LCD_SDIO1 18
-#define LCD_SDIO2 21
-#define LCD_SDIO3 14
-#define LCD_RST   16
-#define LCD_BL     1
-#define LCD_W    180
-#define LCD_H    640
-
-#define PIN_BTN   0          // pulsante BOOT della scheda: il bottone grosso si collega in parallelo
-#define PIN_BAT   8          // lettura della batteria (dal produttore: PIN_BAT_VOLT = 8)
-#define BAT_DIV   2.0        // rapporto del partitore: NON trovato nei documenti, controlla (se la % e' sbagliata cambialo)
 #define IDLE_MS   300000UL   // dopo 5 minuti senza uso va in standby profondo (schermo e WiFi spenti)
 
 const char* WIFI_SSID = "Mostrometro";
@@ -59,9 +32,6 @@ const char* WIFI_PASS = "mostro1234";   // almeno 8 caratteri
 
 #define MAX_FAM 12
 
-Arduino_DataBus *bus = new Arduino_ESP32QSPI(LCD_CS, LCD_SCLK, LCD_SDIO0, LCD_SDIO1, LCD_SDIO2, LCD_SDIO3);
-Arduino_GFX *gfx = new Arduino_AXS15231(bus, LCD_RST, 0 /* rotazione */, false /* IPS */, LCD_W, LCD_H);
-#define tft (*gfx)      // cosi' il resto del codice usa tft.fillRect(...) come prima
 WebServer server(80);
 DNSServer dns;
 Preferences prefs;
@@ -75,27 +45,17 @@ String chi = "";            // chi si sta misurando
 int ultimo = -1;            // ultimo risultato (-1 = nessuno)
 bool misurando = false;
 bool richiestaMisura = false;
+bool richiestaUrlo = false;
 uint32_t ultimaAttivita = 0;   // ultimo momento in cui qualcuno ha fatto qualcosa (serve per lo standby)
 void attivita() { ultimaAttivita = millis(); }
 
-// Carica della batteria in %, dalla tensione (curva tipica delle LiPo da 3,7 V).
-int batteriaPct() {
-  float v = analogReadMilliVolts(PIN_BAT) * BAT_DIV / 1000.0;   // il partitore della scheda riduce la tensione
-  static const float V[] = {3.30, 3.50, 3.65, 3.75, 3.85, 4.00, 4.15};
-  static const int   P[] = {0,    5,    15,   35,   55,   80,   100};
-  if (v <= V[0]) return 0;
-  for (int i = 1; i < 7; i++)
-    if (v <= V[i]) return P[i - 1] + (int)((v - V[i - 1]) * (P[i] - P[i - 1]) / (V[i] - V[i - 1]));
-  return 100;
-}
-
-// ---------- colori e layout schermo (180 x 640, in verticale) ----------
+// ---------- colori e layout schermo (172 x 640, in verticale) ----------
 const uint16_t BG = 0x0000, GRIGIO = 0x4A49, SCURO = 0x1082, BIANCO = 0xFFFF, NERO = 0x0000;
 const int TX = 8, TW = 36, TY = 14, TH = 612;          // tubo lungo a sinistra: occupa quasi tutto lo schermo
 const int MX = TX + 4, MW = TW - 8;                    // colonna del mercurio
 const int MB = TY + TH - 16, MH = TH - 32;             // da dove parte (in basso) e quanto e' alta a 100%
-const int PX = 68, PW = 108;                           // pannello a destra
-const int CX = 122, CY = 150;                          // centro del mostriciattolo
+const int PX = 66, PW = 104;                           // pannello a destra
+const int CX = 118, CY = 150;                          // centro del mostriciattolo
 
 uint16_t coloreVal(int v) {            // verde -> giallo -> rosso
   int r, g;
@@ -112,10 +72,10 @@ int livello(int v) {
   if (v < 90) return 4;
   return 5;
 }
-// Frasi con parole di al massimo 9 lettere: nel pannello entrano 9 caratteri per riga.
+// Frasi con parole di al massimo 8 lettere: nel pannello entrano 8 caratteri per riga.
 const char* FRASI[] = {
   "Angelo? Mah...", "Mostrino da divano", "Mostro medio",
-  "Mostro serio! Papa ha ragione", "Mostro GIGANTE", "SUPER MOSTRO!!!"
+  "Mostro serio! Papa ha ragione", "Mostro GIGANTE", "SUPER MOSTRO!"
 };
 
 // Scrive il testo andando a capo tra le parole (e dove c'e' '\n').
@@ -176,7 +136,7 @@ void disegnaNome() {
   tft.setTextColor(BIANCO, BG);
   tft.setCursor(PX, 10);
   String n = chi.length() ? chi : String("Ospite");
-  tft.print(n.substring(0, 9));
+  tft.print(n.substring(0, 8));
 }
 
 void disegnaBatteria() {                                   // in basso a destra
@@ -251,11 +211,6 @@ void schermataCompleta(int v) {
   disegnaMostro(v);
   if (v < 0) disegnaFrase("Premi il bottone!", BIANCO);
   else disegnaFrase(FRASI[livello(v)], coloreVal(v));
-}
-
-// Qui va tutto cio' che serve alla SCHEDA e non a questo programma (per esempio accendere il chip di
-// alimentazione via I2C, come fa l'esempio del produttore). Per ora non fa niente.
-void schedaInit() {
 }
 
 // ---------- memoria ----------
@@ -335,20 +290,25 @@ String pulisci(String s) {
 // ---------- misura ----------
 void servizi() { dns.processNextRequest(); server.handleClient(); }
 
-// Standby profondo: schermo e WiFi spenti. Si risveglia premendo il bottone (e il programma riparte da capo).
 void dormi() {
   tft.fillScreen(BG);
   tft.setTextSize(3); tft.setTextColor(GRIGIO, BG);
-  tft.setCursor(40, 300); tft.print("Zzz...");
+  tft.setCursor(30, 300); tft.print("Zzz...");
+  mostra();
   delay(1200);
-  digitalWrite(LCD_BL, LOW);
-  gfx->displayOff();
   WiFi.mode(WIFI_OFF);
-  rtc_gpio_pullup_en((gpio_num_t)PIN_BTN);               // il pull-up deve restare attivo durante il sonno
-  rtc_gpio_pulldown_dis((gpio_num_t)PIN_BTN);
-  esp_sleep_enable_ext0_wakeup((gpio_num_t)PIN_BTN, 0);  // si sveglia quando il bottone va a GND
-  esp_deep_sleep_start();
+  schedaDormi();                                          // spegne tutto; il naso lo risveglia
 }
+
+// "sei al sessanta per cento": davanti a uno, otto, undici e agli ottanta si dice "sei all'..."
+void dilloIn(int pct) {
+  bool vocale = (pct == 1 || pct == 8 || pct == 11 || (pct >= 80 && pct <= 89));
+  audioAccoda(vocale ? CLIP_SEI_ALL : CLIP_SEI_AL);
+  audioAccoda(CLIP_NUMERO0 + pct);
+  audioAccoda(CLIP_PER_CENTO);
+}
+
+void aspettaAudio() { while (audioOccupato()) { servizi(); delay(10); } }
 
 void misura() {
   misurando = true;
@@ -358,16 +318,18 @@ void misura() {
   int target = valoreAttuale(idx);            // sempre uguale, finche' non guadagni punti
   int prima = fam[idx].val;                   // -1 se non ti eri mai misurato
   disegnaFrase("Misuro...", BIANCO);
+  mostra();
+  audioAccoda(CLIP_VERSO0 + livello(target)); // il verso del mostro parte subito e dura mentre il mercurio sale
   int ultimoLiv = -1;
   for (int v = 0; v <= 100; v += 2) {                    // sale fino in cima
     disegnaMercurio(v); disegnaPercentuale(v);
     if (livello(v) != ultimoLiv) { ultimoLiv = livello(v); disegnaMostro(v); }
-    servizi(); delay(14);
+    mostra(); servizi(); delay(14);
   }
   for (int v = 100; v >= target; v--) {                  // ...e scende alla tua percentuale
     disegnaMercurio(v); disegnaPercentuale(v);
     if (livello(v) != ultimoLiv) { ultimoLiv = livello(v); disegnaMostro(v); }
-    servizi(); delay(22);
+    mostra(); servizi(); delay(22);
   }
   disegnaMostro(target);
   String f = FRASI[livello(target)];
@@ -378,6 +340,35 @@ void misura() {
   fam[idx].val = target;
   salva();
   disegnaBatteria();
+  mostra();
+  dilloIn(target);                                      // "sei al sessanta per cento"
+  aspettaAudio();
+  misurando = false;
+  attivita();
+}
+
+// Urlo da mostro: il microfono ascolta 2 secondi e il piu' forte momento diventa punti (0..10).
+void urla() {
+  misurando = true;
+  attivita();
+  String nome = chi.length() ? chi : String("Ospite");
+  disegnaFrase("URLA DA MOSTRO!", 0xF800);
+  mostra();
+  audioAccoda(CLIP_URLA);
+  audioAccoda(CLIP_BIP);
+  aspettaAudio();
+  float db = microfonoPicco(2000);
+  int punti = puntiDaDb(db);
+  int idx = trova(nome); if (idx < 0) idx = crea(nome);
+  fam[idx].bonus = constrain(fam[idx].bonus + punti, 0, 100);
+  salva();
+  String f = "Urlo da " + String(punti) + " punti!\nPremi il naso";
+  disegnaFrase(f.c_str(), 0xFFE0);
+  mostra();
+  audioAccoda(CLIP_URLO_DA);
+  audioAccoda(CLIP_NUMERO0 + punti);
+  audioAccoda(CLIP_PUNTI);
+  aspettaAudio();
   misurando = false;
   attivita();
 }
@@ -402,20 +393,20 @@ button:disabled{opacity:.5}.big{font-size:3.2rem;font-weight:900;text-align:cent
 <div class="c"><input id="nome" list="l" maxlength="14" placeholder="Chi si misura?" autocomplete="off"><datalist id="l"></datalist>
 <div class="big" id="pct">--%</div><div class="m" id="msg">Scrivi il tuo nome e premi il bottone (anche sul Mostrometro!)</div>
 <button id="go">MISURA LA MOSTRUOSITA'</button></div>
-<div class="c"><h3>Cosa ha combinato?</h3><div class="a" id="az"></div>
+<div class="c"><h3>Cosa ha combinato?</h3><div class="a" id="az"></div><button id="urlo">&#127908; URLA! Il Mostrometro ti ascolta</button>
 <div class="s" id="azmsg">Scrivi il nome, tocca cosa hai fatto e poi premi di nuovo il bottone: la tua mostruosita sale.</div></div>
 <div class="c"><div id="lista"></div><div class="s" id="crown"></div><div class="s" id="avg"></div></div></main>
 <script>
 const $=s=>document.querySelector(s);
 const pul=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x20-\x7e]/g,'').replace(/[:;"\\<>&'%]/g,'').trim().slice(0,14);
-const FR=['Angelo? Mah...','Mostrino da divano','Mostro medio','Mostro serio! Papa ha ragione','Mostro GIGANTE','SUPER MOSTRO!!!'];
+const FR=['Angelo? Mah...','Mostrino da divano','Mostro medio','Mostro serio! Papa ha ragione','Mostro GIGANTE','SUPER MOSTRO!'];
 const liv=v=>v<10?0:v<30?1:v<50?2:v<70?3:v<90?4:5;
 let ult=-1,aspetto=false;
 async function api(p){const r=await fetch(p,{method:'POST'});return r.json()}
 async function stato(){try{const d=await(await fetch('/api/stato')).json();disegna(d)}catch(e){$('#msg').textContent='Nessuna risposta. Collegati al WiFi Mostrometro. Se lo sei, il Mostrometro dorme: premi il bottone per svegliarlo.'}}
 function disegna(d){
   const nm=$('#nome');if(document.activeElement!==nm&&!nm.value)nm.value=d.chi;
-  $('#go').disabled=d.misurando;
+  $('#go').disabled=d.misurando;$('#urlo').disabled=d.misurando;
   $('#bat').textContent='Batteria '+d.bat+'%'+(d.bat<15?' - da ricaricare!':'');
   if(d.misurando){$('#pct').textContent='...';$('#msg').textContent='Misuro...';aspetto=true}
   else if(d.val>=0){$('#pct').textContent=d.val+'%';$('#msg').textContent=FR[liv(d.val)]}
@@ -445,6 +436,7 @@ async function azione(p,t){
   if(t){ultima=p;m.textContent=n+': '+t+' (+'+p+'). Premi il bottone per vedere quanto sei salito!'}else{ultima=null;m.textContent='Annullato.'}
   stato()}
 $('#nome').onchange=()=>api('/api/chi?nome='+encodeURIComponent(pul($('#nome').value)));
+$('#urlo').onclick=async()=>{await api('/api/chi?nome='+encodeURIComponent(pul($('#nome').value)));await api('/api/urlo');stato()};
 $('#go').onclick=async()=>{await api('/api/chi?nome='+encodeURIComponent(pul($('#nome').value)));await api('/api/misura');stato()};
 stato();setInterval(stato,1000);
 </script></body></html>)=====";
@@ -463,12 +455,7 @@ String statoJson() {
 
 // ---------- setup / loop ----------
 void setup() {
-  Serial.begin(115200);
-  pinMode(PIN_BTN, INPUT_PULLUP);
-  schedaInit();
-  pinMode(LCD_BL, OUTPUT); digitalWrite(LCD_BL, HIGH);
-  gfx->begin();
-  gfx->fillScreen(BG);
+  schedaInit();                                          // schermo, audio, batteria: vedi scheda.h
 
   prefs.begin("mostro", false);
   carica();
@@ -484,12 +471,18 @@ void setup() {
     chi = pulisci(server.arg("nome"));
     prefs.putString("chi", chi);                         // dopo lo standby si riparte dalla stessa persona
     attivita();
-    if (!misurando) disegnaNome();
+    if (!misurando) { disegnaNome(); mostra(); }
     server.send(200, "application/json", "{\"ok\":true}");
   });
   server.on("/api/misura", HTTP_POST, []() {
-    if (misurando || richiestaMisura) { server.send(409, "application/json", "{\"ok\":false}"); return; }
+    if (misurando || richiestaMisura || richiestaUrlo) { server.send(409, "application/json", "{\"ok\":false}"); return; }
     richiestaMisura = true;
+    attivita();
+    server.send(200, "application/json", "{\"ok\":true}");
+  });
+  server.on("/api/urlo", HTTP_POST, []() {
+    if (misurando || richiestaMisura || richiestaUrlo) { server.send(409, "application/json", "{\"ok\":false}"); return; }
+    richiestaUrlo = true;
     attivita();
     server.send(200, "application/json", "{\"ok\":true}");
   });
@@ -515,14 +508,15 @@ void setup() {
   server.begin();
 
   attivita();
-  if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT0) {   // svegliato dal bottone: niente benvenuto, misura subito
-    while (digitalRead(PIN_BTN) == LOW) delay(10);
+  if (schedaSvegliataDaTasto()) {                        // svegliato dal naso: niente benvenuto, misura subito
+    while (tastoPremuto()) delay(10);
     schermataCompleta(-1);
     richiestaMisura = true;
     return;
   }
 
   // schermata di benvenuto
+  tft.fillScreen(BG);
   tft.setTextColor(BIANCO, BG); tft.setTextSize(4);
   tft.setCursor(12, 40);  tft.print("MOSTRO");
   tft.setCursor(12, 80);  tft.print("METRO");
@@ -531,6 +525,7 @@ void setup() {
   tft.setCursor(12, 184); tft.print(WIFI_SSID);
   tft.setCursor(12, 230); tft.print("Password:");
   tft.setCursor(12, 254); tft.print(WIFI_PASS);
+  mostra();
   uint32_t t0 = millis();
   while (millis() - t0 < 4000) { servizi(); delay(5); }
   schermataCompleta(-1);
@@ -539,11 +534,20 @@ void setup() {
 void loop() {
   servizi();
   if (richiestaMisura) { richiestaMisura = false; misura(); }
-  if (!misurando && !richiestaMisura && millis() - ultimaAttivita > IDLE_MS) dormi();   // risparmia la batteria
+  if (richiestaUrlo) { richiestaUrlo = false; urla(); }
+  if (pwrTenutoPremuto()) {                              // PWR tenuto premuto 3 secondi: spegne (a batteria)
+    tft.fillScreen(BG); tft.setTextSize(2); tft.setTextColor(BIANCO, BG);
+    tft.setCursor(20, 300); tft.print("Spengo..."); mostra();
+    delay(800);
+    spegniTutto();
+  }
+  if (!misurando && !richiestaMisura && !richiestaUrlo && millis() - ultimaAttivita > IDLE_MS) dormi();   // risparmia la batteria
   static uint32_t ultimoTasto = 0;
-  if (digitalRead(PIN_BTN) == LOW && millis() - ultimoTasto > 500) {
+  if (tastoPremuto() && millis() - ultimoTasto > 500) {
+    uint32_t t0 = millis();
+    while (tastoPremuto() && millis() - t0 < 1200) servizi();
     ultimoTasto = millis();
-    misura();
-    while (digitalRead(PIN_BTN) == LOW) servizi();       // aspetta che lasci il bottone
+    if (tastoPremuto()) { urla(); while (tastoPremuto()) servizi(); }   // tenuto premuto: urlo
+    else misura();                                                      // premuto e rilasciato: misura
   }
 }
