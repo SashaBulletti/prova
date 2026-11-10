@@ -1,0 +1,109 @@
+<title>App Mostrometro</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+body{margin:0;background:#1b1030;color:#fff4ff;font-family:system-ui,sans-serif}
+main{max-width:520px;margin:0 auto;padding:16px}h1{text-align:center;margin:8px 0}
+.c{background:#2a1a4a;border-radius:18px;padding:16px;margin-bottom:14px}
+input{width:100%;box-sizing:border-box;padding:12px;border-radius:10px;border:2px solid #4a3480;background:#1b1030;color:#fff;font-size:1.1rem}
+button{width:100%;padding:16px;border:0;border-radius:14px;font-size:1.2rem;font-weight:800;background:linear-gradient(90deg,#ff9340,#ff3d5a);color:#fff;margin-top:12px}
+button:disabled{opacity:.5}.big{font-size:3.2rem;font-weight:900;text-align:center}.m{text-align:center;color:#ffd84a;min-height:1.4em}
+.r{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #3d2a68}.r:last-child{border:0}
+.n{flex:0 0 100px;font-weight:700;overflow:hidden;text-overflow:ellipsis}.b{flex:1;height:16px;border-radius:8px;background:#120a22;overflow:hidden}
+.b i{display:block;height:100%;background:linear-gradient(90deg,#52e08a,#ffd84a,#ff9340,#ff3d5a)}.v{flex:0 0 46px;text-align:right;font-weight:800}
+.x{width:auto;padding:2px 8px;margin:0;background:none;font-size:1rem;color:#b9a6dd}.s{text-align:center;color:#b9a6dd;margin-top:8px}
+.a{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.a button{width:auto;margin:0;padding:10px 12px;font-size:.95rem;background:#4a3480}
+.p{color:#ffd84a;font-size:.8rem;font-weight:400}h3{margin:0}
+
+:root{color-scheme:dark}
+body{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0}
+main{padding-left:0;padding-right:0}
+.anteprima{background:#33260a;color:#ffd84a;border-radius:12px;padding:10px 12px;margin:12px 0 4px;font-size:.9rem;line-height:1.4}
+</style>
+<main><div class="anteprima"><b>Anteprima.</b> Qui il Mostrometro è simulato, con tre persone di esempio (Papa, Mamma, Sasha). L'urlo dà punti a caso. Sul mostro vero questa stessa pagina compare quando ti colleghi al suo WiFi.</div><h1>&#128121; MOSTROMETRO</h1><div class="s" id="bat"></div>
+<div class="c"><input id="nome" list="l" maxlength="14" placeholder="Chi si misura?" autocomplete="off"><datalist id="l"></datalist>
+<div class="big" id="pct">--%</div><div class="m" id="msg">Scrivi il tuo nome e premi il bottone (anche sul Mostrometro!)</div>
+<button id="go">MISURA LA MOSTRUOSITA'</button></div>
+<div class="c"><h3>Cosa ha combinato?</h3><div class="a" id="az"></div><button id="urlo">&#127908; URLA! Il Mostrometro ti ascolta</button>
+<div class="s" id="azmsg">Scrivi il nome, tocca cosa hai fatto e poi premi di nuovo il bottone: la tua mostruosita sale.</div></div>
+<div class="c"><div id="lista"></div><div class="s" id="crown"></div><div class="s" id="avg"></div></div></main>
+
+<script>
+(function(){
+  var KEY='mostrometro_anteprima_v1';
+  var S={chi:'',val:-1,misurando:false,bat:87,fam:null};
+  try{var j=JSON.parse(localStorage.getItem(KEY)||'null');if(j&&Array.isArray(j.fam)){S.chi=j.chi||'';S.val=j.val;S.fam=j.fam}}catch(e){}
+  function base(n){var h=2166136261;n=n.toLowerCase();for(var i=0;i<n.length;i++){h^=n.charCodeAt(i);h=Math.imul(h,16777619)>>>0}return 10+(h>>>0)%56}
+  if(!S.fam){S.fam=[{n:'Papa',bonus:8,v:base('Papa')},{n:'Mamma',bonus:0,v:base('Mamma')},{n:'Sasha',bonus:0,v:base('Sasha')}]}
+  function save(){try{localStorage.setItem(KEY,JSON.stringify({chi:S.chi,val:S.val,fam:S.fam}))}catch(e){}}
+  function trova(n){return S.fam.find(function(f){return f.n.toLowerCase()===n.toLowerCase()})}
+  function crea(n){var p={n:n,bonus:0,v:-1};S.fam.push(p);if(S.fam.length>12)S.fam.shift();return p}
+  function att(p){return Math.min(100,base(p.n)+p.bonus)}
+  function stato(){return{bat:S.bat,chi:S.chi,val:S.val,misurando:S.misurando,fam:S.fam.map(function(f){return{n:f.n,v:f.v,p:(f.v>=0&&att(f)>f.v)?att(f)-f.v:0}})}}
+  function risposta(o,st){return new Response(JSON.stringify(o),{status:st||200,headers:{'Content-Type':'application/json'}})}
+  var nome=function(u){return (u.searchParams.get('nome')||'').replace(/[^\x20-\x7e]/g,'').replace(/[:;"\\<>&'%]/g,'').trim().slice(0,14)};
+  window.confirm=function(){return true};              // nell'anteprima i pulsanti X tolgono subito la persona
+  window.fetch=function(url){
+    var u=new URL(url,location.href),p=u.pathname.replace(/^.*\/api\//,'/api/');
+    if(p==='/api/stato')return Promise.resolve(risposta(stato()));
+    if(p==='/api/chi'){S.chi=nome(u);save();return Promise.resolve(risposta({ok:true}))}
+    if(p==='/api/misura'||p==='/api/urlo'){
+      if(S.misurando)return Promise.resolve(risposta({ok:false},409));
+      S.misurando=true;var urlo=p==='/api/urlo',n=S.chi||'Ospite';
+      setTimeout(function(){
+        var f=trova(n)||crea(n);
+        if(urlo){f.bonus=Math.min(100,f.bonus+Math.min(10,Math.round(Math.random()*Math.random()*14)))}
+        else{var t=att(f);f.v=t;S.val=t}
+        S.misurando=false;save()},urlo?3500:3200);
+      return Promise.resolve(risposta({ok:true}))}
+    if(p==='/api/azione'){
+      var n2=nome(u);if(!n2)return Promise.resolve(risposta({ok:false},400));
+      var f2=trova(n2)||crea(n2);var pt=Math.max(-10,Math.min(10,parseInt(u.searchParams.get('punti'),10)||0));
+      f2.bonus=Math.max(0,Math.min(100,f2.bonus+pt));save();return Promise.resolve(risposta({ok:true}))}
+    if(p==='/api/elimina'){var n3=nome(u).toLowerCase();S.fam=S.fam.filter(function(f){return f.n.toLowerCase()!==n3});save();return Promise.resolve(risposta({ok:true}))}
+    return Promise.resolve(risposta({ok:false},404))};
+})();
+</script>
+<script>
+const $=s=>document.querySelector(s);
+const pul=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x20-\x7e]/g,'').replace(/[:;"\\<>&'%]/g,'').trim().slice(0,14);
+const FR=['Angelo? Mah...','Mostrino da divano','Mostro medio','Mostro serio! Papa ha ragione','Mostro GIGANTE','SUPER MOSTRO!'];
+const liv=v=>v<10?0:v<30?1:v<50?2:v<70?3:v<90?4:5;
+let ult=-1,aspetto=false;
+async function api(p){const r=await fetch(p,{method:'POST'});return r.json()}
+async function stato(){try{const d=await(await fetch('/api/stato')).json();disegna(d)}catch(e){$('#msg').textContent='Nessuna risposta. Collegati al WiFi Mostrometro. Se lo sei, il Mostrometro dorme: premi il bottone per svegliarlo.'}}
+function disegna(d){
+  const nm=$('#nome');if(document.activeElement!==nm&&!nm.value)nm.value=d.chi;
+  $('#go').disabled=d.misurando;$('#urlo').disabled=d.misurando;
+  $('#bat').textContent='Batteria '+d.bat+'%'+(d.bat<15?' - da ricaricare!':'');
+  if(d.misurando){$('#pct').textContent='...';$('#msg').textContent='Misuro...';aspetto=true}
+  else if(d.val>=0){$('#pct').textContent=d.val+'%';$('#msg').textContent=FR[liv(d.val)]}
+  $('#l').innerHTML=d.fam.map(f=>'<option value="'+f.n+'">').join('');
+  const L=$('#lista');L.innerHTML='';
+  const o=[...d.fam].sort((a,b)=>b.v-a.v);
+  if(!o.length){L.textContent='Nessun mostro ancora!';$('#crown').textContent='';$('#avg').textContent='';return}
+  o.forEach(f=>{const r=document.createElement('div');r.className='r';
+    r.innerHTML='<div class="n"></div><div class="b"><i style="width:'+Math.max(0,f.v)+'%"></i></div><div class="v">'+(f.v<0?'?':f.v+'%')+'</div><button class="x">&#10005;</button>';
+    const ne=r.querySelector('.n');ne.textContent=f.n;
+    if(f.p>0){const s=document.createElement('div');s.className='p';s.textContent='+'+f.p+' in attesa';ne.appendChild(s)}
+    r.querySelector('.x').onclick=async()=>{if(confirm('Togliere '+f.n+'?')){await api('/api/elimina?nome='+encodeURIComponent(f.n));stato()}};
+    L.appendChild(r)});
+  const mis=o.filter(f=>f.v>=0);
+  $('#crown').textContent=mis.length?'\u{1F451} Mostro della famiglia: '+mis[0].n+' ('+mis[0].v+'%)':'';
+  $('#avg').textContent=mis.length?'Mostruosita media: '+Math.round(mis.reduce((s,f)=>s+f.v,0)/mis.length)+'%':'';
+}
+const AZ=[['Rutto a tavola',3],['Calzini in giro',4],['Mangia con le mani',4],['Urla da mostro',5],['Non mette a posto',5],['Fa un dispetto',6],['Spaventa qualcuno',8]];
+let ultima=null;
+AZ.forEach(([t,p])=>{const b=document.createElement('button');b.textContent=t+' +'+p;b.onclick=()=>azione(p,t);$('#az').appendChild(b)});
+const un=document.createElement('button');un.textContent="Annulla l'ultima";un.onclick=()=>{if(ultima)azione(-ultima,null)};$('#az').appendChild(un);
+async function azione(p,t){
+  const n=pul($('#nome').value),m=$('#azmsg');
+  if(!n){m.textContent='Scrivi prima il tuo nome!';$('#nome').focus();return}
+  await api('/api/chi?nome='+encodeURIComponent(n));
+  await api('/api/azione?nome='+encodeURIComponent(n)+'&punti='+p);
+  if(t){ultima=p;m.textContent=n+': '+t+' (+'+p+'). Premi il bottone per vedere quanto sei salito!'}else{ultima=null;m.textContent='Annullato.'}
+  stato()}
+$('#nome').onchange=()=>api('/api/chi?nome='+encodeURIComponent(pul($('#nome').value)));
+$('#urlo').onclick=async()=>{await api('/api/chi?nome='+encodeURIComponent(pul($('#nome').value)));await api('/api/urlo');stato()};
+$('#go').onclick=async()=>{await api('/api/chi?nome='+encodeURIComponent(pul($('#nome').value)));await api('/api/misura');stato()};
+stato();setInterval(stato,1000);
+</script>
