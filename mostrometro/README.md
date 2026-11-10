@@ -8,7 +8,7 @@ Dal telefono vedi la classifica di tutta la famiglia.
 progetto.html                    guida passo passo (si legge meglio pubblicata), con il 3D da girare e aprire
 index.html                       anteprima nel browser (senza hardware)
 hardware/mostrometro.scad        modello 3D parametrico (OpenSCAD)
-hardware/stl/                    STL pronti: fronte.stl + retro.stl (totem B), A_fronte.stl + A_retro.stl (mostro tondo A)
+hardware/stl/                    STL pronti: fronte.stl + retro.stl + piedistallo.stl (totem B), A_fronte.stl + A_retro.stl (mostro tondo A)
 hardware/bake_modello.py         rigenera modello.js (il 3D della pagina) dopo aver cambiato gli STL
 firmware/mostrometro/mostrometro.ino firmware
 ```
@@ -30,11 +30,11 @@ Se premi il bottone mentre la scheda si sta accendendo entra nel modo "download"
 Batteria nel connettore della scheda (**controlla rosso/nero e + / −**) e interruttore della scheda su ON.
 
 ## Stampa
-- **Due forme:** B = totem col sorriso (76×186 mm, base larga), A = mostro tondo con braccia e piedi (116×183 mm). Per cambiare nel modello scrivi `forma = "A"` o `"B"` in cima a `mostrometro.scad`; il 3D di `progetto.html` le mostra entrambe.
-- Servono almeno 200 mm di piatto (B: 76×186 mm, A: 116×183 mm).
+- **Due forme, come nei disegni:** B = totem col sorriso (70×193 mm, alto e stretto), A = mostro tondo con braccia e piedi (142×203 mm). Dall'alto: occhi, schermo lungo, bottone-naso. Per cambiare nel modello scrivi `forma = "A"` o `"B"` in cima a `mostrometro.scad`; il 3D di `progetto.html` le mostra entrambe.
+- Servono almeno 210 mm di piatto (B: 70×193 mm, A: 142×203 mm). La A impiega molto più filo e tempo.
 - Ogni guscio con la **faccia esterna sul piatto**, niente supporti, 0,2 mm, 3 pareti.
 - **Prima misura scheda, bottone e batteria e correggi i parametri in cima a `mostrometro.scad`**, poi fai una prova veloce.
-- La base larga lo fa stare in piedi. La presa USB-C esce da una tacca in basso: controlla dove sta sulla tua scheda.
+- Il totem B sta in piedi nel **piedistallo** (da stampare a parte), la A sui suoi piedini. La presa USB-C è **in cima alla testa**, tra le corna: monta la scheda con la presa verso l'alto (in basso il corpo del bottone bloccherebbe il cavo).
 
 ## Firmware
 1. Dal repository del produttore (`Xinyuan-LilyGO/T-Display-S3-Long`) copia la cartella `lib/` nelle librerie di Arduino.
@@ -48,7 +48,7 @@ Collegati dal telefono: la pagina si apre da sola, oppure vai su `http://192.168
 Scrivi chi si misura e premi il bottone (sul telefono o sul mostro). La classifica resta salvata anche senza corrente (max 12 persone).
 
 ## A batteria
-- Si ricarica dalla presa USB-C in basso. La carica si vede in basso sullo schermo e sulla pagina del telefono.
+- Si ricarica dalla presa USB-C in cima alla testa. La carica si vede in basso sullo schermo e sulla pagina del telefono.
 - Dopo 5 minuti senza uso va in **standby profondo** (schermo e WiFi spenti). Premendo il bottone si sveglia e misura subito l'ultima persona scelta.
 - Durata (dati del produttore: 90–350 mA acceso, ~1,1 mA in standby): da 2 a 9 ore di uso continuo con 850 mAh, circa un mese in standby. Non misurata su una batteria vera.
 
@@ -65,5 +65,5 @@ Le azioni e i punti si cambiano nella lista `AZ` dentro `mostrometro.ino`.
 - ✅ Pagina web: provata nel browser con un Mostrometro simulato.
 - ✅ Regole di misura, batteria, standby e frasi sullo schermo: provate al computer con una scheda simulata.
 - ⚠️ **Schermo e scheda: il firmware segue l'esempio del produttore ma non è mai girato su una vera LilyGO S3 Long.** Può servire qualche ritocco (pin, alimentazione, orientamento).
-- ⚠️ Non so dove stanno sulla scheda la presa USB-C e l'interruttore: vanno controllati prima di stampare.
+- ⚠️ Non so da che parte sta la presa USB-C sulla scheda (qui è messa in cima) né dove sta l'interruttore: vanno controllati prima di stampare.
 - ⚠️ Modello 3D non ancora stampato: le misure di scheda, bottone e batteria vanno verificate sui pezzi reali.
