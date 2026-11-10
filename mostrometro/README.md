@@ -8,7 +8,7 @@ Dal telefono vedi la classifica di tutta la famiglia.
 progetto.html                    guida passo passo (si legge meglio pubblicata), con il 3D da girare e aprire
 index.html                       anteprima nel browser (senza hardware)
 hardware/mostrometro.scad        modello 3D parametrico (OpenSCAD)
-hardware/stl/fronte.stl, retro.stl   STL pronti da stampare
+hardware/stl/                    STL pronti: fronte.stl + retro.stl (totem B), A_fronte.stl + A_retro.stl (mostro tondo A)
 hardware/bake_modello.py         rigenera modello.js (il 3D della pagina) dopo aver cambiato gli STL
 firmware/mostrometro/mostrometro.ino firmware
 ```
@@ -30,7 +30,8 @@ Se premi il bottone mentre la scheda si sta accendendo entra nel modo "download"
 Batteria nel connettore della scheda (**controlla rosso/nero e + / −**) e interruttore della scheda su ON.
 
 ## Stampa
-- Alto 186 mm, largo 76 mm: serve un piatto da almeno 200 mm.
+- **Due forme:** B = totem col sorriso (76×186 mm, base larga), A = mostro tondo con braccia e piedi (116×183 mm). Per cambiare nel modello scrivi `forma = "A"` o `"B"` in cima a `mostrometro.scad`; il 3D di `progetto.html` le mostra entrambe.
+- Servono almeno 200 mm di piatto (B: 76×186 mm, A: 116×183 mm).
 - Ogni guscio con la **faccia esterna sul piatto**, niente supporti, 0,2 mm, 3 pareti.
 - **Prima misura scheda, bottone e batteria e correggi i parametri in cima a `mostrometro.scad`**, poi fai una prova veloce.
 - La base larga lo fa stare in piedi. La presa USB-C esce da una tacca in basso: controlla dove sta sulla tua scheda.

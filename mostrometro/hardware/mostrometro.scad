@@ -13,11 +13,13 @@
 parte = "assemblato";
 $fn = 96;
 
-// ---------- forma del totem ----------
-body_w = 60;      // larghezza del corpo
-body_h = 170;     // altezza del corpo (le corna sono in piu')
-r_top  = 12;      // arrotondamento degli angoli in alto
-base_w = 76;      // larghezza della base (i "piedi": serve perche' stia in piedi)
+// ---------- forma ----------
+// "A" = mostro tondo (corna, braccia, piedi)   "B" = totem col sorriso (alto e stretto, base larga)
+forma = "B";
+body_w = forma == "A" ? 90 : 60;     // larghezza del corpo
+body_h = forma == "A" ? 165 : 170;   // altezza del corpo (le corna sono in piu')
+r_top  = forma == "A" ? 40 : 12;     // arrotondamento degli angoli in alto
+base_w = 76;      // [solo B] larghezza della base (serve perche' stia in piedi)
 base_h = 10;      // altezza della base
 horn_w = 18;      // larghezza alla base delle corna
 horn_h = 16;      // altezza delle corna
@@ -36,7 +38,7 @@ clear = 0.4;      // gioco intorno alla scheda
 
 // ---------- bottone arcade da 30 mm: e' il "naso" ----------
 btn_d = 24.2;     // foro (corpo sotto pannello circa 21 mm)
-btn_y = 122;
+btn_y = forma == "A" ? 115 : 122;
 
 // ---------- batteria LiPo piatta (es. 603048: 6 x 30 x 48 mm), dietro la scheda ----------
 bat_w = 30;
@@ -47,21 +49,38 @@ usb_w = 12;       // larghezza della tacca. Controlla dove sta la presa sulla TU
 
 // ---------- decorazioni ----------
 eye_d = 14;       // sede per occhietti adesivi
-eye_x = 13;
-eye_y = 150;
+eye_x = forma == "A" ? 18 : 13;
+eye_y = forma == "A" ? 140 : 150;
 
 // ---------- viti M3 x 25 (3 pezzi) ----------
 screw_pilot = 2.6;
 screw_hole  = 3.4;
 screw_head  = 6.4;
 post_d      = 7;
-posts = [[-23.5, 45], [23.5, 45], [0, 150]];
+posts = forma == "A" ? [[-33, 45], [33, 45], [0, 140]] : [[-23.5, 45], [23.5, 45], [0, 150]];
 
 half  = depth / 2;
 win_y = brd_y0 + brd_l / 2;       // centro dello schermo dal basso
 
 // ---------- profilo 2D ----------
-module outline() {
+module outline_A() {        // mostro tondo
+    union() {
+        hull() {
+            translate([-body_w/2 + r_top, body_h - r_top]) circle(r = r_top);
+            translate([ body_w/2 - r_top, body_h - r_top]) circle(r = r_top);
+            translate([-body_w/2 + 16, 16]) circle(r = 16);
+            translate([ body_w/2 - 16, 16]) circle(r = 16);
+            translate([-body_w/2 + 16, 0]) square([body_w - 32, 1]);
+        }
+        for (s = [-1, 1]) {
+            translate([s * 47, 80]) circle(r = 11);                                             // braccia
+            translate([s * 42, 5]) hull() { translate([-8, 0]) circle(r = 5); translate([8, 0]) circle(r = 5); }   // piedi
+            polygon([[s * 34, 150], [s * 14, 150], [s * 22, body_h + 18]]);                     // corna
+        }
+    }
+}
+
+module outline_B() {        // totem col sorriso
     union() {
         hull() {                                            // corpo
             translate([-body_w/2 + r_top, body_h - r_top]) circle(r = r_top);
@@ -77,6 +96,10 @@ module outline() {
             polygon([[s*(horn_x + horn_w/2), body_h - 6], [s*(horn_x - horn_w/2), body_h - 6],
                      [s*(horn_x + 2), body_h + horn_h]]);
     }
+}
+
+module outline() {
+    if (forma == "A") outline_A(); else outline_B();
 }
 
 module ring(a, b) {            // corona tra offset -a e offset -b (a<b)

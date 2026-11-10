@@ -166,12 +166,17 @@ footer{margin-top:3rem;color:var(--mute);font-size:.9rem}
     <button type="button" data-m="esploso" aria-pressed="false">Smontato</button>
     <button type="button" data-m="sezione" aria-pressed="false">Tagliato a metà</button>
   </div>
+  <div class="modes" role="group" aria-label="Forma">
+    <button type="button" data-f="A" aria-pressed="true">A · Mostro tondo</button>
+    <button type="button" data-f="B" aria-pressed="false">B · Totem</button>
+  </div>
   <div class="v3d" id="v3d"><p class="fb" id="v3dfb" hidden>Il modello 3D non si è caricato. Servono una connessione a internet e un browser con WebGL. I file da stampare sono comunque in <code>hardware/stl/</code>.</p></div>
   <div class="opts">
     <label><input type="checkbox" id="vcomp" checked> Mostra i componenti</label>
     <label><input type="checkbox" id="vtr"> Gusci trasparenti</label>
   </div>
   <p class="cap" id="vcap">Così appare quando è montato.</p>
+  <p class="cap">Prova le due forme con i pulsanti A e B. I disegni e le misure più sotto sono quelli del totem B. Il mostro tondo A è largo 116 mm e alto 183 mm, ma dentro lo spazio per i pezzi è lo stesso.</p>
   <ul class="legend" aria-label="Legenda">
     <li><i style="background:#6c4fe0"></i>Fronte</li><li><i style="background:#4a3aa6"></i>Retro</li>
     <li><i style="background:#0b0f1a"></i>Scheda e schermo</li><li><i style="background:#d62839"></i>Bottone</li>
@@ -293,7 +298,7 @@ footer{margin-top:3rem;color:var(--mute);font-size:.9rem}
   <label class="chk"><input type="checkbox" id="m2"><span class="t"><b>Bottone: misura il foro che richiede</b><small>Il diametro va in <code>btn_d</code>. Aggiungi 0,2 mm di gioco. Misura anche la lunghezza del corpo.</small></span></label>
   <label class="chk"><input type="checkbox" id="m3"><span class="t"><b>Batteria: misura larghezza e lunghezza</b><small>Vanno in <code>bat_w</code> e <code>bat_l</code>.</small></span></label>
   <label class="chk"><input type="checkbox" id="m4"><span class="t"><b>Cambia i numeri in <code>hardware/mostrometro.scad</code></b><small>Apri il file con OpenSCAD (gratuito), scegli <code>parte</code> e premi F6, poi Esporta STL.</small></span></label>
-  <div class="note"><b>Se non vuoi modificare nulla:</b> i file pronti sono in <code>hardware/stl/fronte.stl</code> e <code>retro.stl</code>. Vanno bene solo se i tuoi pezzi hanno le misure indicate sopra.</div>
+  <div class="note"><b>Se non vuoi modificare nulla:</b> i file pronti sono in <code>hardware/stl/</code>: <code>fronte.stl</code> e <code>retro.stl</code> per il totem B, <code>A_fronte.stl</code> e <code>A_retro.stl</code> per il mostro tondo A. Vanno bene solo se i tuoi pezzi hanno le misure indicate sopra. Per cambiare forma nel modello basta scrivere <code>forma = "A"</code> o <code>"B"</code> in cima a <code>mostrometro.scad</code>.</div>
 </section>
 
 <section>
@@ -309,7 +314,7 @@ footer{margin-top:3rem;color:var(--mute);font-size:.9rem}
     <div><h3>Impostazioni</h3><ul>
       <li>PLA, ugello 0,4 mm</li><li>Strati da 0,2 mm</li><li>3 pareti, riempimento 15%</li><li>Niente supporti, niente brim</li></ul></div>
     <div><h3>Controlla</h3><ul>
-      <li>Alto 186 mm: serve un piatto da almeno 200 mm.</li>
+      <li>Il totem B è alto 186 mm, il mostro tondo A è largo 116 e alto 183 mm: serve un piatto da almeno 200 mm.</li>
       <li>Le corna sono sottili: stampa piano, senza fretta.</li></ul></div>
   </div>
   <label class="chk"><input type="checkbox" id="s0"><span class="t"><b>Prova veloce prima</b><small>Stampa il fronte a 0,3 mm e 10% di riempimento per vedere se la scheda e il bottone entrano. Poi stampa quello bello.</small></span></label>
@@ -477,8 +482,20 @@ footer{margin-top:3rem;color:var(--mute);font-size:.9rem}
   function add(g,o,dz,comp){g.add(o);parts.push({o:o,dz:dz,comp:comp})}
 
   var mFront=mat(0x6c4fe0),mBack=mat(0x4a3aa6);
-  add(front,new THREE.Mesh(geo(MOSTRO_MODELLO.fronte),mFront),60,false);
-  add(back,new THREE.Mesh(geo(MOSTRO_MODELLO.retro),mBack),-40,false);
+  // misure che cambiano da una forma all'altra (A = mostro tondo, B = totem)
+  var FORME={
+    A:{btnY:115,eyeX:18,eyeY:140,posts:[[-33,45],[33,45],[0,140]],pivotX:62,dAperto:700},
+    B:{btnY:122,eyeX:13,eyeY:150,posts:[[-23.5,45],[23.5,45],[0,150]],pivotX:40,dAperto:520}};
+  var forma='A';
+  function build(nome){
+    var F=FORME[nome],M=MOSTRO_MODELLO[nome];
+    front.children.slice().forEach(function(c){front.remove(c)});
+    back.children.slice().forEach(function(c){back.remove(c)});
+    parts.length=0;
+    pivot.position.x=F.pivotX;front.position.x=-F.pivotX;
+    if(window.__vista){__vista.aperto.t[0]=F.pivotX;__vista.aperto.d=F.dAperto}
+    add(front,new THREE.Mesh(geo(M.fronte),mFront),60,false);
+    add(back,new THREE.Mesh(geo(M.retro),mBack),-40,false);
 
   // scheda LilyGO S3 Long: lo schermo lungo sta contro il fronte, l'elettronica dietro
   function immagine(){
@@ -519,7 +536,7 @@ footer{margin-top:3rem;color:var(--mute);font-size:.9rem}
 
   // viti M3 x 25, entrano dal retro
   g=new THREE.Group();var mScrew=mat(0x9aa0a8,{metalness:.8,roughness:.35});
-  [[-23.5,45],[23.5,45],[0,150]].forEach(function(p){
+  F.posts.forEach(function(p){
     g.add(cylZ(2.75,2,mScrew,p[0],p[1],1.4));
     g.add(cylZ(1.5,22.6,mScrew,p[0],p[1],13.7));
   });
@@ -527,19 +544,22 @@ footer{margin-top:3rem;color:var(--mute);font-size:.9rem}
 
   // bottone arcade da 30 mm: il naso
   g=new THREE.Group();
-  g.add(cylZ(16.5,2.5,mat(0xd62839),0,122,31.25));
-  g.add(cylZ(13.5,3,mat(0xff4a5c),0,122,34));
-  g.add(cylZ(12,2.4,mat(0x222222),0,122,28.8));
-  g.add(cylZ(14,21,mat(0x1b1b1f),0,122,17.1));
+  g.add(cylZ(16.5,2.5,mat(0xd62839),0,F.btnY,31.25));
+  g.add(cylZ(13.5,3,mat(0xff4a5c),0,F.btnY,34));
+  g.add(cylZ(12,2.4,mat(0x222222),0,F.btnY,28.8));
+  g.add(cylZ(14,21,mat(0x1b1b1f),0,F.btnY,17.1));
   add(front,g,90,true);
 
   // occhietti adesivi
   g=new THREE.Group();var mW=mat(0xffffff,{roughness:.3}),mB=mat(0x111111);
-  [-13,13].forEach(function(x){
+  [-F.eyeX,F.eyeX].forEach(function(x){
     var e=new THREE.Mesh(new THREE.SphereGeometry(7,24,12,0,Math.PI*2,0,Math.PI/2),mW);
-    e.scale.y=.5;e.rotation.x=Math.PI/2;e.position.set(x,150,29);g.add(e);
-    var p=new THREE.Mesh(new THREE.SphereGeometry(2.6,16,12),mB);p.position.set(x+.6,149,32);g.add(p)});
+    e.scale.y=.5;e.rotation.x=Math.PI/2;e.position.set(x,F.eyeY,29);g.add(e);
+    var p=new THREE.Mesh(new THREE.SphereGeometry(2.6,16,12),mB);p.position.set(x+.6,F.eyeY-1,32);g.add(p)});
   add(front,g,90,true);
+
+  }
+  build(forma);
 
   // modi
   // t = punto guardato, d = distanza, dir = da dove si guarda, o = aperto, e = smontato, c = taglio
@@ -551,13 +571,18 @@ footer{margin-top:3rem;color:var(--mute);font-size:.9rem}
     aperto:'I due gusci aperti come un libro. A sinistra il retro con la batteria, a destra il fronte con la scheda, lo schermo lungo e il bottone.',
     esploso:'Tutti i pezzi separati, nell\'ordine di montaggio: le viti entrano dal retro, la batteria sta nel retro, la scheda con lo schermo va dentro il fronte, bottone e occhietti si mettono da davanti.',
     sezione:'Tagliato a metà per vedere lo spazio dentro: la scheda lunga contro lo schermo e la batteria dietro di lei. Il bottone sta più in alto, come un naso.'};
+  window.__vista=VIEW;VIEW.aperto.t[0]=FORME[forma].pivotX;VIEW.aperto.d=FORME[forma].dAperto;
   var mode='chiuso',S={o:0,e:0},moving=0;
-  var btns=[].slice.call(document.querySelectorAll('.modes button'));
+  var btns=[].slice.call(document.querySelectorAll('.modes button[data-m]'));
   btns.forEach(function(b){b.addEventListener('click',function(){
     mode=b.getAttribute('data-m');moving=100;
     btns.forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false')});
     document.getElementById('vcap').textContent=CAP[mode];
     clip.constant=VIEW[mode].c?0:1000})});
+  var fbtns=[].slice.call(document.querySelectorAll('.modes button[data-f]'));
+  fbtns.forEach(function(b){b.addEventListener('click',function(){
+    forma=b.getAttribute('data-f');build(forma);opzioni();moving=100;
+    fbtns.forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false')})})});
   var cb=document.getElementById('vcomp'),tr=document.getElementById('vtr');
   function opzioni(){
     parts.forEach(function(p){if(p.comp)p.o.visible=cb.checked});

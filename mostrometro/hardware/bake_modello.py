@@ -24,9 +24,14 @@ def impacchetta(vertici, mappa):
             out.append(q)
     return base64.b64encode(struct.pack(f"<{len(out)}h", *out)).decode()
 
-fronte = impacchetta(leggi("fronte"), lambda p: (p[0], p[1], DEPTH - p[2]))
-retro = impacchetta(leggi("retro"), lambda p: (p[0], p[1], p[2]))
-js = ("// Generato da bake.py a partire da hardware/stl/*.stl (int16, centesimi di mm, base64). Non modificare a mano.\n"
-      f'window.MOSTRO_MODELLO={{fronte:"{fronte}",retro:"{retro}"}};\n')
+def forma(prefisso):
+    f = impacchetta(leggi(prefisso + "fronte"), lambda p: (p[0], p[1], DEPTH - p[2]))
+    r = impacchetta(leggi(prefisso + "retro"), lambda p: (p[0], p[1], p[2]))
+    return f, r
+
+fB, rB = forma("")        # totem (B): stl/fronte.stl, stl/retro.stl
+fA, rA = forma("A_")      # mostro tondo (A): stl/A_fronte.stl, stl/A_retro.stl
+js = ("// Generato da bake_modello.py a partire da hardware/stl/*.stl (int16, centesimi di mm, base64). Non modificare a mano.\n"
+      f'window.MOSTRO_MODELLO={{B:{{fronte:"{fB}",retro:"{rB}"}},A:{{fronte:"{fA}",retro:"{rA}"}}}};\n')
 open(f"{BASE}/modello.js", "w").write(js)
 print("modello.js", len(js) // 1024, "KB")
