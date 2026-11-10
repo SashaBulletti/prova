@@ -1,57 +1,67 @@
-// MOSTROMETRO - firmware per ESP32 + schermo ST7789 240x240
+// MOSTROMETRO - firmware per LilyGO T-Display S3 Long (ESP32-S3 + schermo lungo 180x640 + ricarica USB-C)
 //
 // Cosa fa:
 //  - Ognuno ha una mostruosita' di BASE fissa, che dipende dal suo nome: se ti
 //    misuri due volte di fila, il risultato e' sempre lo stesso.
 //  - Dal telefono si segnano le azioni da mostro (rutto a tavola, dispetti...):
 //    danno punti, e quando premi di nuovo il bottone la tua mostruosita' sale.
-//  - Premi il bottone: il mercurio sale fino a 100 e poi scende alla tua
+//  - Premi il bottone: il mercurio sale lungo lo schermo fino a 100 e poi scende alla tua
 //    percentuale, con un mostriciattolo che si trasforma.
-//  - L'ESP32 crea un suo WiFi "Mostrometro": dal telefono apri la pagina
+//  - La scheda crea un suo WiFi "Mostrometro": dal telefono apri la pagina
 //    (si apre da sola, oppure http://192.168.4.1) e vedi la classifica di famiglia.
-//  - La classifica resta salvata nella memoria dell'ESP32 anche senza corrente.
+//  - La classifica resta salvata nella memoria anche senza corrente.
+//  - Funziona a batteria: dopo 5 minuti senza uso va in standby, il bottone lo risveglia.
 //
-// Librerie (Gestione librerie Arduino): "Adafruit GFX Library", "Adafruit ST7735 and ST7789 Library".
-// Scheda: "ESP32 Dev Module" (pacchetto esp32 di Espressif).
+// COME PROVARLO (NON e' stato provato su una scheda vera, vedi sotto):
+//  1. Installa le librerie come spiegato nel README del produttore:
+//     https://github.com/Xinyuan-LilyGO/T-Display-S3-Long  (copia la cartella lib/ nelle librerie di Arduino:
+//     ci sono "GFX Library for Arduino" e XPowersLib).
+//  2. Apri l'esempio ufficiale  examples/GFX_AXS15231B_Image  e controlla che lo schermo funzioni.
+//  3. Se nell'esempio c'e' una parte che accende il chip di alimentazione (PMU, via I2C), copiala
+//     nella funzione schedaInit() qui sotto: potrebbe servire per far funzionare la scheda a batteria.
+//  4. Carica questo programma. Scheda: "ESP32S3 Dev Module", PSRAM "OPI PSRAM", flash 16 MB, USB CDC on boot attivo.
 //
 // Collegamenti:
-//   Schermo  GND->GND  VCC->3V3  SCL->GPIO18  SDA->GPIO23  RES->GPIO17  DC->GPIO16  BLK->GPIO4  (CS->GPIO5 se c'e')
-//   Bottone  un filo a GPIO27, l'altro a GND
-//   Batteria LiPo nel connettore JST della scheda (controlla + e - !). Ricarica dalla porta USB della scheda.
-//   (Con la LOLIN D32 i pin sopra sono tutti disponibili e la carica si legge su GPIO35.)
+//   Schermo e ricarica USB-C: sono gia' sulla scheda, non serve collegare niente.
+//   Bottone grosso: due fili in parallelo al pulsantino BOOT della scheda (GPIO0). Premere il bottone = GPIO0 a GND.
+//     Se il bottone e' premuto mentre la scheda si accende, entra nel modo "download" (schermo nero): rilascia e riaccendi.
+//   Batteria LiPo nel connettore della scheda (controlla + e - !). La scheda ha un interruttore: deve stare su ON.
 
 #include <WiFi.h>
 #include <WebServer.h>
 #include <DNSServer.h>
 #include <Preferences.h>
-#include <SPI.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_ST7789.h>
+#include <Arduino_GFX_Library.h>
 #include "driver/rtc_io.h"
 #include "esp_sleep.h"
 
-// ALIMENTAZIONE A BATTERIA
-//  - Serve una ESP32 con caricabatteria LiPo e connettore JST (tipo LOLIN D32 o Adafruit Feather ESP32):
-//    la batteria si collega alla scheda, che la ricarica dalla sua porta USB.
-//  - Dopo IDLE_MS senza che nessuno faccia niente il Mostrometro va in standby profondo
-//    (schermo e WiFi spenti) e si risveglia premendo il bottone: parte subito una misura.
-//  - La carica si legge dal pin PIN_BAT (partitore della scheda, di solito GPIO35).
+// Pin dello schermo, presi da pins_config.h del produttore (esempio GFX_AXS15231B_Image).
+// Nello stesso file i pin 16 e 21 compaiono anche per il touch e per un secondo pulsante: se lo schermo
+// non parte, confronta con lo schema della scheda.
+#define LCD_CS    12
+#define LCD_SCLK  17
+#define LCD_SDIO0 13
+#define LCD_SDIO1 18
+#define LCD_SDIO2 21
+#define LCD_SDIO3 14
+#define LCD_RST   16
+#define LCD_BL     1
+#define LCD_W    180
+#define LCD_H    640
 
-#define PIN_BAT  35
-#define IDLE_MS  300000UL   // 5 minuti
-#define TFT_CS   5      // se il tuo schermo non ha il pin CS metti -1
-#define TFT_DC   16
-#define TFT_RST  17
-#define TFT_BL   4
-#define PIN_BTN  27
-#define ROTAZIONE 0     // 0..3: cambialo se lo schermo risulta girato
+#define PIN_BTN   0          // pulsante BOOT della scheda: il bottone grosso si collega in parallelo
+#define PIN_BAT   8          // lettura della batteria (dal produttore: PIN_BAT_VOLT = 8)
+#define BAT_DIV   2.0        // rapporto del partitore: NON trovato nei documenti, controlla (se la % e' sbagliata cambialo)
+#define IDLE_MS   300000UL   // dopo 5 minuti senza uso va in standby profondo (schermo e WiFi spenti)
 
 const char* WIFI_SSID = "Mostrometro";
 const char* WIFI_PASS = "mostro1234";   // almeno 8 caratteri
 
 #define MAX_FAM 12
 
-Adafruit_ST7789 tft(TFT_CS, TFT_DC, TFT_RST);
+Arduino_DataBus *bus = new Arduino_ESP32QSPI(LCD_CS, LCD_SCLK, LCD_SDIO0, LCD_SDIO1, LCD_SDIO2, LCD_SDIO3);
+Arduino_GFX *gfx = new Arduino_AXS15231(bus, LCD_RST, 0 /* rotazione */, false /* IPS */, LCD_W, LCD_H);
+#define tft (*gfx)      // cosi' il resto del codice usa tft.fillRect(...) come prima
 WebServer server(80);
 DNSServer dns;
 Preferences prefs;
@@ -70,7 +80,7 @@ void attivita() { ultimaAttivita = millis(); }
 
 // Carica della batteria in %, dalla tensione (curva tipica delle LiPo da 3,7 V).
 int batteriaPct() {
-  float v = analogReadMilliVolts(PIN_BAT) * 2 / 1000.0;     // il partitore della scheda dimezza la tensione
+  float v = analogReadMilliVolts(PIN_BAT) * BAT_DIV / 1000.0;   // il partitore della scheda riduce la tensione
   static const float V[] = {3.30, 3.50, 3.65, 3.75, 3.85, 4.00, 4.15};
   static const int   P[] = {0,    5,    15,   35,   55,   80,   100};
   if (v <= V[0]) return 0;
@@ -79,11 +89,13 @@ int batteriaPct() {
   return 100;
 }
 
-// ---------- colori e layout schermo ----------
+// ---------- colori e layout schermo (180 x 640, in verticale) ----------
 const uint16_t BG = 0x0000, GRIGIO = 0x4A49, SCURO = 0x1082, BIANCO = 0xFFFF, NERO = 0x0000;
-const int TX = 26, TW = 30, TY = 16, TH = 160;          // tubo
-const int BCX = TX + TW / 2, BCY = TY + TH + 22, BR = 26; // bulbo
-const int CX = 160, CY = 124;                            // centro del mostriciattolo
+const int TX = 8, TW = 36, TY = 14, TH = 612;          // tubo lungo a sinistra: occupa quasi tutto lo schermo
+const int MX = TX + 4, MW = TW - 8;                    // colonna del mercurio
+const int MB = TY + TH - 16, MH = TH - 32;             // da dove parte (in basso) e quanto e' alta a 100%
+const int PX = 68, PW = 108;                           // pannello a destra
+const int CX = 122, CY = 150;                          // centro del mostriciattolo
 
 uint16_t coloreVal(int v) {            // verde -> giallo -> rosso
   int r, g;
@@ -100,72 +112,94 @@ int livello(int v) {
   if (v < 90) return 4;
   return 5;
 }
+// Frasi con parole di al massimo 9 lettere: nel pannello entrano 9 caratteri per riga.
 const char* FRASI[] = {
-  "Angioletto? Sospetto...", "Mostriciattolo da divano", "Mostro medio",
-  "Mostro serio! Papa ha ragione", "Mostro GIGANTE", "MOSTRO SUPREMO!!!"
+  "Angelo? Mah...", "Mostrino da divano", "Mostro medio",
+  "Mostro serio! Papa ha ragione", "Mostro GIGANTE", "SUPER MOSTRO!!!"
 };
 
-// ---------- disegno ----------
-void disegnaTubo() {
-  tft.fillRect(0, 0, 76, 240, BG);
-  tft.fillRoundRect(TX - 4, TY - 4, TW + 8, TH + 34, 12, GRIGIO);
-  tft.fillRoundRect(TX, TY, TW, TH + 30, 10, SCURO);
-  tft.fillCircle(BCX, BCY, BR + 4, GRIGIO);
-  for (int i = 0; i <= 10; i++) {                       // tacche 0..100
-    int y = TY + TH - i * TH / 10;
-    int len = (i % 5 == 0) ? 10 : 5;
-    tft.drawFastHLine(TX + TW + 6, y, len, BIANCO);
+// Scrive il testo andando a capo tra le parole (e dove c'e' '\n').
+void stampaParole(const char* s, int x, int y, int maxCh, int rigaH) {
+  String testo = s, riga = "";
+  int n = testo.length(), i = 0, yy = y;
+  while (i <= n) {
+    int j = i;
+    while (j < n && testo[j] != ' ' && testo[j] != '\n') j++;
+    String parola = testo.substring(i, j);
+    bool aCapo = (j < n && testo[j] == '\n');
+    if (riga.length() && riga.length() + 1 + parola.length() > (unsigned)maxCh) {
+      tft.setCursor(x, yy); tft.print(riga); yy += rigaH; riga = "";
+    }
+    if (riga.length()) riga += " ";
+    riga += parola;
+    if (aCapo || j >= n) { tft.setCursor(x, yy); tft.print(riga); yy += rigaH; riga = ""; }
+    i = j + 1;
   }
 }
 
+// ---------- disegno ----------
+static int mercurioDisegnato = -1;       // altezza (in pixel) gia' disegnata: si ridisegna solo la differenza
+
+void disegnaTubo() {
+  tft.fillRect(0, 0, PX - 4, LCD_H, BG);
+  tft.fillRoundRect(TX - 4, TY - 4, TW + 8, TH + 8, 22, GRIGIO);
+  tft.fillRoundRect(TX, TY, TW, TH, 18, SCURO);
+  for (int i = 0; i <= 10; i++) {                       // tacche 0..100
+    int y = MB - i * MH / 10;
+    tft.drawFastHLine(TX + TW + 6, y, (i % 5 == 0) ? 12 : 6, BIANCO);
+  }
+  mercurioDisegnato = -1;
+}
+
 void disegnaMercurio(int v) {
-  uint16_t c = coloreVal(v);
-  int h = v * TH / 100;
-  int xc = BCX - 7;
-  tft.fillCircle(BCX, BCY, BR, c);
-  tft.fillRect(xc, TY + TH, 14, BCY - (TY + TH), c);     // collo del bulbo
-  for (int i = 0; i < h; i++)                            // colonna colorata
-    tft.drawFastHLine(xc, TY + TH - 1 - i, 14, coloreVal(i * 100 / TH));
-  if (TH - h > 0) tft.fillRect(xc, TY, 14, TH - h, SCURO);
+  int h = v * MH / 100;
+  if (mercurioDisegnato < 0) { tft.fillRect(MX, TY + 8, MW, TH - 16, SCURO); mercurioDisegnato = 0; }
+  if (h > mercurioDisegnato)
+    for (int i = mercurioDisegnato; i < h; i++) tft.drawFastHLine(MX, MB - i, MW, coloreVal(i * 100 / MH));
+  else if (h < mercurioDisegnato)
+    tft.fillRect(MX, MB - mercurioDisegnato + 1, MW, mercurioDisegnato - h, SCURO);
+  mercurioDisegnato = h;
 }
 
 void disegnaPercentuale(int v) {
   char buf[12];
   if (v < 0) snprintf(buf, sizeof(buf), " --%%"); else snprintf(buf, sizeof(buf), "%3d%%", v);
-  tft.setTextSize(5);
+  tft.setTextSize(4);
   tft.setTextColor(v < 0 ? GRIGIO : coloreVal(v), BG);
-  tft.setCursor(84, 28);
+  tft.setCursor(PX, 36);
   tft.print(buf);
 }
 
 void disegnaNome() {
-  tft.fillRect(80, 4, 124, 20, BG);
+  tft.fillRect(PX - 2, 4, PW + 4, 26, BG);
   tft.setTextSize(2);
   tft.setTextColor(BIANCO, BG);
-  tft.setCursor(84, 6);
+  tft.setCursor(PX, 10);
   String n = chi.length() ? chi : String("Ospite");
-  tft.print(n.substring(0, 10));
+  tft.print(n.substring(0, 9));
 }
 
-void disegnaBatteria() {                                   // iconcina in alto a destra
+void disegnaBatteria() {                                   // in basso a destra
   int p = batteriaPct();
   uint16_t c = p < 15 ? 0xF800 : (p < 40 ? 0xFD20 : 0x07E0);
-  tft.drawRect(208, 8, 24, 12, BIANCO);
-  tft.fillRect(232, 11, 3, 6, BIANCO);
-  tft.fillRect(209, 9, 22, 10, BG);
-  tft.fillRect(209, 9, p * 22 / 100, 10, c);
+  tft.fillRect(PX - 2, 604, PW + 4, 28, BG);
+  tft.drawRect(PX, 610, 28, 14, BIANCO);
+  tft.fillRect(PX + 28, 614, 3, 6, BIANCO);
+  tft.fillRect(PX + 1, 611, p * 26 / 100, 12, c);
+  char buf[8]; snprintf(buf, sizeof(buf), "%d%%", p);
+  tft.setTextSize(2); tft.setTextColor(BIANCO, BG);
+  tft.setCursor(PX + 40, 609); tft.print(buf);
 }
 
 void disegnaFrase(const char* s, uint16_t col) {
-  tft.fillRect(80, 172, 160, 68, BG);
+  tft.fillRect(PX - 2, 206, PW + 4, 150, BG);
   tft.setTextSize(2);
   tft.setTextColor(col, BG);
-  tft.setCursor(84, 178);
-  tft.print(s);
+  stampaParole(s, PX, 212, PW / 12, 20);
 }
 
 void disegnaMostro(int v) {
-  tft.fillRect(CX - 80, CY - 56, 160, 104, BG);
+  tft.fillRect(PX - 2, 80, PW + 4, 120, BG);
   if (v < 0) {                                           // punto interrogativo
     tft.setTextSize(8); tft.setTextColor(GRIGIO, BG);
     tft.setCursor(CX - 24, CY - 32); tft.print("?");
@@ -217,6 +251,11 @@ void schermataCompleta(int v) {
   disegnaMostro(v);
   if (v < 0) disegnaFrase("Premi il bottone!", BIANCO);
   else disegnaFrase(FRASI[livello(v)], coloreVal(v));
+}
+
+// Qui va tutto cio' che serve alla SCHEDA e non a questo programma (per esempio accendere il chip di
+// alimentazione via I2C, come fa l'esempio del produttore). Per ora non fa niente.
+void schedaInit() {
 }
 
 // ---------- memoria ----------
@@ -300,11 +339,10 @@ void servizi() { dns.processNextRequest(); server.handleClient(); }
 void dormi() {
   tft.fillScreen(BG);
   tft.setTextSize(3); tft.setTextColor(GRIGIO, BG);
-  tft.setCursor(70, 100); tft.print("Zzz...");
+  tft.setCursor(40, 300); tft.print("Zzz...");
   delay(1200);
-  digitalWrite(TFT_BL, LOW);
-  tft.enableDisplay(false);
-  tft.enableSleep(true);
+  digitalWrite(LCD_BL, LOW);
+  gfx->displayOff();
   WiFi.mode(WIFI_OFF);
   rtc_gpio_pullup_en((gpio_num_t)PIN_BTN);               // il pull-up deve restare attivo durante il sonno
   rtc_gpio_pulldown_dis((gpio_num_t)PIN_BTN);
@@ -370,7 +408,7 @@ button:disabled{opacity:.5}.big{font-size:3.2rem;font-weight:900;text-align:cent
 <script>
 const $=s=>document.querySelector(s);
 const pul=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x20-\x7e]/g,'').replace(/[:;"\\<>&'%]/g,'').trim().slice(0,14);
-const FR=['Angioletto? Sospetto...','Mostriciattolo da divano','Mostro medio','Mostro serio! Papa ha ragione','Mostro GIGANTE','MOSTRO SUPREMO!!!'];
+const FR=['Angelo? Mah...','Mostrino da divano','Mostro medio','Mostro serio! Papa ha ragione','Mostro GIGANTE','SUPER MOSTRO!!!'];
 const liv=v=>v<10?0:v<30?1:v<50?2:v<70?3:v<90?4:5;
 let ult=-1,aspetto=false;
 async function api(p){const r=await fetch(p,{method:'POST'});return r.json()}
@@ -427,10 +465,10 @@ String statoJson() {
 void setup() {
   Serial.begin(115200);
   pinMode(PIN_BTN, INPUT_PULLUP);
-  pinMode(TFT_BL, OUTPUT); digitalWrite(TFT_BL, HIGH);
-  tft.init(240, 240, SPI_MODE3);
-  tft.setRotation(ROTAZIONE);
-  tft.fillScreen(BG);
+  schedaInit();
+  pinMode(LCD_BL, OUTPUT); digitalWrite(LCD_BL, HIGH);
+  gfx->begin();
+  gfx->fillScreen(BG);
 
   prefs.begin("mostro", false);
   carica();
@@ -485,13 +523,14 @@ void setup() {
   }
 
   // schermata di benvenuto
-  tft.setTextColor(BIANCO, BG); tft.setTextSize(3);
-  tft.setCursor(20, 30);  tft.print("MOSTROMETRO");
+  tft.setTextColor(BIANCO, BG); tft.setTextSize(4);
+  tft.setCursor(12, 40);  tft.print("MOSTRO");
+  tft.setCursor(12, 80);  tft.print("METRO");
   tft.setTextSize(2); tft.setTextColor(0xFFE0, BG);
-  tft.setCursor(20, 100); tft.print("WiFi:");
-  tft.setCursor(20, 124); tft.print(WIFI_SSID);
-  tft.setCursor(20, 156); tft.print("Password:");
-  tft.setCursor(20, 180); tft.print(WIFI_PASS);
+  tft.setCursor(12, 160); tft.print("WiFi:");
+  tft.setCursor(12, 184); tft.print(WIFI_SSID);
+  tft.setCursor(12, 230); tft.print("Password:");
+  tft.setCursor(12, 254); tft.print(WIFI_PASS);
   uint32_t t0 = millis();
   while (millis() - t0 < 4000) { servizi(); delay(5); }
   schermataCompleta(-1);

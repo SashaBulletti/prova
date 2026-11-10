@@ -27,14 +27,12 @@
     background:linear-gradient(90deg,var(--orange),var(--red));color:#fff;margin-top:12px}
   .big:disabled{opacity:.6}
   .meter{display:flex;align-items:center;justify-content:center;gap:18px;margin:10px 0}
-  .thermo{position:relative;width:70px;height:300px}
-  .tube{position:absolute;left:20px;top:0;width:30px;height:300px;border-radius:15px 15px 0 0;
-    background:#120a22;border:3px solid #6b4fb0;border-bottom:0;overflow:hidden}
-  .fill{position:absolute;bottom:0;left:0;right:0;height:0;transition:height 2.2s cubic-bezier(.2,.8,.2,1);
+  .thermo{position:relative;width:70px;height:340px}
+  .tube{position:absolute;left:14px;top:0;width:34px;height:340px;border-radius:17px;
+    background:#120a22;border:3px solid #6b4fb0;overflow:hidden}
+  .fill{position:absolute;bottom:0;left:0;right:0;height:0;border-radius:0 0 14px 14px;transition:height 2.2s cubic-bezier(.2,.8,.2,1);
     background:linear-gradient(0deg,var(--green),var(--yellow) 40%,var(--orange) 65%,var(--red))}
-  .bulb{position:absolute;left:0;bottom:0;width:70px;height:70px;border-radius:50%;background:var(--red);
-    border:3px solid #6b4fb0;box-shadow:0 0 18px var(--red);z-index:2}
-  .ticks{position:absolute;left:56px;top:0;height:265px;display:flex;flex-direction:column;justify-content:space-between;
+  .ticks{position:absolute;left:56px;top:10px;height:310px;display:flex;flex-direction:column;justify-content:space-between;
     font-size:.7rem;color:var(--mute)}
   .read{text-align:center}
   .pct{font-size:4rem;font-weight:900;line-height:1}
@@ -61,7 +59,7 @@
 <body>
 <main>
   <h1>👹 MOSTROMETRO</h1>
-  <p class="sub">Anteprima: funziona come il termometro vero.</p>
+  <p class="sub">Anteprima: funziona come il Mostrometro vero.</p>
   <nav>
     <button id="tabMisura" class="on">🌡️ Misura</button>
     <button id="tabFamiglia">👨‍👩‍👧‍👦 Famiglia</button>
@@ -73,8 +71,7 @@
       <div class="meter">
         <div class="thermo">
           <div class="tube"><div class="fill" id="fill"></div></div>
-          <div class="bulb"></div>
-          <div class="ticks"><span>100</span><span>75</span><span>50</span><span>25</span><span>0</span></div>
+                    <div class="ticks"><span>100</span><span>75</span><span>50</span><span>25</span><span>0</span></div>
         </div>
         <div class="read">
           <div class="monster" id="monster">🙂</div>
@@ -103,12 +100,12 @@
 //  - le azioni da mostro danno punti che restano "in attesa";
 //  - quando misuri, il valore mostrato è base + punti (massimo 100).
 const LIVELLI = [
-  [10,"🙂","Angioletto? Sospetto..."],
-  [30,"😏","Mostriciattolo da divano"],
+  [10,"🙂","Angelo? Mah..."],
+  [30,"😏","Mostrino da divano"],
   [50,"😈","Mostro medio"],
   [70,"👹","Mostro serio! Papà ha ragione"],
   [90,"👺","Mostro GIGANTE"],
-  [101,"👾","MOSTRO SUPREMO!!!"]
+  [101,"👾","SUPER MOSTRO!!!"]
 ];
 const AZIONI = [["Rutto a tavola",3],["Calzini in giro",4],["Mangia con le mani",4],["Urla da mostro",5],
                 ["Non mette a posto",5],["Fa un dispetto",6],["Spaventa qualcuno",8]];
@@ -151,7 +148,7 @@ $("misuraBtn").onclick = () => {
   $("lvl").textContent = "Misurazione in corso…";
   m.textContent = "🤔"; m.classList.add("shake");
   $("fill").style.height = "0px";
-  requestAnimationFrame(() => requestAnimationFrame(() => { $("fill").style.height = (35 + target * 2.65) + "px"; }));
+  requestAnimationFrame(() => requestAnimationFrame(() => { $("fill").style.height = (target * 3.34) + "px"; }));
   const t0 = performance.now();
   (function tick(now){
     const k = Math.min(1, (now - t0) / 2200);

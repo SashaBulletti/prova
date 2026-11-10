@@ -1,62 +1,55 @@
 # 👹 Mostrometro
 
-Un termometro **fisico** stampato in 3D che misura la percentuale di mostruosità.
-Premi il bottone: il mercurio sale sullo schermino, scende alla tua percentuale e il mostriciattolo si trasforma.
+Un mostro-totem stampato in 3D, **a batteria**, che misura la percentuale di mostruosità.
+Premi il suo naso rosso: il mercurio sale lungo lo schermo, scende alla tua percentuale e il mostriciattolo si trasforma.
 Dal telefono vedi la classifica di tutta la famiglia.
 
 ```
-index.html                       anteprima/simulatore nel browser (senza hardware)
+progetto.html                    guida passo passo (si legge meglio pubblicata), con il 3D da girare e aprire
+index.html                       anteprima nel browser (senza hardware)
 hardware/mostrometro.scad        modello 3D parametrico (OpenSCAD)
 hardware/stl/fronte.stl, retro.stl   STL pronti da stampare
-firmware/mostrometro/mostrometro.ino firmware ESP32
+hardware/bake_modello.py         rigenera modello.js (il 3D della pagina) dopo aver cambiato gli STL
+firmware/mostrometro/mostrometro.ino firmware
 ```
 
-## Cosa serve (circa 20 €)
+## Cosa serve (circa 45 €)
 | Pezzo | Note |
 |---|---|
-| ESP32 con caricabatteria LiPo (tipo LOLIN D32) | ~58×25 mm, connettore JST per la batteria. Una ESP32 normale non va bene |
-| Batteria LiPo piatta 3,7 V, tipo 603048 | 6×30×48 mm (~850 mAh), con circuito di protezione e connettore JST. Max 7 mm di spessore |
-| Prolunga USB femmina da pannello | micro-USB o USB-C come la scheda; per ricaricare senza aprire |
-| Schermo ST7789 1.3" 240×240 | SPI, 7 pin |
-| Bottone arcade 30 mm | foro 24 mm |
-| 3 viti M3×30 | per chiudere i gusci |
-| Cavo USB + caricatore | solo per ricaricare la batteria |
-| 2 occhietti adesivi da 12 mm | opzionali ma obbligatori 😈 |
+| **LilyGO T-Display S3 Long** | Una sola scheda: ESP32-S3 con WiFi, schermo lungo 3,4" (180×640), presa USB-C e caricabatteria. ~92×28 mm |
+| Batteria LiPo piatta 3,7 V, tipo 603048 | 6×30×48 mm (~850 mAh), con protezione e il connettore della scheda (JST-GH 1,25 mm: controlla). Max 7 mm di spessore |
+| Bottone arcade 30 mm | è il naso; foro da 24 mm |
+| 3 viti M3×25 | chiudono i gusci da dietro |
+| 2 occhietti adesivi da 14 mm | |
+| Due fili sottili e stagno | per collegare il bottone |
+| Cavo USB-C + caricatore | solo per ricaricare |
 
 ## Collegamenti
-| Schermo | ESP32 |
-|---|---|
-| GND / VCC | GND / 3V3 |
-| SCL | GPIO18 |
-| SDA | GPIO23 |
-| RES | GPIO17 |
-| DC | GPIO16 |
-| BLK | GPIO4 |
-| CS (se c'è) | GPIO5 |
-
-Bottone: un filo a **GPIO27**, l'altro a **GND**.
+Schermo e ricarica sono già sulla scheda. Resta solo il bottone: **due fili in parallelo al pulsantino BOOT** della scheda (GPIO0).
+Se premi il bottone mentre la scheda si sta accendendo entra nel modo "download" (schermo nero): rilascia e riaccendi.
+Batteria nel connettore della scheda (**controlla rosso/nero e + / −**) e interruttore della scheda su ON.
 
 ## Stampa
-- Alto 200 mm, largo 70 mm: serve un piatto da almeno 220 mm (altrimenti ridimensiona/accorcia `tube_h`).
-- Stampa ogni guscio con la **faccia esterna sul piatto**, niente supporti, 0.2 mm, 3 pareti.
-- **Prima misura schermo, ESP32 e bottone e correggi i parametri in cima a `mostrometro.scad`**, poi fai una prova veloce.
-- Il fondo del bulbo è piatto, quindi sta in piedi. Il cavo USB esce da una tacca in basso.
+- Alto 186 mm, largo 76 mm: serve un piatto da almeno 200 mm.
+- Ogni guscio con la **faccia esterna sul piatto**, niente supporti, 0,2 mm, 3 pareti.
+- **Prima misura scheda, bottone e batteria e correggi i parametri in cima a `mostrometro.scad`**, poi fai una prova veloce.
+- La base larga lo fa stare in piedi. La presa USB-C esce da una tacca in basso: controlla dove sta sulla tua scheda.
 
 ## Firmware
-1. Arduino IDE → installa il pacchetto **esp32** (Espressif), poi le librerie *Adafruit GFX* e *Adafruit ST7735 and ST7789*.
-2. Apri `firmware/mostrometro/mostrometro.ino`, scheda "ESP32 Dev Module", carica.
-3. Se lo schermo è girato cambia `ROTAZIONE`; se il tuo schermo non ha il pin CS metti `TFT_CS -1`.
+1. Dal repository del produttore (`Xinyuan-LilyGO/T-Display-S3-Long`) copia la cartella `lib/` nelle librerie di Arduino.
+2. **Prova prima l'esempio ufficiale `GFX_AXS15231B_Image`**: lo schermo deve accendersi. Se l'esempio inizializza anche il chip di alimentazione, copia quella parte in `schedaInit()` del nostro programma.
+3. Apri `firmware/mostrometro/mostrometro.ino`, scheda "ESP32S3 Dev Module", PSRAM OPI, flash 16 MB, e carica.
+4. Se la percentuale della batteria è sbagliata cambia `BAT_DIV` (il rapporto del partitore non l'ho trovato nei documenti).
 
 ## Uso
-L'ESP32 crea il WiFi **Mostrometro** (password `mostro1234`, cambiala nel `.ino`).
+La scheda crea il WiFi **Mostrometro** (password `mostro1234`, cambiala nel `.ino`).
 Collegati dal telefono: la pagina si apre da sola, oppure vai su `http://192.168.4.1`.
-Scrivi chi si misura e premi il bottone (sul telefono o sul termometro). La classifica resta salvata anche senza corrente (max 12 persone).
+Scrivi chi si misura e premi il bottone (sul telefono o sul mostro). La classifica resta salvata anche senza corrente (max 12 persone).
 
 ## A batteria
-- La batteria LiPo va nel bulbo, dietro al bottone, e si collega al connettore JST della scheda. **Prima controlla che rosso e nero coincidano con + e − della scheda**: la polarità dei connettori non è sempre la stessa.
-- Si ricarica dalla prolunga USB in basso. La carica si vede sull'iconcina in alto a destra dello schermo e sulla pagina del telefono (il pin di lettura è `PIN_BAT`, di solito GPIO35).
-- Dopo 5 minuti senza uso va in **standby profondo** (schermo e WiFi spenti). Premendo il bottone si sveglia e misura subito l'ultima persona scelta. Non serve un interruttore.
-- Durata (stime): circa 6 ore di uso continuo con una batteria da 850 mAh, settimane in standby. Non misurata su una batteria vera.
+- Si ricarica dalla presa USB-C in basso. La carica si vede in basso sullo schermo e sulla pagina del telefono.
+- Dopo 5 minuti senza uso va in **standby profondo** (schermo e WiFi spenti). Premendo il bottone si sveglia e misura subito l'ultima persona scelta.
+- Durata (dati del produttore: 90–350 mA acceso, ~1,1 mA in standby): da 2 a 9 ore di uso continuo con 850 mAh, circa un mese in standby. Non misurata su una batteria vera.
 
 ## Come si misura la mostruosità
 Non è a caso:
@@ -69,5 +62,7 @@ Le azioni e i punti si cambiano nella lista `AZ` dentro `mostrometro.ino`.
 ## Stato della verifica
 - ✅ Modello 3D: STL validi, ingombri controllati, anteprima vista.
 - ✅ Pagina web: provata nel browser con un Mostrometro simulato.
-- ⚠️ Firmware: **non compilato né provato su una vera ESP32** (nessun toolchain disponibile quando è stato scritto). Può servire qualche ritocco, specie ai pin e all'orientamento dello schermo.
-- ⚠️ Modello 3D non ancora stampato: le misure di schermo/bottone/scheda vanno verificate sui pezzi reali.
+- ✅ Regole di misura, batteria, standby e frasi sullo schermo: provate al computer con una scheda simulata.
+- ⚠️ **Schermo e scheda: il firmware segue l'esempio del produttore ma non è mai girato su una vera LilyGO S3 Long.** Può servire qualche ritocco (pin, alimentazione, orientamento).
+- ⚠️ Non so dove stanno sulla scheda la presa USB-C e l'interruttore: vanno controllati prima di stampare.
+- ⚠️ Modello 3D non ancora stampato: le misure di scheda, bottone e batteria vanno verificate sui pezzi reali.

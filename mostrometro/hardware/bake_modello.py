@@ -3,11 +3,11 @@ Dopo aver cambiato mostrometro.scad: riesporta gli STL e lancia  python3 bake_mo
 
 Formato: coordinate in centesimi di mm, int16, base64.
 Sistema di riferimento del visualizzatore: y verso l'alto, il fronte guarda l'osservatore (+z).
-  fronte: (x, y, z) -> (x, y, 40 - z)      retro: (x, y, z) -> (x, y, z)
+  fronte: (x, y, z) -> (x, y, 30 - z)      retro: (x, y, z) -> (x, y, z)
 """
 import os, re, struct, base64
 
-DEPTH = 40.0
+DEPTH = 30.0
 BASE = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))   # cartella mostrometro/
 
 def leggi(nome):

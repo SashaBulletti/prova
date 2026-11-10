@@ -1,4 +1,4 @@
-// MOSTROMETRO - custodia stampabile in 3D, in due gusci (fronte + retro)
+// MOSTROMETRO - custodia stampabile in 3D: un "totem" col sorriso, in due gusci (fronte + retro)
 // Unita': mm.  Apri con OpenSCAD, scegli `parte` e premi F6 -> Esporta STL.
 //
 //   parte = "fronte"      -> guscio anteriore (stampalo con la faccia esterna sul piatto)
@@ -6,66 +6,76 @@
 //   parte = "stampa"      -> i due gusci affiancati
 //   parte = "assemblato"  -> anteprima chiusa (per controllare che combacino)
 //
-// NON STAMPARE SUBITO: misura il tuo schermo, la tua ESP32 e il tuo bottone
-// e correggi i parametri qui sotto. Fai prima una prova veloce (layer alto, 10% infill).
+// NON STAMPARE SUBITO: misura la tua scheda, il tuo bottone e la tua batteria e correggi i
+// parametri qui sotto. Fai prima una prova veloce (strati da 0,3 mm, 10% di riempimento).
+// Dopo aver cambiato qualcosa riesporta gli STL e lancia  python3 bake_modello.py  per il 3D della pagina.
 
 parte = "assemblato";
 $fn = 96;
 
-// ---------- forma del termometro ----------
-bulb_d = 70;      // diametro del bulbo
-tube_w = 42;      // larghezza del tubo
-tube_h = 150;     // altezza del tubo (dal centro del bulbo)
-depth  = 40;      // spessore totale (fronte + retro)
+// ---------- forma del totem ----------
+body_w = 60;      // larghezza del corpo
+body_h = 170;     // altezza del corpo (le corna sono in piu')
+r_top  = 12;      // arrotondamento degli angoli in alto
+base_w = 76;      // larghezza della base (i "piedi": serve perche' stia in piedi)
+base_h = 10;      // altezza della base
+horn_w = 18;      // larghezza alla base delle corna
+horn_h = 16;      // altezza delle corna
+horn_x = 15;      // distanza delle corna dal centro
+depth  = 30;      // spessore totale (fronte + retro)
 wall   = 2.4;     // spessore pareti
-flat   = 6;       // quanto e' appiattito il fondo del bulbo (cosi' sta in piedi)
 
-// ---------- schermo: ST7789 1.3" 240x240 (MISURA IL TUO MODULO!) ----------
-pcb_w = 28;       // larghezza del circuito stampato dello schermo
-pcb_h = 34;       // altezza del circuito stampato
-win_w = 24.6;     // finestra visibile (area attiva ~23.4 mm)
-win_h = 24.6;
-screen_y = 116;   // altezza del centro dello schermo sul tubo
+// ---------- scheda: LilyGO T-Display S3 Long (schermo lungo + ESP32-S3 + ricarica USB-C) ----------
+// MISURA LA TUA: i negozi indicano 92 x 28 mm e 14-16 mm di spessore.
+brd_w = 28;       // larghezza della scheda
+brd_l = 92;       // lunghezza della scheda
+brd_y0 = 3;       // dove inizia dal basso (la presa USB-C e' in basso)
+win_w = 24.4;     // finestra: area visibile dello schermo (circa 23,4 x 83 mm)
+win_h = 83.6;
+clear = 0.4;      // gioco intorno alla scheda
 
-// ---------- bottone ----------
-btn_d = 24.2;     // foro per bottone arcade da 30 mm (corpo sotto pannello ~ 21 mm)
+// ---------- bottone arcade da 30 mm: e' il "naso" ----------
+btn_d = 24.2;     // foro (corpo sotto pannello circa 21 mm)
+btn_y = 122;
 
-// ---------- ESP32 con caricabatteria LiPo (tipo LOLIN D32, circa 58 x 25 mm) ----------
-esp_w = 26;       // larghezza scheda
-esp_l = 58;       // lunghezza scheda (con porta USB)
-esp_y0 = 34;      // dove inizia la scheda (porta USB rivolta verso il basso)
+// ---------- batteria LiPo piatta (es. 603048: 6 x 30 x 48 mm), dietro la scheda ----------
+bat_w = 30;
+bat_l = 48;
 
-// ---------- batteria LiPo piatta (es. 603048: 6 x 30 x 48 mm, al massimo 7 mm di spessore) ----------
-bat_w = 30;       // larghezza
-bat_l = 48;       // lunghezza
-bat_cy = 2;       // altezza del centro (nel bulbo, dietro al bottone)
-
-// ---------- porta di ricarica: prolunga USB femmina da pannello, in basso ----------
-usb_w = 14;       // larghezza della tacca
+// ---------- presa USB-C (in basso) ----------
+usb_w = 12;       // larghezza della tacca. Controlla dove sta la presa sulla TUA scheda.
 
 // ---------- decorazioni ----------
-eye_d = 12;       // sede per occhietti adesivi (googly eyes)
-eye_x = 8.5;
-eye_y = tube_h - 2;
+eye_d = 14;       // sede per occhietti adesivi
+eye_x = 13;
+eye_y = 150;
 
-// ---------- viti M3 (3 pezzi, lunghezza 30) ----------
+// ---------- viti M3 x 25 (3 pezzi) ----------
 screw_pilot = 2.6;
 screw_hole  = 3.4;
 screw_head  = 6.4;
 post_d      = 7;
-posts = [[-26, 0], [26, 0], [0, tube_h - 10]];
+posts = [[-23.5, 45], [23.5, 45], [0, 150]];
 
-half = depth / 2;
+half  = depth / 2;
+win_y = brd_y0 + brd_l / 2;       // centro dello schermo dal basso
 
 // ---------- profilo 2D ----------
 module outline() {
-    intersection() {
-        union() {
-            circle(d = bulb_d);
-            translate([-tube_w/2, 0]) square([tube_w, tube_h]);
-            translate([0, tube_h]) circle(d = tube_w);
+    union() {
+        hull() {                                            // corpo
+            translate([-body_w/2 + r_top, body_h - r_top]) circle(r = r_top);
+            translate([ body_w/2 - r_top, body_h - r_top]) circle(r = r_top);
+            translate([-body_w/2, 0]) square([body_w, 1]);
         }
-        translate([-100, -bulb_d/2 + flat]) square([200, 400]);
+        hull() {                                            // base larga, angoli in basso tondi
+            translate([-base_w/2 + 6, 6]) circle(r = 6);
+            translate([ base_w/2 - 6, 6]) circle(r = 6);
+            translate([-base_w/2, base_h - 1]) square([base_w, 1]);
+        }
+        for (s = [-1, 1])                                   // corna
+            polygon([[s*(horn_x + horn_w/2), body_h - 6], [s*(horn_x - horn_w/2), body_h - 6],
+                     [s*(horn_x + 2), body_h + horn_h]]);
     }
 }
 
@@ -88,13 +98,13 @@ module posts_solid() {
         translate([p[0], p[1], wall - 0.01]) cylinder(d = post_d, h = half - wall + 0.01);
 }
 
-// tacche della scala 0-100% incise ai lati dello schermo
+// tacche della scala 0-100% ai lati dello schermo (lo schermo disegna il resto)
 module ticks() {
     for (i = [0:10]) {
-        y = 34 + i * 10;
+        y = win_y - win_h/2 + i * win_h / 10;
         len = (i % 5 == 0) ? 6 : 3.5;
         for (s = [-1, 1])
-            translate([s * (14.5 + len/2), y, 0.3]) cube([len, 1, 1.2], center = true);
+            translate([s * (win_w/2 + 2.3 + len/2), y, 0.3]) cube([len, 1, 1.2], center = true);
     }
 }
 
@@ -105,16 +115,20 @@ module fronte() {
             translate([0, 0, half]) linear_extrude(2) ring(0.6, 1.8);   // linguetta
             posts_solid();
         }
-        // viti: foro pilota nel piantone
         for (p = posts) translate([p[0], p[1], half - 10]) cylinder(d = screw_pilot, h = 11);
-        // finestra schermo + sede del circuito (resta 1 mm di bordo davanti)
-        translate([-win_w/2, screen_y - win_h/2, -1]) cube([win_w, win_h, wall + 2]);
-        translate([-pcb_w/2, screen_y - pcb_h/2, wall - 1.4]) cube([pcb_w, pcb_h, 4]);
+        // finestra schermo + nicchia della scheda (resta 1 mm di bordo davanti)
+        translate([-win_w/2, win_y - win_h/2, -1]) cube([win_w, win_h, wall + 2]);
+        translate([-(brd_w + clear)/2, win_y - (brd_l + clear)/2, wall - 1.4]) cube([brd_w + clear, brd_l + clear, 4]);
         // foro bottone
-        translate([0, 0, -1]) cylinder(d = btn_d, h = wall + 2);
-        // sedi occhietti
-        for (s = [-1, 1]) translate([s * eye_x, eye_y, -0.01]) cylinder(d = eye_d, h = 1);
+        translate([0, btn_y, -1]) cylinder(d = btn_d, h = wall + 2);
+        // sedi occhietti e sopracciglia arrabbiate
+        for (s = [-1, 1]) {
+            translate([s * eye_x, eye_y, -0.01]) cylinder(d = eye_d, h = 1);
+            translate([s * eye_x, eye_y + 11, 0]) rotate([0, 0, -s * 18]) translate([-6, -0.7, -0.01]) cube([12, 1.4, 0.7]);
+        }
         ticks();
+        // presa USB-C (meta' della tacca)
+        translate([-usb_w/2, -1, half - 10]) cube([usb_w, wall + 2, 11]);
     }
 }
 
@@ -123,22 +137,17 @@ module retro() {
         union() {
             shell();
             posts_solid();
-            // gabbietta per l'ESP32
-            for (sx = [-1, 1], yy = [esp_y0 + 3, esp_y0 + esp_l - 3])
-                translate([sx * (esp_w/2 + 0.8), yy, wall + 3.5]) cube([1.6, 6, 7], center = true);
-            // alloggio per la batteria LiPo (nel bulbo, dietro al bottone)
+            // alloggio per la batteria, dietro alla scheda
             for (sx = [-1, 1], sy = [-1, 1])
-                translate([sx * (bat_w/2 + 0.8), bat_cy + sy * (bat_l/2 - 6), wall + 3]) cube([1.6, 6, 6], center = true);
+                translate([sx * (bat_w/2 + 0.8), win_y + sy * (bat_l/2 - 6), wall + 3]) cube([1.6, 6, 6], center = true);
         }
-        // scanalatura per la linguetta del fronte
-        translate([0, 0, half - 2.2]) linear_extrude(3) ring(0.5, 1.9);
-        // viti passanti con sede della testa
+        translate([0, 0, half - 2.2]) linear_extrude(3) ring(0.5, 1.9);     // scanalatura
         for (p = posts) {
             translate([p[0], p[1], -1]) cylinder(d = screw_hole, h = half + 2);
             translate([p[0], p[1], -0.01]) cylinder(d = screw_head, h = wall - 0.4);
         }
-        // porta di ricarica USB, in basso
-        translate([-usb_w/2, -bulb_d/2 + flat - 1, half - 12]) cube([usb_w, wall + 2, 13]);
+        // presa USB-C (altra meta' della tacca)
+        translate([-usb_w/2, -1, half - 4]) cube([usb_w, wall + 2, 5]);
     }
 }
 
