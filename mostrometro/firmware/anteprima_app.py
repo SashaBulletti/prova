@@ -48,6 +48,10 @@ SIMULATORE = r"""
         else{var t=att(f);f.v=t;S.val=t}
         S.misurando=false;save()},urlo?3500:3200);
       return Promise.resolve(risposta({ok:true}))}
+    if(p==='/api/aggiungi'){
+      var n4=nome(u);if(!n4)return Promise.resolve(risposta({ok:false},400));
+      if(!trova(n4)){if(S.fam.length>=12)return Promise.resolve(risposta({ok:false,pieno:true},409));S.fam.push({n:n4,bonus:0,v:-1});save()}
+      return Promise.resolve(risposta({ok:true}))}
     if(p==='/api/azione'){
       var n2=nome(u);if(!n2)return Promise.resolve(risposta({ok:false},400));
       var f2=trova(n2)||crea(n2);var pt=Math.max(-10,Math.min(10,parseInt(u.searchParams.get('punti'),10)||0));

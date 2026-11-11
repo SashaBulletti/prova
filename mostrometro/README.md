@@ -8,7 +8,8 @@ Tieni premuto il naso e urla: il microfono ascolta e ti dà dei punti. Dal telef
 
 ```
 progetto.html                        la guida (si legge meglio pubblicata)
-index.html                           anteprima nel browser (senza hardware)
+app_anteprima.html                   l'app del telefono con un Mostrometro simulato (si rigenera con firmware/anteprima_app.py)
+mascotte/                            la mascotte: in piedi, adesivo e versione piccola per l'app
 hardware/mostrometro.scad            modello 3D parametrico (OpenSCAD), forme A e B
 hardware/stl/                        STL pronti: fronte.stl + retro.stl + piedistallo.stl (totem B), A_fronte.stl + A_retro.stl (mostro tondo A)
 hardware/bake_modello.py             rigenera modello.js (il 3D della guida) dopo aver cambiato gli STL
@@ -42,7 +43,8 @@ Il disegno e la spiegazione da zero sono in `progetto.html`, fase 4.
 - Dal telefono si segnano le **azioni da mostro** (rutto a tavola +3, spaventa qualcuno +8…) e si può **urlare** nel microfono (0–10 punti). I punti restano "in attesa".
 - Alla pressione successiva del naso il mercurio si ferma su **base + punti** (massimo 100) e lo schermo scrive di quanto sei salito, per esempio «+8 mostro!».
 - 6 versi di mostro (uno per livello) e la voce che dice la percentuale. La voce è sintetica (`espeak-ng`), abbassata e rauca; si cambia con `firmware/genera_audio.py`.
-- La classifica resta salvata anche senza corrente (max 12 persone).
+- Dall'app si aggiungono le persone della famiglia (fino a 12) e si tocca un nome per scegliere chi si misura.
+- La classifica resta salvata anche senza corrente.
 - A batteria: dopo 5 minuti senza uso va in **standby** (schermo, suoni e WiFi spenti); il naso lo risveglia.
 
 ## Come si carica il programma (in breve)
@@ -53,6 +55,7 @@ Passo passo, con le immagini, in `progetto.html` (fase 5). In sintesi:
 4. Prima carica `prova_bottone` per controllare le saldature, poi `mostrometro`.
 
 ## Uso
+Non c'è niente da installare sul telefono: l'app è una pagina che sta dentro il Mostrometro.
 La scheda crea il WiFi **Mostrometro** (password `mostro1234`, cambiala nel `.ino`). Collegati dal telefono: la pagina si apre da sola, oppure vai su `http://192.168.4.1`.
 Scrivi chi si misura e premi il naso (sul telefono o sul mostro).
 

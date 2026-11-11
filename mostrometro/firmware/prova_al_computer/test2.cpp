@@ -107,6 +107,17 @@ int main() {
   }
   verifica(largo, "nessuna riga e' piu' larga del pannello");
 
+  std::cout << "\nAggiungere persone dall'app\n";
+  int prima = nFam;
+  call("/api/aggiungi", {{"nome", "Nonna"}});
+  verifica(nFam == prima + 1 && trova("Nonna") >= 0 && fam[trova("Nonna")].val == -1, "Nonna aggiunta, non ancora misurata");
+  call("/api/aggiungi", {{"nome", "nonna"}});
+  verifica(nFam == prima + 1, "'nonna' minuscolo non crea un doppione");
+  for (int i = 0; nFam < MAX_FAM; i++) call("/api/aggiungi", {{"nome", "Zio" + std::to_string(i)}});
+  call("/api/aggiungi", {{"nome", "Tredicesimo"}});
+  verifica(nFam == MAX_FAM && trova("Tredicesimo") < 0 && server.last.find("pieno") != std::string::npos,
+           "con 12 persone la tredicesima non entra e l'app lo dice");
+
   std::cout << "\n" << ok << " controlli su " << tot << " superati\n";
   return ok == tot ? 0 : 1;
 }
