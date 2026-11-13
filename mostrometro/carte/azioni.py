@@ -12,15 +12,15 @@ GRUPPI = {
     "Rumori a tavola": [
         ("Rutta a tavola!", "Un bel rutto da mostro, davanti a tutti."),
         ("Fai una scoreggia!", "Vera o finta, col braccio sotto l'ascella."),
-        ("Slurp gigante", "Bevi facendo il rumore più forte possibile."),
+        ("Glu glu glu gigante", "Bevi dalla bottiglia a canna e sbrodolati tutto d'acqua."),
         ("Bolle nel bicchiere", "Soffia nella cannuccia finché qualcuno se ne accorge."),
         ("Starnuto da gigante", "Un finto starnuto enorme: ETCIÙÙÙ!"),
         ("Sbadiglio da leone", "Sbadiglia ruggendo, con la bocca spalancata."),
-        ("Verso del maiale", "Mangia un boccone facendo il verso del maiale."),
+        ("Verso del maiale", "Mangia un boccone con le mani, facendo il verso del maiale."),
         ("Mucca assetata", "Chiedi l'acqua muggendo: MUUUU."),
         ("Russa a tavola", "Fingi di addormentarti e russa forte."),
-        ("Mastica rumoroso", "Mastica facendo più rumore che puoi per 10 secondi."),
-        ("Il cucchiaio parla", "Batti il cucchiaio sul bicchiere e annuncia: «Ho un discorso!»"),
+        ("Mastica rumoroso", "Mastica facendo più rumore che puoi, finché attiri l'attenzione di tutti."),
+        ("Il cucchiaio parla", "Batti il cucchiaio sul bicchiere e fai un discorso a caso, che non c'entra niente."),
         ("Gargarismo", "Fai i gargarismi con un sorso d'acqua, a tavola."),
         ("Pernacchia", "Fai una pernacchia lunga e sonora."),
     ],
@@ -40,23 +40,23 @@ GRUPPI = {
     ],
     "Facce e gesti": [
         ("La faccia più brutta", "Fai la faccia più brutta del mondo a qualcuno."),
-        ("Occhi storti", "Guarda qualcuno con gli occhi storti per 5 secondi."),
+        ("Occhi storti", "Guarda con gli occhi storti qualcuno che sta facendo un discorso serio."),
         ("Lingua da serpente", "Fai uscire e rientrare la lingua come un serpente."),
         ("Orecchie da elefante", "Fai le orecchie da elefante con le mani."),
         ("Artigli da mostro", "Mani ad artiglio e ringhia piano verso qualcuno."),
         ("Narici da maiale", "Spingi su il naso col dito e grugnisci."),
         ("Sopracciglia ballerine", "Muovi le sopracciglia su e giù guardando qualcuno."),
         ("Faccia da pesce", "Fai la bocca da pesce mentre ti parlano."),
-        ("Statua di sale", "Resta immobile come una statua per 20 secondi."),
+        ("Statua di sale", "Resta immobile come una statua, seduto sulla sedia, per 30 secondi."),
         ("Occhiolino a tutti", "Fai l'occhiolino a ognuno, uno per uno."),
-        ("Baffi finti", "Fatti i baffi con un dito e parla come un signore."),
-        ("Corna da mostro", "Metti due dita sulla testa come corna per un minuto."),
+        ("Baffi finti", "Fatti i baffi con quello che trovi in giro e parla come un signore."),
+        ("Corna da mostro", "Usa qualcosa che trovi in giro come corna e incorna gli altri invitati."),
     ],
     "Dispetti innocui": [
-        ("Ruba una patatina", "Prendi qualcosa dal piatto di qualcuno, senza farti vedere."),
-        ("Sposta il bicchiere", "Sposta il bicchiere di qualcuno senza che se ne accorga."),
+        ("Ruba una patatina", "Prendi qualcosa dal piatto di qualcuno senza farti vedere, e continua finché non ti scopre."),
+        ("Sposta il bicchiere", "Sposta il bicchiere di qualcuno senza farti vedere e mettici al suo posto qualcos'altro."),
         ("Cambia posto alle cose", "Scambia di posto il sale e il pepe (o due oggetti)."),
-        ("Il solletico", "Fai il solletico a qualcuno, solo un attimo."),
+        ("Il solletico", "Fai il solletico a qualcuno finché tutta la tavolata non se ne accorge."),
         ("Nascondi la forchetta", "Nascondi la forchetta di qualcuno e fai l'innocente."),
         ("Tocca e scappa", "Tocca la spalla di qualcuno e guarda dall'altra parte."),
         ("Ripeti come un pappagallo", "Ripeti tutto quello che dice qualcuno per un minuto."),
@@ -74,18 +74,19 @@ GRUPPI = {
         ("Domanda con domanda", "Rispondi a ogni domanda con un'altra domanda."),
         ("Canta la risposta", "La prossima risposta la devi cantare."),
         ("Parola inventata", "Inventa una parola e usala tre volte."),
-        ("Mostro Supremo", "Chiama qualcuno «Mostro Supremo» davanti a tutti."),
-        ("Barzelletta pessima", "Racconta la barzelletta più brutta che conosci."),
+        ("Mostro Supremo", "Chiama qualcuno «Mostro Supremo» davanti a tutti. Se ha la carta «Artigli da mostro» prendete 5 punti a testa, altrimenti tu ne prendi 2.",
+         {"punti": "2/5", "speciale": "mostro_supremo"}),
+        ("Barzelletta pessima", "Racconta la barzelletta più brutta che conosci. Puoi anche inventarla."),
         ("Telecronaca", "Fai la telecronaca di qualcuno che mangia."),
-        ("Annuncio importante", "Alzati e annuncia: «È arrivata l'ora del mostro!»"),
-        ("Parla in terza persona", "Parla di te come «il Mostro» per 2 minuti."),
-        ("Complimento mostruoso", "Fai un complimento strano: «Hai un naso magnifico!»"),
-        ("Sussurro misterioso", "Sussurra all'orecchio di qualcuno: «Lo so...»"),
-        ("Previsioni del tempo", "Annuncia che domani pioveranno polpette."),
+        ("Annuncio importante", "Alzati e annuncia «È arrivata l'ora del mostro!», imitando Michael Jackson."),
+        ("Parla in terza persona", "Parla di te in terza persona per 2 minuti, facendo capire che sei tu il mostro più mostro."),
+        ("Complimento mostruoso", "Fai a qualcuno un complimento stranissimo."),
+        ("Sussurro misterioso", "Sussurra all'orecchio di qualcuno le risposte alle prossime 4 domande."),
+        ("Previsioni del tempo", "Rispondi alle prossime domande che ti fanno imitando il meteorologo del telegiornale."),
     ],
     "Movimento e ballo": [
-        ("Balla senza musica", "Alzati e balla 10 secondi, in silenzio."),
-        ("Passo del dinosauro", "Cammina per la stanza come un T-rex."),
+        ("Balla senza musica", "Alzati e balla per 30 secondi, in silenzio."),
+        ("Passo del dinosauro", "Hai le braccine corte da T-rex e non arrivi alle posate: imitalo finché qualcuno non ti aiuta. Puoi parlare solo ruggendo."),
         ("Giravolta", "Fai una giravolta prima di sederti."),
         ("Il pollo", "Fai il pollo con le braccia e gira intorno al tavolo."),
         ("Saltella", "Fai il giro del tavolo saltellando su un piede."),
@@ -127,14 +128,22 @@ GRUPPI = {
     ],
 }
 
-AZIONI = [(gruppo, titolo, come) for gruppo, carte in GRUPPI.items() for titolo, come in carte]
+def _carta(gruppo, c):
+    titolo, come = c[0], c[1]
+    extra = c[2] if len(c) > 2 else {}
+    return (gruppo, titolo, come, extra)
+
+# Ogni carta: (gruppo, titolo, come, extra). extra puo' avere "punti" (testo del bollino, es. "2/5")
+# e "speciale" (regola che l'app deve chiedere, es. "mostro_supremo").
+AZIONI = [_carta(gruppo, c) for gruppo, carte in GRUPPI.items() for c in carte]
 
 if __name__ == "__main__":
     print(len(AZIONI), "azioni")
     for g, c in GRUPPI.items():
         print(f"  {g}: {len(c)}")
-    titoli = [t for _, t, _ in AZIONI]
+    titoli = [t for _, t, _, _ in AZIONI]
     doppi = {t for t in titoli if titoli.count(t) > 1}
     print("doppioni:", doppi or "nessuno")
     print("titolo piu' lungo:", max(titoli, key=len), len(max(titoli, key=len)))
-    print("riga piu' lunga:", max(len(c) for _, _, c in AZIONI))
+    print("riga piu' lunga:", max(len(c) for _, _, c, _ in AZIONI))
+    print("carte speciali:", [(i + 1, t) for i, (_, t, _, e) in enumerate(AZIONI) if e])

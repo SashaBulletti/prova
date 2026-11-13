@@ -22,7 +22,8 @@ gruppi_html = []
 n = 0
 for gruppo, carte in GRUPPI.items():
     righe = []
-    for titolo, come in carte:
+    for c in carte:
+        titolo, come = c[0], c[1]
         n += 1
         righe.append(f'<li><span class="n">{n:03d}</span><span class="t"><b>{html.escape(titolo)}</b>'
                      f'<small>{html.escape(come)}</small></span></li>')

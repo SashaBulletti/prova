@@ -41,17 +41,22 @@ COLORI = {   # colore della cornice per gruppo
     "Cibo da mostro": "#c7781a", "A sorpresa": "#5a5ad6",
 }
 
-def carta_html(n, gruppo, titolo, come, img):
+def carta_html(n, gruppo, titolo, come, img, extra=None):
+    extra = extra or {}
     col = COLORI.get(gruppo, "#7a4fe0")
+    punti = extra.get("punti", str(PUNTI_CARTA))
+    lung = "lunghissima" if len(come) > 125 else ("lunga" if len(come) > 95 else ("media" if len(come) > 62 else ""))
+    bollino = "piccolo" if len(punti) > 2 else ""
+    tlen = "t3" if len(titolo) > 21 else ("t2" if len(titolo) > 17 else "")
     arte = f'<img class="arte" src="{data_uri(img)}" alt="">' if img else '<div class="arte vuota">disegno in arrivo</div>'
     return f'''<div class="carta" id="carta-{n}" style="--c:{col}">
   <div class="testa"><span class="num">N. {n:03d}</span><span class="gruppo">{gruppo}</span></div>
   {arte}
   <div class="corpo">
-  <div class="titolo">{titolo}</div>
-  <div class="come">{come}</div>
+  <div class="titolo {tlen}">{titolo}</div>
+  <div class="come {lung}">{come}</div>
   <div class="piede">
-    <div class="punti"><b>+{PUNTI_CARTA}</b><span>mostro</span></div>
+    <div class="punti {bollino}"><b>+{punti}</b><span>mostro</span></div>
     <div class="regola">Fallo davanti a tutti, senza avvisare.<br>Poi scansiona il QR.</div>
     <div class="qr">{qr_svg(n)}</div>
   </div>
@@ -66,14 +71,16 @@ body{margin:0;background:#e9e2f5;font-family:"Fredoka",sans-serif;display:flex;f
 .carta{width:63mm;height:88mm;border-radius:4mm;background:var(--c);padding:2.2mm;display:flex;flex-direction:column;
   box-shadow:0 2px 8px rgba(0,0,0,.25);overflow:hidden;color:#2b1650}
 .testa{display:flex;justify-content:space-between;align-items:center;color:#fff;font-weight:600;font-size:2.6mm;padding:0 1mm 1.2mm}
-.arte{display:block;width:100%;aspect-ratio:6/5;object-fit:cover;object-position:50% 40%;border-radius:2.6mm;background:#fff6e6;border:.6mm solid #fff}
+.arte{display:block;width:100%;aspect-ratio:5/4;object-fit:cover;object-position:50% 40%;border-radius:2.6mm;background:#fff6e6;border:.6mm solid #fff}
 .arte.vuota{display:flex;align-items:center;justify-content:center;color:#b9a6dd;font-size:3mm}
 .corpo{background:#fff;margin-top:1.6mm;border-radius:2.4mm;flex:1;display:flex;flex-direction:column}
 .titolo{padding:1.4mm 2mm 0;font-weight:700;font-size:5.4mm;line-height:1.05;text-align:center}
 .come{padding:.6mm 2.4mm 1.2mm;font-size:2.75mm;line-height:1.2;text-align:center;font-weight:400;color:#4a3a66;flex:1}
 .piede{display:flex;align-items:center;gap:1.6mm;padding:0 1.6mm 1.6mm}
 .punti{background:var(--c);color:#fff;border-radius:2mm;width:11mm;height:11mm;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
-.punti b{font-size:5mm;font-weight:700}.punti span{font-size:1.9mm;font-weight:500}
+.punti b{font-size:5mm;font-weight:700}.punti.piccolo b{font-size:3.4mm}
+.titolo.t2{font-size:4.5mm}.titolo.t3{font-size:4.1mm}
+.come.media{font-size:2.5mm}.come.lunga{font-size:2.25mm;line-height:1.18}.come.lunghissima{font-size:2.08mm;line-height:1.15}.punti span{font-size:1.9mm;font-weight:500}
 .regola{flex:1;font-size:2.15mm;line-height:1.25;color:#6a5a86}
 .qr svg{display:block;width:13mm;height:13mm}
 '''.replace("FONT", FONT)
@@ -81,17 +88,17 @@ body{margin:0;background:#e9e2f5;font-family:"Fredoka",sans-serif;display:flex;f
 def main():
     solo = None
     if "--solo" in sys.argv:
-        solo = int(sys.argv[sys.argv.index("--solo") + 1])
+        solo = {int(x) for x in sys.argv[sys.argv.index("--solo") + 1].split(",")}
     carte = []
-    for i, (gruppo, titolo, come) in enumerate(AZIONI, start=1):
-        if solo and i != solo:
+    for i, (gruppo, titolo, come, extra) in enumerate(AZIONI, start=1):
+        if solo and i not in solo:
             continue
         img = None
         for ext in ("png", "jpg"):
             p = os.path.join(QUI, "disegni", f"{i:03d}.{ext}")
             if os.path.exists(p):
                 img = p
-        carte.append(carta_html(i, gruppo, titolo, come, img))
+        carte.append(carta_html(i, gruppo, titolo, come, img, extra))
     html = '<!doctype html><meta charset="utf-8"><title>Carte del Mostrometro</title><style>' + STILE + "</style>\n" + "\n".join(carte)
     out = os.path.join(QUI, "carte.html")
     open(out, "w", encoding="utf8").write(html)
