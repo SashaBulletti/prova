@@ -104,7 +104,27 @@ def main():
     open(out, "w", encoding="utf8").write(html)
     # elenco dei codici, per il firmware
     json.dump({str(i): codice(i) for i in range(1, len(AZIONI) + 1)}, open(os.path.join(QUI, "codici.json"), "w"), indent=0)
+    scrivi_firmware()
     print("scritto", out, "con", len(carte), "carte;", "esempio QR:", url(1))
+
+def c_str(t):
+    return '"' + t.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+def scrivi_firmware():
+    """Scrive firmware/mostrometro/carte_dati.h: titolo, testo, punti, regola speciale e codice di ogni carta."""
+    righe = ["// GENERATO da carte/genera_carte.py a partire da carte/azioni.py: non modificare a mano.",
+             "#pragma once", "#include <stdint.h>", "",
+             f"#define N_CARTE {len(AZIONI)}",
+             "#define CARTA_SPECIALE_MOSTRO_SUPREMO 1   // +5 a tutti e due se l'altro ha la carta Artigli da mostro, altrimenti +2",
+             "#define PUNTI_MOSTRO_SUPREMO_DA_SOLO 2", "",
+             "struct Carta { const char* titolo; const char* come; uint8_t punti; uint8_t speciale; const char* codice; };", "",
+             "const Carta CARTE[N_CARTE] = {"]
+    for i, (gruppo, titolo, come, extra) in enumerate(AZIONI, start=1):
+        sp = 1 if extra.get("speciale") == "mostro_supremo" else 0
+        righe.append(f"  {{{c_str(titolo)}, {c_str(come)}, {PUNTI_CARTA}, {sp}, \"{codice(i)}\"}},   // {i}")
+    righe.append("};")
+    out = os.path.join(QUI, "..", "firmware", "mostrometro", "carte_dati.h")
+    open(out, "w", encoding="utf8").write("\n".join(righe) + "\n")
 
 if __name__ == "__main__":
     main()

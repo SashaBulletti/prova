@@ -13,7 +13,7 @@ mascotte/                            la mascotte: in piedi, adesivo e versione p
 hardware/mostrometro.scad            modello 3D parametrico (OpenSCAD), forme A e B
 hardware/stl/                        STL pronti: fronte.stl + retro.stl + piedistallo.stl (totem B), A_fronte.stl + A_retro.stl (mostro tondo A)
 hardware/bake_modello.py             rigenera modello.js (il 3D della guida) dopo aver cambiato gli STL
-firmware/mostrometro/                il programma (mostrometro.ino, scheda.h, audio_dati.h) e LEGGIMI.txt
+firmware/mostrometro/                il programma (mostrometro.ino, scheda.h, audio_dati.h, carte_dati.h) e LEGGIMI.txt
 firmware/prova_bottone/              prova per controllare le saldature del bottone
 firmware/genera_audio.py             genera la voce e i versi (audio_dati.h)
 firmware/prova_al_computer/          prova il programma al computer con una scheda finta (sh prova.sh)

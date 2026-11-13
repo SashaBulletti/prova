@@ -10,6 +10,8 @@
 //    per 2 secondi e piu' urli forte, piu' punti prendi (da 0 a 10). I punti si aggiungono alla tua
 //    mostruosita' e la prossima volta che premi il naso il mercurio sale.
 //  - Dal telefono si segnano anche le altre azioni da mostro (rutto a tavola, dispetti...).
+//  - Gioco delle carte: ogni carta ha un QR. Lo scansioni, scegli chi ha fatto l'azione e prende i punti.
+//    Ogni carta vale una volta per serata; il pulsante "Nuova serata" le rimette tutte in gioco.
 //  - La scheda crea un suo WiFi "Mostrometro": dal telefono apri la pagina
 //    (si apre da sola, oppure http://192.168.4.1) e vedi la classifica di famiglia.
 //  - La classifica resta salvata nella memoria anche senza corrente.
@@ -24,6 +26,7 @@
 #include <DNSServer.h>
 #include <Preferences.h>
 #include "scheda.h"          // schermo, audio, batteria, bottone: tutto cio' che riguarda la scheda
+#include "carte_dati.h"      // le 100 carte (generato da carte/genera_carte.py)
 
 #define IDLE_MS   300000UL   // dopo 5 minuti senza uso va in standby profondo (schermo e WiFi spenti)
 
@@ -287,6 +290,56 @@ String pulisci(String s) {
   return o;
 }
 
+// ---------- carte del gioco ----------
+String cartaDa[N_CARTE + 1];   // chi ha giocato ogni carta stasera ("" = ancora da giocare). L'indice 0 non si usa.
+
+void caricaCarte() {           // in memoria: "numero:nome;numero:nome;..."
+  for (int n = 0; n <= N_CARTE; n++) cartaDa[n] = "";
+  String s = prefs.getString("carte", "");
+  int i = 0;
+  while (i < (int)s.length()) {
+    int pv = s.indexOf(';', i);
+    if (pv < 0) pv = s.length();
+    String r = s.substring(i, pv);
+    int c = r.indexOf(':');
+    if (c > 0) {
+      int n = r.substring(0, c).toInt();
+      if (n >= 1 && n <= N_CARTE) cartaDa[n] = r.substring(c + 1);
+    }
+    i = pv + 1;
+  }
+}
+
+void salvaCarte() {
+  String s = "";
+  for (int n = 1; n <= N_CARTE; n++)
+    if (cartaDa[n].length()) { if (s.length()) s += ";"; s += String(n) + ":" + cartaDa[n]; }
+  prefs.putString("carte", s);
+}
+
+// il codice di 4 lettere nel QR deve essere quello giusto: cosi' nessuno si inventa carte
+bool cartaValida(int n, const String& k) { return n >= 1 && n <= N_CARTE && k.equalsIgnoreCase(CARTE[n - 1].codice); }
+
+int carteDi(const String& nome) {
+  int c = 0;
+  for (int n = 1; n <= N_CARTE; n++) if (cartaDa[n].equalsIgnoreCase(nome)) c++;
+  return c;
+}
+
+int carteGiocate() {
+  int c = 0;
+  for (int n = 1; n <= N_CARTE; n++) if (cartaDa[n].length()) c++;
+  return c;
+}
+
+String jsonTesto(const char* t) {   // testo tra virgolette, pronto per il JSON
+  String o = "\"";
+  for (const char* p = t; *p; p++) { if (*p == '"' || *p == '\\') o += '\\'; o += *p; }
+  return o + "\"";
+}
+
+void daiPunti(int i, int punti) { fam[i].bonus = constrain(fam[i].bonus + punti, 0, 100); }
+
 // ---------- misura ----------
 void servizi() { dns.processNextRequest(); server.handleClient(); }
 
@@ -392,19 +445,30 @@ button:disabled{opacity:.5}.big{font-size:3.2rem;font-weight:900;text-align:cent
 .hero{text-align:center;padding-top:6px}.hero img{width:110px;height:110px;border-radius:50%;display:block;margin:0 auto;border:3px solid #4a3480}
 .add{display:flex;gap:8px;margin:10px 0 4px}.add input{flex:1;min-width:0}.add button{width:auto;margin:0;padding:12px 16px;font-size:1rem;background:#4a3480}
 .n{cursor:pointer}.n:hover{text-decoration:underline}
+[hidden]{display:none!important}
+.carta{border:3px solid #ffd84a}.carta h2{margin:4px 0 6px;font-size:1.6rem}.k{color:#ffd84a;font-weight:700;font-size:.85rem;letter-spacing:.06em}
+.carta h3{margin-top:14px}.carta input{margin-top:8px}.a button.sel{background:linear-gradient(90deg,#ff9340,#ff3d5a)}
+.chk{display:flex;gap:10px;align-items:center;margin-top:12px;font-weight:700}.chk input{width:26px;height:26px;margin:0;flex:0 0 auto}
+.sec{background:#4a3480;font-size:1rem;padding:12px}.q{color:#9fd3ff;font-size:.8rem;font-weight:400}
 </style></head><body><main><div class="hero"><img alt="La mascotte del Mostrometro" src="data:image/jpeg;base64,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"></div><h1>MOSTROMETRO</h1><div class="s" id="bat"></div>
+<div class="c carta" id="cartaBox" hidden><div class="k" id="cNum">CARTA</div><h2 id="cTit"></h2><div id="cCome"></div>
+<div id="cGioca"><h3>Chi l'ha fatto?</h3><div class="a" id="cChi"></div><input id="cNome" maxlength="14" placeholder="...oppure scrivi il nome" autocomplete="off">
+<div id="cSup" hidden><h3>Chi è stato chiamato Mostro Supremo?</h3><div class="a" id="cAltroB"></div><input id="cAltro" maxlength="14" placeholder="...oppure scrivi il nome" autocomplete="off">
+<label class="chk"><input type="checkbox" id="cArt">Ha la carta «Artigli da mostro»</label></div>
+<button id="cOk">ASSEGNA I PUNTI</button></div><div class="m" id="cMsg"></div><button class="sec" id="cChiudi">Chiudi la carta</button></div>
 <div class="c"><input id="nome" list="l" maxlength="14" placeholder="Chi si misura?" autocomplete="off"><datalist id="l"></datalist>
 <div class="big" id="pct">--%</div><div class="m" id="msg">Scrivi il tuo nome e premi il bottone, anche quello sul Mostrometro.</div>
 <button id="go">MISURA LA MOSTRUOSITÀ</button></div>
 <div class="c"><h3>Cosa ha combinato?</h3><div class="a" id="az"></div><button id="urlo">&#127908; URLA! Il Mostrometro ti ascolta</button>
 <div class="s" id="azmsg">Scrivi il nome, tocca cosa hai fatto e poi premi di nuovo il bottone: la tua mostruosità sale.</div></div>
-<div class="c"><h3>La famiglia</h3><div class="add"><input id="nuovo" maxlength="14" placeholder="Nome nuovo" autocomplete="off"><button id="agg">Aggiungi</button></div><div class="s" id="addmsg">Tocca un nome per scegliere chi si misura.</div><div id="lista"></div><div class="s" id="crown"></div><div class="s" id="avg"></div></div></main>
+<div class="c"><h3>La famiglia</h3><div class="add"><input id="nuovo" maxlength="14" placeholder="Nome nuovo" autocomplete="off"><button id="agg">Aggiungi</button></div><div class="s" id="addmsg">Tocca un nome per scegliere chi si misura.</div><div id="lista"></div><div class="s" id="crown"></div><div class="s" id="avg"></div></div>
+<div class="c"><h3>Gioco delle carte</h3><div class="s" id="ncarte"></div><div class="s">Scansiona il QR di una carta con la fotocamera del telefono, collegato a questo WiFi.</div><button class="sec" id="serata">Nuova serata: rimetti in gioco tutte le carte</button></div></main>
 <script>
 const $=s=>document.querySelector(s);
 const pul=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x20-\x7e]/g,'').replace(/[:;"\\<>&'%]/g,'').trim().slice(0,14);
 const FR=['Angelo? Mah...','Mostrino da divano','Mostro medio','Mostro serio! Papa ha ragione','Mostro GIGANTE','SUPER MOSTRO!'];
 const liv=v=>v<10?0:v<30?1:v<50?2:v<70?3:v<90?4:5;
-let ult=-1,aspetto=false;
+let ult=-1,aspetto=false,famNomi=[],carta=null;
 async function api(p){const r=await fetch(p,{method:'POST'});return r.json()}
 async function stato(){try{const d=await(await fetch('/api/stato')).json();disegna(d)}catch(e){$('#msg').textContent='Nessuna risposta. Collegati al WiFi Mostrometro. Se lo sei, il Mostrometro dorme: premi il bottone per svegliarlo.'}}
 function disegna(d){
@@ -413,6 +477,8 @@ function disegna(d){
   $('#bat').textContent='Batteria '+d.bat+'%'+(d.bat<15?' - da ricaricare!':'');
   if(d.misurando){$('#pct').textContent='...';$('#msg').textContent='Misuro...';aspetto=true}
   else if(d.val>=0){$('#pct').textContent=d.val+'%';$('#msg').textContent=FR[liv(d.val)]}
+  famNomi=d.fam.map(f=>f.n);
+  $('#ncarte').textContent='Carte giocate stasera: '+d.carte+' su '+d.nc+'.';
   $('#l').innerHTML=d.fam.map(f=>'<option value="'+f.n+'">').join('');
   const L=$('#lista');L.innerHTML='';
   const o=[...d.fam].sort((a,b)=>b.v-a.v);
@@ -421,6 +487,7 @@ function disegna(d){
     r.innerHTML='<div class="n"></div><div class="b"><i style="width:'+Math.max(0,f.v)+'%"></i></div><div class="v">'+(f.v<0?'?':f.v+'%')+'</div><button class="x">&#10005;</button>';
     const ne=r.querySelector('.n');ne.textContent=f.n;ne.title='Scegli '+f.n;ne.onclick=async()=>{$('#nome').value=f.n;await api('/api/chi?nome='+encodeURIComponent(f.n));$('#addmsg').textContent='Ora si misura '+f.n+'.';window.scrollTo({top:0,behavior:'smooth'});stato()};
     if(f.p>0){const s=document.createElement('div');s.className='p';s.textContent='+'+f.p+' in attesa';ne.appendChild(s)}
+    if(f.c>0){const s=document.createElement('div');s.className='q';s.textContent=f.c+(f.c>1?' carte':' carta')+' stasera';ne.appendChild(s)}
     r.querySelector('.x').onclick=async()=>{if(confirm('Togliere '+f.n+'?')){await api('/api/elimina?nome='+encodeURIComponent(f.n));stato()}};
     L.appendChild(r)});
   const mis=o.filter(f=>f.v>=0);
@@ -449,17 +516,47 @@ $('#agg').onclick=aggiungi;$('#nuovo').onkeydown=e=>{if(e.key==='Enter')aggiungi
 $('#nome').onchange=()=>api('/api/chi?nome='+encodeURIComponent(pul($('#nome').value)));
 $('#urlo').onclick=async()=>{await api('/api/chi?nome='+encodeURIComponent(pul($('#nome').value)));await api('/api/urlo');stato()};
 $('#go').onclick=async()=>{await api('/api/chi?nome='+encodeURIComponent(pul($('#nome').value)));await api('/api/misura');stato()};
-stato();setInterval(stato,1000);
+function bottoni(dove,campo){const D=$(dove);D.innerHTML='';famNomi.forEach(n=>{const b=document.createElement('button');b.textContent=n;
+  b.onclick=()=>{$(campo).value=n;D.querySelectorAll('button').forEach(x=>x.classList.toggle('sel',x===b))};D.appendChild(b)});
+  $(campo).oninput=()=>D.querySelectorAll('button').forEach(x=>x.classList.remove('sel'))}
+async function apriCarta(n,k){
+  const B=$('#cartaBox'),m=$('#cMsg');B.hidden=false;m.textContent='';window.scrollTo({top:0,behavior:'smooth'});
+  let d={ok:false};try{d=await(await fetch('/api/carta?n='+n+'&k='+encodeURIComponent(k))).json()}catch(e){}
+  if(!d.ok){carta=null;$('#cNum').textContent='CARTA';$('#cTit').textContent='Carta non valida';$('#cCome').textContent='Questo QR non è una carta del Mostrometro.';$('#cGioca').hidden=true;return}
+  carta={n:n,k:k,sp:d.speciale};
+  $('#cNum').textContent='CARTA N. '+String(n).padStart(3,'0')+' · +'+(d.speciale?'2/5':d.punti)+' MOSTRO';$('#cTit').textContent=d.titolo;$('#cCome').textContent=d.come;
+  $('#cNome').value='';$('#cAltro').value='';$('#cArt').checked=false;$('#cSup').hidden=!d.speciale;
+  if(d.da){$('#cGioca').hidden=true;m.textContent='Questa carta è già stata giocata stasera da '+d.da+'.'}
+  else{$('#cGioca').hidden=false;bottoni('#cChi','#cNome');bottoni('#cAltroB','#cAltro')}}
+function togliQR(){try{history.replaceState(null,'',location.pathname)}catch(e){}}
+function chiudiCarta(){$('#cartaBox').hidden=true;carta=null;togliQR()}
+$('#cChiudi').onclick=chiudiCarta;
+$('#cOk').onclick=async()=>{if(!carta)return;const n=pul($('#cNome').value),m=$('#cMsg');
+  if(!n){m.textContent="Scegli chi ha fatto l'azione.";return}
+  let q='/api/gioca?n='+carta.n+'&k='+encodeURIComponent(carta.k)+'&nome='+encodeURIComponent(n);
+  if(carta.sp){const a=pul($('#cAltro').value);
+    if(!a){m.textContent='Scegli chi è stato chiamato Mostro Supremo.';return}
+    if(a.toLowerCase()===n.toLowerCase()){m.textContent='Non puoi chiamare Mostro Supremo te stesso!';return}
+    q+='&altro='+encodeURIComponent(a)+($('#cArt').checked?'&artigli=1':'')}
+  let d={};try{d=await api(q)}catch(e){m.textContent='Nessuna risposta, riprova.';return}
+  if(d.ok){$('#cGioca').hidden=true;$('#nome').value=d.nome;await api('/api/chi?nome='+encodeURIComponent(d.nome));
+    m.textContent=d.nome+' prende +'+d.punti+(d.puntiAltro?' e '+d.altro+' +'+d.puntiAltro:'')+'! Premi il bottone per vedere quanto sale.';togliQR()}
+  else if(d.usata){$('#cGioca').hidden=true;m.textContent='Questa carta è già stata giocata stasera da '+d.da+'.'}
+  else if(d.pieno){m.textContent='La famiglia è piena (12 persone): togline una con la X.'}
+  else{m.textContent='Carta non valida.'}
+  stato()};
+$('#serata').onclick=async()=>{if(confirm('Nuova serata? Tutte le carte tornano giocabili. I punti restano.')){await api('/api/nuovaserata');stato()}};
+stato().then(()=>{const u=new URLSearchParams(location.search);if(u.get('n'))apriCarta(+u.get('n'),u.get('k')||'')});setInterval(stato,1000);
 </script></body></html>)=====";
 
 String statoJson() {
   String j = "{\"bat\":" + String(batteriaPct()) + ",\"chi\":\"" + chi + "\",\"val\":" + String(ultimo) + ",\"misurando\":" +
-             (misurando || richiestaMisura ? "true" : "false") + ",\"fam\":[";
+             (misurando || richiestaMisura ? "true" : "false") + ",\"carte\":" + String(carteGiocate()) + ",\"nc\":" + String(N_CARTE) + ",\"fam\":[";
   for (int i = 0; i < nFam; i++) {
     if (i) j += ",";
     int att = valoreAttuale(i);
     int p = (fam[i].val >= 0 && att > fam[i].val) ? att - fam[i].val : 0;   // punti in attesa del prossimo bottone
-    j += "{\"n\":\"" + fam[i].nome + "\",\"v\":" + String(fam[i].val) + ",\"p\":" + String(p) + "}";
+    j += "{\"n\":\"" + fam[i].nome + "\",\"v\":" + String(fam[i].val) + ",\"p\":" + String(p) + ",\"c\":" + String(carteDi(fam[i].nome)) + "}";
   }
   return j + "]}";
 }
@@ -470,6 +567,7 @@ void setup() {
 
   prefs.begin("mostro", false);
   carica();
+  caricaCarte();
   chi = prefs.getString("chi", "");
 
   WiFi.mode(WIFI_AP);
@@ -477,6 +575,49 @@ void setup() {
   dns.start(53, "*", WiFi.softAPIP());                   // fa aprire la pagina da sola sul telefono
 
   server.on("/", HTTP_GET, []() { server.send_P(200, "text/html; charset=utf-8", PAGINA); });
+  server.on("/c", HTTP_GET, []() { server.send_P(200, "text/html; charset=utf-8", PAGINA); });   // il QR delle carte
+  server.on("/api/carta", HTTP_GET, []() {               // cosa c'e' scritto su una carta e se e' gia' stata giocata
+    int n = server.arg("n").toInt();
+    if (!cartaValida(n, server.arg("k"))) { server.send(404, "application/json", "{\"ok\":false}"); return; }
+    const Carta& c = CARTE[n - 1];
+    server.send(200, "application/json", "{\"ok\":true,\"n\":" + String(n) + ",\"titolo\":" + jsonTesto(c.titolo) +
+                ",\"come\":" + jsonTesto(c.come) + ",\"punti\":" + String(c.punti) + ",\"speciale\":" + String(c.speciale) +
+                ",\"da\":\"" + cartaDa[n] + "\"}");
+  });
+  server.on("/api/gioca", HTTP_POST, []() {              // carta giocata: punti a chi l'ha fatta
+    int n = server.arg("n").toInt();
+    if (!cartaValida(n, server.arg("k"))) { server.send(404, "application/json", "{\"ok\":false}"); return; }
+    if (cartaDa[n].length()) { server.send(409, "application/json", "{\"ok\":false,\"usata\":true,\"da\":\"" + cartaDa[n] + "\"}"); return; }
+    String nome = pulisci(server.arg("nome"));
+    if (nome.length() == 0) { server.send(400, "application/json", "{\"ok\":false}"); return; }
+    const Carta& c = CARTE[n - 1];
+    int punti = c.punti, puntiAltro = 0;
+    String altro = "";
+    if (c.speciale == CARTA_SPECIALE_MOSTRO_SUPREMO) {
+      // Mostro Supremo: se chi e' stato chiamato cosi' ha la carta "Artigli da mostro", 5 punti a testa.
+      // Altrimenti solo 2 a chi gioca. La carta Artigli NON viene consumata: chi ce l'ha puo' ancora giocarla.
+      altro = pulisci(server.arg("altro"));
+      if (server.arg("artigli") == "1" && altro.length() && !altro.equalsIgnoreCase(nome)) puntiAltro = c.punti;
+      else punti = PUNTI_MOSTRO_SUPREMO_DA_SOLO;
+    }
+    int nuovi = (trova(nome) < 0) + (puntiAltro && trova(altro) < 0);
+    if (nFam + nuovi > MAX_FAM) { server.send(409, "application/json", "{\"ok\":false,\"pieno\":true}"); return; }
+    int i = trova(nome); if (i < 0) i = crea(nome);
+    daiPunti(i, punti);
+    if (puntiAltro) { int j = trova(altro); if (j < 0) j = crea(altro); daiPunti(j, puntiAltro); altro = fam[j].nome; }
+    cartaDa[n] = fam[i].nome;
+    salva(); salvaCarte();
+    if (!misurando) audioAccoda(CLIP_BIP);
+    attivita();
+    server.send(200, "application/json", "{\"ok\":true,\"nome\":\"" + fam[i].nome + "\",\"punti\":" + String(punti) +
+                ",\"altro\":\"" + (puntiAltro ? altro : String("")) + "\",\"puntiAltro\":" + String(puntiAltro) + "}");
+  });
+  server.on("/api/nuovaserata", HTTP_POST, []() {        // tutte le carte tornano giocabili; i punti restano
+    for (int n = 0; n <= N_CARTE; n++) cartaDa[n] = "";
+    salvaCarte();
+    attivita();
+    server.send(200, "application/json", "{\"ok\":true}");
+  });
   server.on("/api/stato", HTTP_GET, []() { server.send(200, "application/json", statoJson()); });
   server.on("/api/chi", HTTP_POST, []() {
     chi = pulisci(server.arg("nome"));

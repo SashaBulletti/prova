@@ -86,7 +86,8 @@ struct WebServer {
   void onNotFound(std::function<void()> f) { nf = f; }
   void begin() {}
   void handleClient() {}
-  void send(int, const char*, const String& b) { last = b.s; }
+  int code = 0;
+  void send(int c, const char*, const String& b) { code = c; last = b.s; }
   void send_P(int, const char*, const char*) {}
   void sendHeader(const char*, const char*) {}
   String arg(const char* n) { return String(args.count(n) ? args[n] : ""); }

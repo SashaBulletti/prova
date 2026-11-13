@@ -6,6 +6,7 @@ Questa cartella contiene il programma per la scheda Waveshare ESP32-S3-Touch-LCD
   mostrometro.ino   il programma: misura, WiFi e pagina del telefono, standby
   scheda.h          tutto cio' che riguarda la scheda: schermo, audio, microfono, batteria, bottone
   audio_dati.h      i suoni (numeri da 0 a 100, versi del mostro...). Si rigenera con ../genera_audio.py
+  carte_dati.h      le 100 carte del gioco (titolo, testo, codice del QR). Si rigenera con ../../carte/genera_carte.py
 
 PRIMA DI CARICARLO bisogna aggiungere qui dentro alcuni file del produttore (servono per far suonare l'audio):
 

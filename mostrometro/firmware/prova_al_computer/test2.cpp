@@ -118,6 +118,46 @@ int main() {
   verifica(nFam == MAX_FAM && trova("Tredicesimo") < 0 && server.last.find("pieno") != std::string::npos,
            "con 12 persone la tredicesima non entra e l'app lo dice");
 
+  std::cout << "\nGioco delle carte\n";
+  auto cod = [](int n) { return std::string(CARTE[n - 1].codice); };
+  call("/api/carta", {{"n", "1"}, {"k", "ZZZZ"}});
+  verifica(server.code == 404, "un QR con il codice sbagliato non vale");
+  call("/api/carta", {{"n", "1"}, {"k", cod(1)}});
+  std::cout << "   " << server.last << "\n";
+  verifica(server.code == 200 && server.last.find("Rutta a tavola!") != std::string::npos && server.last.find("\"da\":\"\"") != std::string::npos,
+           "la carta 1 si legge ed e' ancora da giocare");
+  int bPapa = fam[trova("Papa")].bonus;
+  clipLog.clear();
+  call("/api/gioca", {{"n", "1"}, {"k", cod(1)}, {"nome", "papa"}});
+  aspetta();
+  verifica(server.code == 200 && fam[trova("Papa")].bonus == bPapa + 5 && clipLog.size() == 1 && clipLog[0] == CLIP_BIP,
+           "Papa gioca la carta 1: +5 e un bip");
+  call("/api/gioca", {{"n", "1"}, {"k", cod(1)}, {"nome", "Nonna"}});
+  verifica(server.code == 409 && server.last.find("Papa") != std::string::npos && fam[trova("Papa")].bonus == bPapa + 5,
+           "la stessa carta non vale due volte, e l'app dice chi l'ha gia' giocata");
+  call("/api/stato");
+  verifica(server.last.find("\"carte\":1,") != std::string::npos && server.last.find("\"n\":\"Papa\",\"v\":47,\"p\":5,\"c\":1}") != std::string::npos,
+           "lo stato dice 1 carta giocata, e Papa ha 1 carta e +5 in attesa");
+  call("/api/gioca", {{"n", "2"}, {"k", cod(2)}, {"nome", "Sconosciuto"}});
+  verifica(server.code == 409 && server.last.find("pieno") != std::string::npos && trova("Sconosciuto") < 0, "con la famiglia piena un nome nuovo non entra");
+
+  std::cout << "\nMostro Supremo (carta 57)\n";
+  verifica(CARTE[56].speciale == CARTA_SPECIALE_MOSTRO_SUPREMO && std::string(CARTE[29].titolo) == "Artigli da mostro", "la 57 e' speciale e la 30 e' Artigli da mostro");
+  int bN = fam[trova("Nonna")].bonus; bPapa = fam[trova("Papa")].bonus;
+  call("/api/gioca", {{"n", "57"}, {"k", cod(57)}, {"nome", "Nonna"}, {"altro", "Papa"}});
+  verifica(fam[trova("Nonna")].bonus == bN + 2 && fam[trova("Papa")].bonus == bPapa, "senza gli artigli: Nonna +2, Papa niente");
+  call("/api/nuovaserata");
+  call("/api/carta", {{"n", "1"}, {"k", cod(1)}});
+  verifica(server.last.find("\"da\":\"\"") != std::string::npos && fam[trova("Papa")].bonus == bPapa, "nuova serata: le carte tornano giocabili, i punti restano");
+  bN = fam[trova("Nonna")].bonus;
+  call("/api/gioca", {{"n", "57"}, {"k", cod(57)}, {"nome", "Nonna"}, {"altro", "papa"}, {"artigli", "1"}});
+  std::cout << "   " << server.last << "\n";
+  verifica(fam[trova("Nonna")].bonus == bN + 5 && fam[trova("Papa")].bonus == bPapa + 5, "con gli artigli: 5 punti a testa");
+  call("/api/gioca", {{"n", "30"}, {"k", cod(30)}, {"nome", "Papa"}});
+  verifica(server.code == 200 && fam[trova("Papa")].bonus == bPapa + 10, "Papa puo' ancora giocare la sua carta Artigli da mostro");
+  caricaCarte();
+  verifica(cartaDa[57] == String("Nonna") && cartaDa[30] == String("Papa") && cartaDa[1].length() == 0, "le carte giocate restano salvate in memoria");
+
   std::cout << "\n" << ok << " controlli su " << tot << " superati\n";
   return ok == tot ? 0 : 1;
 }
