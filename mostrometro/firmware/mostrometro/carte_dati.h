@@ -75,29 +75,29 @@ const Carta CARTE[N_CARTE] = {
   {"Previsioni del tempo", "Rispondi alle prossime domande che ti fanno imitando il meteorologo del telegiornale.", 5, 0, "QXGK"},   // 64
   {"Balla senza musica", "Alzati e balla per 30 secondi, in silenzio.", 5, 0, "LYGW"},   // 65
   {"Passo del dinosauro", "Hai le braccine corte da T-rex e non arrivi alle posate: imitalo finché qualcuno non ti aiuta. Puoi parlare solo ruggendo.", 5, 0, "LDCD"},   // 66
-  {"Giravolta", "Fai una giravolta prima di sederti.", 5, 0, "ALMW"},   // 67
+  {"Giravolta", "Fai una giravolta a ogni boccone, finché qualcuno non se ne accorge.", 5, 0, "ALMW"},   // 67
   {"Il pollo", "Fai il pollo con le braccia e gira intorno al tavolo.", 5, 0, "EYTZ"},   // 68
   {"Saltella", "Fai il giro del tavolo saltellando su un piede.", 5, 0, "VRJR"},   // 69
-  {"Robot che balla", "Balla come un robot per 10 secondi.", 5, 0, "EFLD"},   // 70
-  {"Moonwalk", "Cammina all'indietro come Michael Jackson.", 5, 0, "EBJT"},   // 71
-  {"Inchino reale", "Fai un inchino enorme a qualcuno.", 5, 0, "PFXR"},   // 72
+  {"Robot che balla", "Balla come un robot per 30 secondi.", 5, 0, "EFLD"},   // 70
+  {"Moonwalk", "Cammina all'indietro come Michael Jackson dicendo: «Ciao, sono Michael Jackson e mi sono perso a Poggibonsi!»", 5, 0, "EBJT"},   // 71
+  {"Inchino reale", "Fai un inchino enorme, fino a sbattere (piano!) la testa sul tavolo.", 5, 0, "PFXR"},   // 72
   {"Supereroe in volo", "Fingi di volare come un supereroe per la stanza.", 5, 0, "NJFP"},   // 73
   {"Ginnastica", "Fai 5 saltelli a braccia aperte, all'improvviso.", 5, 0, "GSPN"},   // 74
   {"Pinguino", "Cammina come un pinguino fino alla cucina.", 5, 0, "QHQU"},   // 75
-  {"Mossa da ninja", "Fai una mossa da ninja con il verso: HIA!", 5, 0, "ATEJ"},   // 76
+  {"Mossa da ninja", "Lancia a tutti degli shuriken creati sul momento.", 5, 0, "ATEJ"},   // 76
   {"Zanne di patatine", "Mettiti due patatine (o due grissini) come zanne.", 5, 0, "NQWV"},   // 77
-  {"Telefono di pane", "Usa un pezzo di pane come telefono: «Pronto?»", 5, 0, "PKME"},   // 78
+  {"Telefono di pane", "Usa un pezzo di pane come telefono: «Pronto?», poi passalo a qualcuno.", 5, 0, "PKME"},   // 78
   {"Parla al cibo", "Dai un nome al tuo cibo e parlagli.", 5, 0, "CMEN"},   // 79
-  {"Annusa come un cane", "Annusa il piatto come un cane, molto da vicino.", 5, 0, "DDPD"},   // 80
+  {"Annusa come un cane", "Annusa il piatto del tuo vicino come un cane, molto da vicino.", 5, 0, "DDPD"},   // 80
   {"Brindisi al mostro", "Alza il bicchiere e brinda: «Al Mostrometro!»", 5, 0, "RVNP"},   // 81
   {"Assaggiatore", "Assaggia un boccone e dai un voto da giudice di cucina.", 5, 0, "HGKT"},   // 82
-  {"Bocca piena", "Prova a dire «sopra la panca la capra campa» dopo un boccone.", 5, 0, "LQZM"},   // 83
+  {"Bocca piena", "Fatti capire con la bocca piena.", 5, 0, "LQZM"},   // 83
   {"Il pirata", "Parla al cibo come un pirata: «Arrr, ti mangerò!»", 5, 0, "LZFE"},   // 84
-  {"Occhi di oliva", "Metti due olive (o due cose rotonde) davanti agli occhi.", 5, 0, "HPZK"},   // 85
-  {"Chef matto", "Racconta come hai «cucinato» il tuo piatto, inventando tutto.", 5, 0, "MCYA"},   // 86
-  {"Sono pieno!", "Gonfia la pancia e di': «Non ce la faccio più!»", 5, 0, "ELLN"},   // 87
-  {"Mangia a occhi chiusi", "Mangia un boccone a occhi chiusi, facendo «mmmh».", 5, 0, "LFMZ"},   // 88
-  {"Cappello di tovagliolo", "Mettiti il tovagliolo in testa come un cappello.", 5, 0, "EWQM"},   // 89
+  {"L'investigatore", "Attira l'attenzione di tutti e annuncia il colpevole di un omicidio inventato.", 5, 0, "HPZK"},   // 85
+  {"Chef matto", "Racconta come hai «cucinato» un piatto, inventando tutto.", 5, 0, "MCYA"},   // 86
+  {"Sono pieno!", "Gonfia la pancia e di': «Non ce la faccio più!», poi continua a mangiare con foga.", 5, 0, "ELLN"},   // 87
+  {"A occhi chiusi", "Servi da mangiare alla tavolata a occhi chiusi.", 5, 0, "LFMZ"},   // 88
+  {"Attore a sorpresa", "All'improvviso recita una scena del tuo film preferito.", 5, 0, "EWQM"},   // 89
   {"Abbraccio da orso", "Abbraccia qualcuno ruggendo come un orso.", 5, 0, "GSAS"},   // 90
   {"Applauso infinito", "Applaudi da solo finché qualcuno ti chiede perché.", 5, 0, "VBQS"},   // 91
   {"Risata contagiosa", "Ridi forte senza motivo per 10 secondi.", 5, 0, "XFDP"},   // 92
@@ -105,7 +105,7 @@ const Carta CARTE[N_CARTE] = {
   {"Selfie con faccia", "Fai un selfie con qualcuno facendo la faccia da mostro.", 5, 0, "CSDQ"},   // 94
   {"Interrogatorio", "Chiedi a qualcuno: «Dov'eri ieri alle 8?» molto serio.", 5, 0, "YSJD"},   // 95
   {"Coro da stadio", "Fai partire un coro da stadio per il Mostrometro.", 5, 0, "YBUA"},   // 96
-  {"Il mago", "Fai una «magia»: tocca un oggetto e di' «abracadabra».", 5, 0, "EBGH"},   // 97
+  {"Il mago", "Fai una magia, inventata sul momento.", 5, 0, "EBGH"},   // 97
   {"Poeta", "Recita una poesia di due righe dedicata a qualcuno.", 5, 0, "PHFQ"},   // 98
   {"Pausa drammatica", "Alzati, guarda tutti, poi risiediti senza dire niente.", 5, 0, "PZJD"},   // 99
   {"Saluto militare", "Fai il saluto militare a ogni persona che parla.", 5, 0, "XQEN"},   // 100
