@@ -99,7 +99,7 @@ main{padding-left:0;padding-right:0}
 
 out = ('<title>App Mostrometro</title>\n<meta name="claude:viewport-fit-sides" content="cover">\n<style>'
        + stile + EXTRA + "</style>\n" + html_main + "\n<script>" + SIMULATORE + "</script>\n<script>" + js
-       + "\ndocument.getElementById('simCarta').onclick=function(){simulaCarta(0)};document.getElementById('simSupremo').onclick=function(){simulaCarta(57)};</script>\n")
+       + "\ndocument.getElementById('simCarta').onclick=function(){simulaCarta(0)};document.getElementById('simSupremo').onclick=function(){simulaCarta(57)};function daLink(){var m=/^#carta-(\\d+)-([A-Za-z]{4})$/.exec(location.hash);if(m)setTimeout(function(){apriCarta(+m[1],m[2].toUpperCase())},700)}daLink();window.addEventListener('hashchange',daLink);</script>\n")
 out = out.replace("__CARTE__", json.dumps(CARTE, ensure_ascii=False)).replace("__PC__", str(PUNTI_CARTA))
 open(USCITA, "w", encoding="utf8").write(out)
 print("scritto", os.path.abspath(USCITA), len(out) // 1024, "KB")

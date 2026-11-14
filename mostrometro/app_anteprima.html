@@ -187,4 +187,4 @@ $('#cOk').onclick=async()=>{if(!carta)return;const n=pul($('#cNome').value),m=$(
 $('#serata').onclick=async()=>{if(confirm('Nuova serata? Tutte le carte tornano giocabili. I punti restano.')){await api('/api/nuovaserata');stato()}};
 stato().then(()=>{const u=new URLSearchParams(location.search);if(u.get('n'))apriCarta(+u.get('n'),u.get('k')||'')});setInterval(stato,1000);
 
-document.getElementById('simCarta').onclick=function(){simulaCarta(0)};document.getElementById('simSupremo').onclick=function(){simulaCarta(57)};</script>
+document.getElementById('simCarta').onclick=function(){simulaCarta(0)};document.getElementById('simSupremo').onclick=function(){simulaCarta(57)};function daLink(){var m=/^#carta-(\d+)-([A-Za-z]{4})$/.exec(location.hash);if(m)setTimeout(function(){apriCarta(+m[1],m[2].toUpperCase())},700)}daLink();window.addEventListener('hashchange',daLink);</script>
