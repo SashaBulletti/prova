@@ -138,9 +138,10 @@ def pagina(titolo, fogli, formato, stile):
     return (f'<!doctype html><meta charset="utf-8"><title>{titolo}</title><style>@page{{size:{formato};margin:0}}'
             + BASE + stile + "</style>\n" + "\n".join(fogli))
 
-open(os.path.join(QUI, "scatola_A3.html"), "w", encoding="utf8").write(pagina("Coperchio", [coperchio()], "A3", STILE_COP))
-open(os.path.join(QUI, "scatola_A4.html"), "w", encoding="utf8").write(
-    pagina("Lati e fondo", [lati_coperchio(), lati_fondo(), sotto()], "A4 landscape", STILE_STRISCE + STILE_SOTTO))
+if __name__ == "__main__":
+    open(os.path.join(QUI, "scatola_A3.html"), "w", encoding="utf8").write(pagina("Coperchio", [coperchio()], "A3", STILE_COP))
+    open(os.path.join(QUI, "scatola_A4.html"), "w", encoding="utf8").write(
+        pagina("Lati e fondo", [lati_coperchio(), lati_fondo(), sotto()], "A4 landscape", STILE_STRISCE + STILE_SOTTO))
 
-print("fondo esterno", FONDO_EST, "coperchio esterno", COP_EST)
-print("etichetta coperchio", ETI_COP, "lati coperchio", LATI_COP, "lati fondo", LATI_FONDO)
+    print("fondo esterno", FONDO_EST, "coperchio esterno", COP_EST)
+    print("etichetta coperchio", ETI_COP, "lati coperchio", LATI_COP, "lati fondo", LATI_FONDO)

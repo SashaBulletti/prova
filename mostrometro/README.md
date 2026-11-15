@@ -21,7 +21,7 @@ carte/azioni.py                      le 100 azioni del gioco (si cambiano qui)
 carte/genera_carte.py, stampa.py     impaginano le carte (fronte, retro, QR) e scrivono carte_dati.h per il programma
 carte/disegni/                       i 100 disegni delle carte, fatti con Higgsfield
 scatola/inserto.scad, scatola/stl/   l'inserto 3D che tiene fermi il Mostrometro e le carte nella scatola
-scatola/grafica.py                   le etichette della scatola da stampare (coperchio A3, lati e fondo A4)
+scatola/fustella.py                  la scatola in un pezzo da stampare su 50 x 70 cm (grafica + taglio/piega + misure)
 scatola/guida_scatola.html           come costruire la scatola
 ```
 

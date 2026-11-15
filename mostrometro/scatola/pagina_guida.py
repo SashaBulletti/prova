@@ -13,16 +13,6 @@ def img_carta1():
     b = io.BytesIO(); Image.open(p).convert("RGB").resize((372, 520)).save(b, "JPEG", quality=85)
     return "data:image/jpeg;base64," + base64.b64encode(b.getvalue()).decode()
 
-TAGLI = [
-    ("Fondo", "Base", "227 × 213", 1),
-    ("Fondo", "Lato lungo", "237 × 50", 2),
-    ("Fondo", "Lato corto", "213 × 50", 2),
-    ("Coperchio", "Sopra", "238 × 224", 1),
-    ("Coperchio", "Lato lungo", "248 × 30", 2),
-    ("Coperchio", "Lato corto", "224 × 30", 2),
-]
-righe = "".join(f"<tr><td>{a}</td><td>{b}</td><td class='num'>{c}</td><td class='num'>{d}</td></tr>" for a, b, c, d in TAGLI)
-
 pagina = f'''<title>Scatola del Mostrometro</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -72,7 +62,7 @@ code{{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgrou
     <div>
       <div class="kicker">Mostrometro · il gioco in scatola</div>
       <h1>Scatola del Mostrometro</h1>
-      <p class="intro">Tutto per trasformare il Mostrometro in un gioco da tavolo: il retro delle carte, la scatola di cartone con le etichette stampate e l'inserto 3D che tiene fermi il Mostrometro e le 100 carte.</p>
+      <p class="intro">Tutto per trasformare il Mostrometro in un gioco da tavolo: il retro delle carte, la scatola tutta in un pezzo da stampare e l'inserto 3D che tiene fermi il Mostrometro e le 100 carte.</p>
     </div>
     <img src="{img("coperchio.jpg")}" alt="L'etichetta del coperchio: il mostro viola che ruggisce felice tra le carte, con il titolo MOSTROMETRO">
   </header>
@@ -97,41 +87,43 @@ code{{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgrou
   </section>
 
   <section class="parte">
-    <div><div class="kicker">2 · La scatola</div><h2>Cartone piuma e etichette</h2>
-      <p class="intro">Fuori misura <span class="misura">248 × 234 × 50 mm</span>. È fatta su misura per l'inserto, così dentro non balla niente.</p></div>
+    <div><div class="kicker">2 · La scatola</div><h2>Tutta in un pezzo</h2>
+      <p class="intro">Non serve comprare una scatola: coperchio e fondo si stampano già con la grafica su un foglio di cartoncino da 50 × 70 cm, poi si ritagliano, si piegano e si incollano. Chiusa misura circa <span class="misura">231 × 217 × 46 mm</span>, su misura per l'inserto.</p></div>
     <div class="due">
+      <figure><img src="{img("fustella.jpg")}" alt="Il foglio da stampare: in alto il coperchio aperto con la copertina e le 4 pareti, in basso il fondo aperto con le regole e le 4 pareti"><figcaption>Il foglio da stampare. Linea nera: taglia. Tratteggio bianco: piega.</figcaption></figure>
+      <figure><img src="{img("fustella_misure.jpg")}" alt="Il disegno tecnico con le misure: coperchio 230 per 216 con pareti da 30, fondo 227 per 213 con pareti da 45"><figcaption>Il disegno con le misure (pagina 2 del PDF).</figcaption></figure>
+    </div>
+    <div class="due">
+      <div class="tab box">
+        <table>
+          <thead><tr><th>Pezzo</th><th class="num">Pannello (mm)</th><th class="num">Pareti</th><th class="num">Aperto (mm)</th></tr></thead>
+          <tbody>
+            <tr><td>Coperchio</td><td class="num">230 × 216</td><td class="num">30 mm</td><td class="num">290 × 276</td></tr>
+            <tr><td>Fondo</td><td class="num">227 × 213</td><td class="num">45 mm</td><td class="num">317 × 303</td></tr>
+            <tr><td>Alette negli angoli</td><td class="num">15</td><td class="num">8 in tutto</td><td class="num"></td></tr>
+          </tbody>
+        </table>
+      </div>
       <div class="box">
         <h3 style="margin-top:0">Ti serve</h3>
         <ul class="lista">
-          <li>1 foglio di <b>cartone piuma da 5 mm</b>, 50 × 70 cm (cartoleria o negozio di belle arti)</li>
-          <li>taglierino nuovo, righello di metallo, una base da taglio</li>
-          <li>colla vinilica o pistola a caldo, colla stick per le etichette</li>
-          <li>le etichette stampate: <b>1 foglio A3</b> (in copisteria) e <b>3 fogli A4</b></li>
+          <li>la stampa di <code>scatola_fustella.pdf</code> (solo la pagina 1) su <b>cartoncino 300–350 g, formato 50 × 70 cm</b>, in copisteria, al 100%</li>
+          <li>taglierino, righello di metallo, base da taglio</li>
+          <li>una penna scarica (o il dorso di un coltello) per segnare le pieghe</li>
+          <li>colla vinilica o nastro biadesivo</li>
         </ul>
       </div>
-      <div class="tab box">
-        <table>
-          <thead><tr><th>Parte</th><th>Pezzo</th><th class="num">Misura (mm)</th><th class="num">Quanti</th></tr></thead>
-          <tbody>{righe}</tbody>
-        </table>
-      </div>
     </div>
-    <div class="due">
-      <div>
-        <h3 style="margin-top:0">Come si monta</h3>
-        <ol class="passi">
-          <li>Disegna i pezzi a matita e tagliali con più passate leggere, il taglierino sempre dritto.</li>
-          <li><b>Fondo:</b> appoggia la base sul tavolo. Incolla i due lati lunghi <b>fuori</b> dalla base, in piedi; poi i due lati corti, in mezzo ai lunghi.</li>
-          <li><b>Coperchio:</b> uguale, con il pezzo «sopra» e i lati da 30 mm.</li>
-          <li>Prova: il coperchio deve scendere sul fondo senza forzare.</li>
-          <li>Incolla l'etichetta grande sopra il coperchio e le 4 strisce strette sui lati del coperchio.</li>
-          <li>Incolla le 4 strisce alte sui lati del fondo, partendo dal basso, e l'etichetta «come si gioca» sotto la scatola.</li>
-        </ol>
-      </div>
-      <div class="file">
-        <figure><img src="{img("lati.jpg")}" alt="Le 4 strisce viola per i lati del coperchio, con la scritta MOSTROMETRO"><figcaption>Le strisce per i lati del coperchio</figcaption></figure>
-        <figure><img src="{img("sotto.jpg")}" alt="L'etichetta per sotto la scatola: illustrazione dei mostri a cena e le regole in 5 passi"><figcaption>Sotto la scatola: le regole in 5 passi</figcaption></figure>
-      </div>
+    <div>
+      <h3 style="margin-top:0">Come si monta</h3>
+      <ol class="passi">
+        <li>Ritaglia i due pezzi lungo la linea nera, compresi i 4 piccoli tagli vicino alle alette di ogni pezzo.</li>
+        <li>Appoggia il righello su ogni linea tratteggiata e ripassala con la penna scarica, premendo: così la piega viene dritta.</li>
+        <li>Piega tutte le pareti verso l'interno (la grafica resta fuori) e piega le alette.</li>
+        <li>Metti la colla sulle alette e incollale dentro le pareti accanto. Tieni stretto un minuto per ogni angolo.</li>
+        <li>Prova: il coperchio scende sul fondo senza forzare. Poi metti dentro l'inserto, le carte e il Mostrometro.</li>
+      </ol>
+      <div class="box attenzione" style="margin-top:1rem">Vuoi comprare una scatola già fatta? Deve misurare dentro almeno <b>23 × 22 × 4,5 cm</b>: va bene per esempio una scatola quadrata da 25 × 25 × 5 cm. Dentro avanzano un paio di centimetri.</div>
     </div>
   </section>
 
@@ -151,7 +143,7 @@ code{{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgrou
           <li>Niente supporti. Strati da 0,28 mm, riempimento 10–15%.</li>
           <li>Colori: viola per il mostro, giallo per le carte, come le corna.</li>
         </ul>
-        <div class="box attenzione" style="margin-top:1rem">Il naso (il bottone) sporge sopra l'inserto: per questo la scatola dentro è alta 45 mm. Se il tuo bottone è più alto, dimmelo e alzo la scatola.</div>
+        <div class="box attenzione" style="margin-top:1rem">Il naso (il bottone) sporge sopra l'inserto: per questo il fondo della scatola è alto 45 mm. Se il tuo bottone è più alto, dimmelo e alzo la scatola.</div>
       </div>
     </div>
   </section>
@@ -161,8 +153,7 @@ code{{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgrou
     <div class="box file">
       <div><code>carte_da_stampare.pdf</code><span>24 pagine A4: fronti e retro alternati.</span></div>
       <div><code>retro_carte.pdf</code><span>1 pagina A4: solo i retro, se stampi i due lati separati.</span></div>
-      <div><code>scatola_A3.pdf</code><span>L'etichetta del coperchio, su A3.</span></div>
-      <div><code>scatola_A4.pdf</code><span>3 pagine A4: lati del coperchio, lati del fondo, etichetta di sotto.</span></div>
+      <div><code>scatola_fustella.pdf</code><span>Pagina 1: la scatola da stampare su 50 × 70 cm. Pagina 2: il disegno con le misure.</span></div>
       <div><code>inserto_mostro.stl</code><span>Il vassoio del Mostrometro.</span></div>
       <div><code>inserto_carte.stl</code><span>Il vassoio delle carte.</span></div>
     </div>
