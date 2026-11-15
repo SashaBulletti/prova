@@ -88,18 +88,18 @@ code{{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgrou
 
   <section class="parte">
     <div><div class="kicker">2 · La scatola</div><h2>Tutta in un pezzo</h2>
-      <p class="intro">Non serve comprare una scatola: coperchio e fondo si stampano già con la grafica su un foglio di cartoncino da 50 × 70 cm, poi si ritagliano, si piegano e si incollano. Chiusa misura circa <span class="misura">231 × 217 × 46 mm</span>, su misura per l'inserto.</p></div>
+      <p class="intro">Non serve comprare una scatola: coperchio e fondo si stampano già con la grafica su due fogli di cartoncino da 50 × 70 cm, poi si ritagliano, si piegano e si incollano. Ogni parete è doppia: la parte interna si rimbocca dentro sopra il bordo, così il cartone tagliato e le alette non si vedono. Chiusa misura circa <span class="misura">234 × 220 × 46 mm</span>.</p></div>
     <div class="due">
-      <figure><img src="{img("fustella.jpg")}" alt="Il foglio da stampare: in alto il coperchio aperto con la copertina e le 4 pareti, in basso il fondo aperto con le regole e le 4 pareti"><figcaption>Il foglio da stampare. Linea nera: taglia. Tratteggio bianco: piega.</figcaption></figure>
-      <figure><img src="{img("fustella_misure.jpg")}" alt="Il disegno tecnico con le misure: coperchio 230 per 216 con pareti da 30, fondo 227 per 213 con pareti da 45"><figcaption>Il disegno con le misure (pagina 2 del PDF).</figcaption></figure>
+      <figure><img src="{img("fustella.jpg")}" alt="I due fogli da stampare: il coperchio aperto con la copertina e il fondo aperto con le regole, ognuno con le pareti doppie"><figcaption>Pagine 1 e 2: coperchio e fondo. Linea nera: taglia. Tratteggio bianco: piega.</figcaption></figure>
+      <figure><img src="{img("fustella_misure.jpg")}" alt="Il disegno con le misure: coperchio 233 per 219, pareti da 30 più rimbocco da 29; fondo 229 per 215, pareti da 45 più rimbocco da 44"><figcaption>Il disegno con le misure (pagina 3 del PDF).</figcaption></figure>
     </div>
     <div class="due">
       <div class="tab box">
         <table>
-          <thead><tr><th>Pezzo</th><th class="num">Pannello (mm)</th><th class="num">Pareti</th><th class="num">Aperto (mm)</th></tr></thead>
+          <thead><tr><th>Pezzo</th><th class="num">Pannello (mm)</th><th class="num">Parete + rimbocco</th><th class="num">Aperto (mm)</th></tr></thead>
           <tbody>
-            <tr><td>Coperchio</td><td class="num">230 × 216</td><td class="num">30 mm</td><td class="num">290 × 276</td></tr>
-            <tr><td>Fondo</td><td class="num">227 × 213</td><td class="num">45 mm</td><td class="num">317 × 303</td></tr>
+            <tr><td>Coperchio</td><td class="num">233 × 219</td><td class="num">30 + 29 mm</td><td class="num">351 × 337</td></tr>
+            <tr><td>Fondo</td><td class="num">229 × 215</td><td class="num">45 + 44 mm</td><td class="num">407 × 393</td></tr>
             <tr><td>Alette negli angoli</td><td class="num">15</td><td class="num">8 in tutto</td><td class="num"></td></tr>
           </tbody>
         </table>
@@ -107,7 +107,7 @@ code{{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgrou
       <div class="box">
         <h3 style="margin-top:0">Ti serve</h3>
         <ul class="lista">
-          <li>la stampa di <code>scatola_fustella.pdf</code> (solo la pagina 1) su <b>cartoncino 300–350 g, formato 50 × 70 cm</b>, in copisteria, al 100%</li>
+          <li>la stampa di <code>scatola_fustella.pdf</code>, <b>pagine 1 e 2</b>, su <b>2 fogli di cartoncino 300–350 g da 50 × 70 cm</b>, in copisteria, al 100%</li>
           <li>taglierino, righello di metallo, base da taglio</li>
           <li>una penna scarica (o il dorso di un coltello) per segnare le pieghe</li>
           <li>colla vinilica o nastro biadesivo</li>
@@ -119,8 +119,9 @@ code{{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgrou
       <ol class="passi">
         <li>Ritaglia i due pezzi lungo la linea nera, compresi i 4 piccoli tagli vicino alle alette di ogni pezzo.</li>
         <li>Appoggia il righello su ogni linea tratteggiata e ripassala con la penna scarica, premendo: così la piega viene dritta.</li>
-        <li>Piega tutte le pareti verso l'interno (la grafica resta fuori) e piega le alette.</li>
+        <li>Alza le pareti esterne (la grafica resta fuori) e piega le alette verso dentro.</li>
         <li>Metti la colla sulle alette e incollale dentro le pareti accanto. Tieni stretto un minuto per ogni angolo.</li>
+        <li>Rimbocca: piega la parte interna di ogni parete sopra il bordo, verso dentro, e incollala. Copre le alette e il bordo del cartone.</li>
         <li>Prova: il coperchio scende sul fondo senza forzare. Poi metti dentro l'inserto, le carte e il Mostrometro.</li>
       </ol>
       <div class="box attenzione" style="margin-top:1rem">Vuoi comprare una scatola già fatta? Deve misurare dentro almeno <b>23 × 22 × 4,5 cm</b>: va bene per esempio una scatola quadrata da 25 × 25 × 5 cm. Dentro avanzano un paio di centimetri.</div>
@@ -153,7 +154,7 @@ code{{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgrou
     <div class="box file">
       <div><code>carte_da_stampare.pdf</code><span>24 pagine A4: fronti e retro alternati.</span></div>
       <div><code>retro_carte.pdf</code><span>1 pagina A4: solo i retro, se stampi i due lati separati.</span></div>
-      <div><code>scatola_fustella.pdf</code><span>Pagina 1: la scatola da stampare su 50 × 70 cm. Pagina 2: il disegno con le misure.</span></div>
+      <div><code>scatola_fustella.pdf</code><span>Pagine 1 e 2: coperchio e fondo da stampare su 50 × 70 cm. Pagina 3: il disegno con le misure.</span></div>
       <div><code>inserto_mostro.stl</code><span>Il vassoio del Mostrometro.</span></div>
       <div><code>inserto_carte.stl</code><span>Il vassoio delle carte.</span></div>
     </div>

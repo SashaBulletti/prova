@@ -102,13 +102,7 @@ def lati_fondo():
 
 def sotto():
     w, h = ETI_SOTTO
-    passi = [
-        "Collega il telefono al WiFi <b>Mostrometro</b> (password <b>mostro1234</b>) e aggiungi i giocatori nell'app.",
-        "Mescola le carte e danne qualcuna a ognuno, senza farle vedere.",
-        "Durante la serata fai l'azione della carta, davanti a tutti, senza avvisare.",
-        "Scansiona il QR della carta, scegli chi l'ha fatta: +5 di mostruosità. Ogni carta vale una volta.",
-        "Premi il naso del Mostrometro: il mercurio sale. Chi arriva più in alto è il Mostro della serata!",
-    ]
+    from regole import REGOLE as passi
     li = "".join(f"<li>{p}</li>" for p in passi)
     return f'''<section class="foglio" style="width:297mm;height:210mm">
 <div class="istr">Etichetta per sotto la scatola · {w} × {h} mm</div>
