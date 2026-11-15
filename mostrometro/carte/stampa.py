@@ -5,7 +5,7 @@ Stampa al 100% (dimensione reale, NON "adatta alla pagina"): ogni carta viene 63
 """
 import os
 from azioni import AZIONI
-from genera_carte import carta_html, STILE, QUI
+from genera_carte import carta_html, retro_html, STILE, QUI
 
 W, H = 63, 88                     # mm, carta
 MX, MY = (210 - 3 * W) / 2, (297 - 3 * H) / 2   # margini del foglio
@@ -28,11 +28,19 @@ def segni():
         s.append(f'<i class="o" style="top:{y}mm;left:{MX - 7}mm"></i><i class="o" style="top:{y}mm;left:{MX + 3 * W + 2}mm"></i>')
     return "".join(s)
 
+RETRO = retro_html()
+retro = (f'<section class="foglio">{segni()}<div class="griglia">{RETRO * 9}</div>'
+         '<div class="nota">Mostrometro · retro delle carte</div></section>')
+SOLO_RETRO = "--solo-retro" in __import__("sys").argv
+
 fogli = []
 for f in range(0, len(carte), 9):
     gruppo = carte[f:f + 9]
     fogli.append(f'<section class="foglio">{segni()}<div class="griglia">{"".join(gruppo)}</div>'
                  f'<div class="nota">Mostrometro · foglio {f // 9 + 1} di {(len(carte) + 8) // 9} · stampa al 100%, poi taglia lungo i segni</div></section>')
+    fogli.append(retro)          # dopo ogni fronte il suo retro: stampa fronte-retro, lato lungo
+if SOLO_RETRO:
+    fogli = [retro]
 
 PAGINA = STILE + f'''
 @page{{size:A4;margin:0}}
@@ -44,5 +52,5 @@ body{{display:block;padding:0;background:#fff;-webkit-print-color-adjust:exact;p
 .nota{{position:absolute;left:0;right:0;bottom:4mm;text-align:center;font-size:2.6mm;color:#888}}
 '''
 html = '<!doctype html><meta charset="utf-8"><title>Carte da stampare</title><style>' + PAGINA + "</style>\n" + "\n".join(fogli)
-open(os.path.join(QUI, "stampa.html"), "w", encoding="utf8").write(html)
-print("scritto stampa.html:", len(fogli), "fogli,", sum(1 for i in range(1, 101) if disegno(i)), "carte con disegno")
+open(os.path.join(QUI, "stampa_retro.html" if SOLO_RETRO else "stampa.html"), "w", encoding="utf8").write(html)
+print("scritto:", len(fogli), "fogli,", sum(1 for i in range(1, 101) if disegno(i)), "carte con disegno")

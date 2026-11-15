@@ -63,6 +63,27 @@ def carta_html(n, gruppo, titolo, come, img, extra=None):
   </div>
 </div>'''
 
+def retro_html():
+    """Il retro, uguale per tutte le carte. E' simmetrico, cosi' combacia anche se stampato fronte-retro."""
+    from PIL import Image          # immagine piccola (500 px bastano per 37 mm a 300 dpi): il PDF resta leggero
+    import io
+    b = io.BytesIO()
+    Image.open(os.path.join(QUI, "..", "mascotte", "mascotte_in_piedi.jpg")).convert("RGB").resize((500, 500)).save(b, "JPEG", quality=85)
+    masc = "data:image/jpeg;base64," + base64.b64encode(b.getvalue()).decode()
+    tacche = "".join(f'<i style="left:{p}%"></i>' for p in range(0, 101, 10))
+    fondo = ('<svg class="fondo" viewBox="0 0 63 88" preserveAspectRatio="none"><defs><pattern id="puntini" width="7" height="7" '
+             'patternUnits="userSpaceOnUse"><circle cx="1.75" cy="1.75" r=".9" fill="#ffd84a" fill-opacity=".22"/>'
+             '<circle cx="5.25" cy="5.25" r=".7" fill="#fff" fill-opacity=".12"/></pattern></defs>'
+             '<rect width="63" height="88" fill="#4a1fa8"/><rect width="63" height="88" fill="url(#puntini)"/></svg>')
+    return f'''<div class="carta retro">{fondo}
+  <div class="cornice">
+    <div class="marchio">MOSTRO<span>METRO</span></div>
+    <div class="tondo"><img src="{masc}" alt=""></div>
+    <div class="scala"><div class="barra"></div><div class="tacche">{tacche}</div><div class="numeri"><b>0%</b><b>50%</b><b>100%</b></div></div>
+    <div class="motto">Il gioco della serata</div>
+  </div>
+</div>'''
+
 FONT = data_uri(os.path.join(QUI, "font", "Fredoka.ttf")).replace("image/png", "font/ttf")
 
 STILE = '''@font-face{font-family:"Fredoka";src:url("FONT") format("truetype");font-weight:300 700}
@@ -83,6 +104,19 @@ body{margin:0;background:#e9e2f5;font-family:"Fredoka",sans-serif;display:flex;f
 .come.media{font-size:2.5mm}.come.lunga{font-size:2.25mm;line-height:1.18}.come.lunghissima{font-size:2.08mm;line-height:1.15}.punti span{font-size:1.9mm;font-weight:500}
 .regola{flex:1;font-size:2.15mm;line-height:1.25;color:#6a5a86}
 .qr svg{display:block;width:13mm;height:13mm}
+.retro{background:#4a1fa8;padding:2.2mm;position:relative}
+.retro .fondo{position:absolute;inset:0;width:100%;height:100%}
+.cornice{position:relative}
+.cornice{flex:1;border:.7mm solid #ffd84a;border-radius:2.6mm;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:4mm 3mm 3.4mm}
+.marchio{font-weight:700;font-size:7.4mm;line-height:.9;color:#ffd84a;text-align:center;letter-spacing:.02em;text-shadow:0 .5mm 0 #2b1650}
+.marchio span{display:block;color:#fff}
+.tondo{width:37mm;height:37mm;border-radius:50%;overflow:hidden;border:1mm solid #ffd84a;background:#fff6e6;box-shadow:0 0 0 1.2mm #6b3fd6}
+.tondo img{width:100%;height:100%;object-fit:cover;transform:scale(1.12)}
+.scala{width:40mm}
+.barra{height:3mm;border-radius:1.5mm;background:linear-gradient(90deg,#52e08a,#ffd84a,#ff9340,#ff3d5a);border:.4mm solid #fff}
+.tacche{position:relative;height:1.4mm}.tacche i{position:absolute;top:0;width:.3mm;height:1.4mm;background:#fff;transform:translateX(-50%)}
+.numeri{display:flex;justify-content:space-between;color:#fff;font-size:2.2mm;font-weight:600}
+.motto{color:#fff;font-size:2.6mm;font-weight:500;letter-spacing:.08em;text-transform:uppercase}
 '''.replace("FONT", FONT)
 
 def main():
