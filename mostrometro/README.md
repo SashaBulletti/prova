@@ -17,6 +17,12 @@ firmware/mostrometro/                il programma (mostrometro.ino, scheda.h, au
 firmware/prova_bottone/              prova per controllare le saldature del bottone
 firmware/genera_audio.py             genera la voce e i versi (audio_dati.h)
 firmware/prova_al_computer/          prova il programma al computer con una scheda finta (sh prova.sh)
+carte/azioni.py                      le 100 azioni del gioco (si cambiano qui)
+carte/genera_carte.py, stampa.py     impaginano le carte (fronte, retro, QR) e scrivono carte_dati.h per il programma
+carte/disegni/                       i 100 disegni delle carte, fatti con Higgsfield
+scatola/inserto.scad, scatola/stl/   l'inserto 3D che tiene fermi il Mostrometro e le carte nella scatola
+scatola/grafica.py                   le etichette della scatola da stampare (coperchio A3, lati e fondo A4)
+scatola/guida_scatola.html           come costruire la scatola
 ```
 
 ## Cosa serve (circa 60 €)
