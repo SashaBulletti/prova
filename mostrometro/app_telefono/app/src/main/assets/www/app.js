@@ -18,6 +18,8 @@ let S = { fam: [], chi: "", carte: {} };
 try { const j = JSON.parse(localStorage.getItem(CHIAVE) || "null"); if (j && Array.isArray(j.fam)) S = Object.assign(S, j); } catch (e) {}
 const salva = () => { try { localStorage.setItem(CHIAVE, JSON.stringify(S)); } catch (e) {} };
 const partenza = () => Math.floor(Math.random() * (PARTENZA_MAX + 1));        // 0..40, a sorte
+// versione 2 delle regole: si riparte tutti da 0-40%, senza i punti delle prove di prima (urlo, carte vecchie)
+if (S.ver !== 2) { S.fam.forEach(f => { f.b = partenza(); f.bonus = 0; f.v = -1; }); S.carte = {}; S.ver = 2; }
 S.fam.forEach(f => { if (typeof f.b !== "number" || f.b > PARTENZA_MAX) { f.b = partenza(); f.v = -1; } });
 salva();
 
