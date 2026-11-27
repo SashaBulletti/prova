@@ -46,13 +46,20 @@ button{cursor:pointer}
 .tappo{transition:transform .08s}
 .naso.premuto .tappo{transform:translateY(1.6px)}
 #corpo-tutto{transform-origin:0 -10px;transform-box:view-box}
-.trema #corpo-tutto{animation:trema .12s infinite}
-@keyframes trema{0%{transform:translate(0,0) rotate(0)}25%{transform:translate(.8px,-.4px) rotate(.6deg)}50%{transform:translate(-.6px,.3px) rotate(-.5deg)}75%{transform:translate(.4px,.5px) rotate(.4deg)}}
+@keyframes trema{0%{transform:translate(0,0) rotate(0)}25%{transform:translate(calc(.8px * var(--forza)),calc(-.4px * var(--forza))) rotate(calc(.6deg * var(--forza)))}50%{transform:translate(calc(-.6px * var(--forza)),calc(.3px * var(--forza))) rotate(calc(-.5deg * var(--forza)))}75%{transform:translate(calc(.4px * var(--forza)),calc(.5px * var(--forza))) rotate(calc(.4deg * var(--forza)))}}
 .salta #corpo-tutto{animation:salta .5s cubic-bezier(.3,1.7,.5,1)}
 @keyframes salta{0%{transform:scale(1,1)}30%{transform:scale(1.04,.95)}60%{transform:scale(.97,1.04) translateY(-4px)}100%{transform:scale(1,1)}}
-.onda{position:absolute;left:50%;bottom:12%;width:70%;max-width:280px;height:10px;transform:translateX(-50%);border-radius:5px;background:var(--scuro);overflow:hidden}
-.onda::after{content:"";position:absolute;inset:0;width:var(--livello,0%);background:linear-gradient(90deg,var(--verde),var(--giallo),var(--arancio),var(--rosso));transition:width .08s}
-
+/* mentre carica: il mostro brilla, trema sempre di piu', e salgono bolle e stelline */
+.palco{--forza:1}
+.trema #corpo-tutto{animation:trema calc(.16s / var(--forza)) infinite}
+.carica #mostro{filter:drop-shadow(0 0 calc(6px * var(--forza)) rgba(255,216,74,.55))}
+.carica #bulbo{animation:pulsa .35s infinite alternate}
+@keyframes pulsa{to{r:7.2px}}
+.bolla{position:absolute;bottom:30%;width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff,rgba(255,216,74,.7) 40%,rgba(255,147,64,.2));pointer-events:none;animation:bolla 1.2s ease-out forwards}
+.bolla.stella{width:16px;height:16px;border-radius:0;background:#ffd84a;clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
+@keyframes bolla{from{transform:translate(0,0) scale(.4);opacity:0}15%{opacity:1}to{transform:translate(var(--dx),-260px) scale(1.2);opacity:0}}
+.coriandolo{position:absolute;top:38%;width:9px;height:14px;border-radius:2px;pointer-events:none;animation:coriandolo 1.5s cubic-bezier(.2,.7,.4,1) forwards}
+@keyframes coriandolo{from{transform:translate(0,0) rotate(0);opacity:1}to{transform:translate(var(--dx),var(--dy)) rotate(var(--r));opacity:0}}
 .risultato{text-align:center;padding:2px 0 0}
 .pct-grande{font-size:3rem;font-weight:700;line-height:1}
 .frase{color:var(--giallo);min-height:1.4em;margin-top:2px}

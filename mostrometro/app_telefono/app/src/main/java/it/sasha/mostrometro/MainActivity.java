@@ -9,6 +9,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.VibrationEffect;
+import android.speech.tts.TextToSpeech;
+import android.speech.tts.Voice;
 import android.os.Vibrator;
 import android.view.View;
 import android.view.WindowInsets;
@@ -25,6 +27,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Il Mostrometro sul telefono.
@@ -39,6 +42,8 @@ public class MainActivity extends Activity {
     private WebView web;
     private PermissionRequest richiestaInAttesa;
     private String linkInAttesa;
+    private TextToSpeech voce;
+    private boolean voceOk = false;
 
     @Override
     protected void onCreate(Bundle stato) {
@@ -101,8 +106,34 @@ public class MainActivity extends Activity {
             }
         });
 
+        // la voce: quella italiana del telefono (Google), un po' piu' acuta e allegra
+        voce = new TextToSpeech(this, stato2 -> {
+            if (stato2 != TextToSpeech.SUCCESS) return;
+            Locale it = Locale.ITALIAN;
+            if (voce.isLanguageAvailable(it) < TextToSpeech.LANG_AVAILABLE) return;
+            voce.setLanguage(it);
+            try {                                      // la voce italiana migliore che funziona anche senza internet
+                Voice migliore = null;
+                for (Voice v : voce.getVoices()) {
+                    if (!"it".equals(v.getLocale().getLanguage()) || v.isNetworkConnectionRequired()) continue;
+                    if (v.getFeatures() != null && v.getFeatures().contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED)) continue;
+                    if (migliore == null || v.getQuality() > migliore.getQuality()) migliore = v;
+                }
+                if (migliore != null) voce.setVoice(migliore);
+            } catch (Exception ignorata) { }
+            voce.setPitch(1.12f);
+            voce.setSpeechRate(1.0f);
+            voceOk = true;
+        });
+
         linkInAttesa = linkDa(getIntent());
         web.loadUrl(BASE + "index.html");
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (voce != null) voce.shutdown();
+        super.onDestroy();
     }
 
     @Override
@@ -174,6 +205,11 @@ public class MainActivity extends Activity {
             Vibrator v = (Vibrator) getSystemService(VIBRATOR_SERVICE);
             if (v == null) return;
             if (Build.VERSION.SDK_INT >= 26) v.vibrate(VibrationEffect.createOneShot(Math.max(1, ms), VibrationEffect.DEFAULT_AMPLITUDE));
+        }
+
+        @JavascriptInterface
+        public void parla(String testo) {
+            if (voceOk) voce.speak(testo, TextToSpeech.QUEUE_FLUSH, null, "mostro");
         }
 
         @JavascriptInterface

@@ -13,7 +13,7 @@
   <button id="chi" class="chi" type="button"><span class="chi-et">Chi si misura?</span><b id="chi-nome">Scegli</b><span class="freccia">▾</span></button>
 
   <div id="palco" class="palco">
-    <svg id="mostro" viewBox="-80 -212 160 220" aria-label="Il Mostrometro: tocca il naso per misurarti">
+    <svg id="mostro" viewBox="-80 -212 160 220" aria-label="Il Mostrometro: tieni premuto il naso per misurarti">
       <defs>
         <radialGradient id="g-corpo" cx="35%" cy="28%" r="80%">
           <stop offset="0" stop-color="#b08bff"/><stop offset=".55" stop-color="#8a5cf0"/><stop offset="1" stop-color="#6a3fd0"/>
@@ -83,20 +83,20 @@
 
         <!-- il naso: il bottone arcade -->
         <g id="naso" class="naso">
+          <circle cx="0" cy="-28" r="24" fill="transparent"/>
           <circle cx="0" cy="-28" r="16.5" class="ghiera"/>
           <circle id="naso-tappo" cx="0" cy="-28.6" r="13" fill="url(#g-naso)" class="tappo"/>
           <ellipse cx="-4" cy="-33" rx="5" ry="2.6" fill="#fff" opacity=".55"/>
         </g>
       </g>
     </svg>
-    <div id="onda" class="onda" hidden></div>
-  </div>
+      </div>
 
   <div class="risultato">
     <div id="pct" class="pct-grande">--%</div>
-    <div id="frase" class="frase">Tocca il naso per misurarti</div>
+    <div id="frase" class="frase">Tieni premuto il naso per misurarti</div>
     <div id="attesa" class="attesa" hidden></div>
-    <div class="aiuto">Tocca il naso: misura · tienilo premuto: <b>URLA!</b></div>
+    <div class="aiuto">Tieni il dito sul naso: il mercurio sale. Se lo lasci, si ferma!</div>
   </div>
 </section>
 

@@ -1,11 +1,12 @@
-/* Mostrometro sul telefono: stesse regole del Mostrometro vero (firmware/mostrometro/mostrometro.ino).
-   - mostruosita' di base fissa per ogni nome (10-65%), + i punti presi con l'urlo e con le carte (massimo 100)
-   - i punti restano "in attesa" finche' non ti misuri di nuovo
+/* Mostrometro sul telefono.
+   - a ogni partita ognuno parte da una mostruosita' a caso tra 0 e 40%
+   - con le carte prendi punti; i punti restano "in attesa" finche' non ti misuri di nuovo (massimo 100%)
+   - per misurarti tieni premuto il naso: il mercurio sale piano; se lasci il dito si ferma e torna giu'
    - ogni carta vale una volta per serata; Mostro Supremo: 5 a testa con gli Artigli, altrimenti 2 a chi gioca */
 "use strict";
 const $ = s => document.querySelector(s);
 const CHIAVE = "mostrometro_telefono_v1";
-const MAX_FAM = 12, PUNTI_DA_SOLO = 2;
+const MAX_FAM = 12, PUNTI_DA_SOLO = 2, PARTENZA_MAX = 40;
 const FRASI = ["Angelo? Mah...", "Mostrino da divano", "Mostro medio", "Mostro serio! Papà ha ragione", "Mostro GIGANTE", "SUPER MOSTRO!"];
 const livello = v => v < 10 ? 0 : v < 30 ? 1 : v < 50 ? 2 : v < 70 ? 3 : v < 90 ? 4 : 5;
 const pulisci = s => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\x20-\x7e]/g, "")
@@ -16,41 +17,61 @@ const telefono = window.Telefono || { vibra() {}, schermoAcceso() {} };
 let S = { fam: [], chi: "", carte: {} };
 try { const j = JSON.parse(localStorage.getItem(CHIAVE) || "null"); if (j && Array.isArray(j.fam)) S = Object.assign(S, j); } catch (e) {}
 const salva = () => { try { localStorage.setItem(CHIAVE, JSON.stringify(S)); } catch (e) {} };
+const partenza = () => Math.floor(Math.random() * (PARTENZA_MAX + 1));        // 0..40, a sorte
+S.fam.forEach(f => { if (typeof f.b !== "number" || f.b > PARTENZA_MAX) { f.b = partenza(); f.v = -1; } });
+salva();
 
-function base(nome) {                                   // FNV-1a, come nel firmware
-  let h = 2166136261; nome = nome.toLowerCase();
-  for (let i = 0; i < nome.length; i++) { h ^= nome.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
-  return 10 + (h >>> 0) % 56;
-}
 const trova = n => S.fam.find(f => f.n.toLowerCase() === (n || "").toLowerCase());
-const attuale = f => Math.min(100, base(f.n) + f.bonus);
+const attuale = f => Math.min(100, f.b + f.bonus);
 const inAttesa = f => (f.v >= 0 && attuale(f) > f.v) ? attuale(f) - f.v : 0;
 const carteDi = n => Object.values(S.carte).filter(x => x.toLowerCase() === n.toLowerCase()).length;
-function crea(n) { const p = { n, bonus: 0, v: -1 }; S.fam.push(p); return p; }
+function crea(n) { const p = { n, b: partenza(), bonus: 0, v: -1 }; S.fam.push(p); return p; }
 function daiPunti(f, p) { f.bonus = Math.max(0, Math.min(100, f.bonus + p)); }
-
-// ------------------------------------------------------------------ suoni
-let ac = null; const buffer = {};
-function audio() { if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === "suspended") ac.resume(); return ac; }
-async function carica(nome) {
-  if (buffer[nome]) return buffer[nome];
-  const r = await fetch("suoni/" + nome + ".wav");
-  buffer[nome] = await audio().decodeAudioData(await r.arrayBuffer());
-  return buffer[nome];
-}
-let fineCoda = 0;
-async function suona(nomi) {                            // in fila, uno dopo l'altro; risolve quando finiscono
-  try {
-    const bufs = await Promise.all(nomi.map(carica));
-    const c = audio(); let t = Math.max(c.currentTime + 0.03, fineCoda);
-    for (const b of bufs) { const s = c.createBufferSource(); s.buffer = b; s.connect(c.destination); s.start(t); t += b.duration; }
-    fineCoda = t;
-    await attendi((t - c.currentTime) * 1000);
-  } catch (e) { console.warn("suono", e); }
-}
 const attendi = ms => new Promise(r => setTimeout(r, Math.max(0, ms)));
-const num = n => "n" + String(n).padStart(3, "0");
-const seiAl = n => (n === 1 || n === 8 || n === 11 || (n >= 80 && n <= 89)) ? "sei_all" : "sei_al";
+
+// ------------------------------------------------------------------ voce (quella del telefono) e suoni
+function parla(testo) {
+  if (window.Telefono && Telefono.parla) { Telefono.parla(testo); return; }
+  try {                                                  // nel browser: la voce del browser
+    const u = new SpeechSynthesisUtterance(testo); u.lang = "it-IT"; u.pitch = 1.15; u.rate = 1.02;
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  } catch (e) {}
+}
+let ac = null;
+function audio() { if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === "suspended") ac.resume(); return ac; }
+// suono che sale mentre tieni premuto: due onde un po' stonate + un tremolio "a bolle"
+let tono = null;
+function tonoParte() {
+  const c = audio(), g = c.createGain(); g.gain.value = 0; g.connect(c.destination);
+  const o1 = c.createOscillator(), o2 = c.createOscillator(); o1.type = "triangle"; o2.type = "sine";
+  const lfo = c.createOscillator(), lg = c.createGain(); lfo.frequency.value = 9; lg.gain.value = 25; lfo.connect(lg); lg.connect(o1.frequency); lg.connect(o2.frequency);
+  o1.connect(g); o2.connect(g); [o1, o2, lfo].forEach(o => o.start());
+  g.gain.setTargetAtTime(0.12, c.currentTime, 0.05);
+  tono = { c, g, o1, o2, lfo };
+}
+function tonoA(v) {                                      // v 0..100 -> da 180 a 900 Hz
+  if (!tono) return; const f = 180 + v * 7.2, t = tono.c.currentTime;
+  tono.o1.frequency.setTargetAtTime(f, t, 0.04); tono.o2.frequency.setTargetAtTime(f * 1.505, t, 0.04);
+  tono.lfo.frequency.setTargetAtTime(7 + v / 8, t, 0.1);
+}
+function tonoFine(cade) {
+  if (!tono) return; const { c, g, o1, o2, lfo } = tono, t = c.currentTime; tono = null;
+  if (cade) { o1.frequency.setTargetAtTime(90, t, 0.15); o2.frequency.setTargetAtTime(120, t, 0.15); }
+  g.gain.setTargetAtTime(0, t + (cade ? 0.25 : 0), 0.08);
+  setTimeout(() => [o1, o2, lfo].forEach(o => { try { o.stop(); } catch (e) {} }), 1200);
+}
+function festa() {                                       // accordo allegro quando arrivi in cima
+  const c = audio(), t = c.currentTime;
+  [523, 659, 784, 1047].forEach((f, i) => {
+    const o = c.createOscillator(), g = c.createGain(); o.type = "triangle"; o.frequency.value = f;
+    g.gain.setValueAtTime(0, t + i * 0.08); g.gain.linearRampToValueAtTime(0.16, t + i * 0.08 + 0.02); g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.08 + 0.6);
+    o.connect(g); g.connect(c.destination); o.start(t + i * 0.08); o.stop(t + i * 0.08 + 0.65);
+  });
+}
+function bip() {
+  const c = audio(), o = c.createOscillator(), g = c.createGain(), t = c.currentTime; o.frequency.value = 880;
+  g.gain.setValueAtTime(0.15, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.18); o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + 0.2);
+}
 
 // ------------------------------------------------------------------ il disegno: tacche, mercurio, occhi, sopracciglia
 (function tacche() {
@@ -130,87 +151,89 @@ document.addEventListener("pointermove", e => { if (guarda) guardaVerso(e); });
 document.addEventListener("pointerup", () => { guarda = null; });
 document.addEventListener("pointercancel", () => { guarda = null; });
 
-// ------------------------------------------------------------------ misura e urlo
-let occupato = false;
-const palco = $("#palco");
-function animaValore(da, a, ms, cb) {
-  return new Promise(r => {
-    const t0 = performance.now();
-    (function f(t) {
-      const k = Math.min(1, (t - t0) / ms), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
-      cb(da + (a - da) * e); if (k < 1) requestAnimationFrame(f); else r();
-    })(t0);
-  });
+// ------------------------------------------------------------------ misura: tieni premuto il naso
+// Il mercurio sale piano finche' tieni il dito sul naso. Se lo lasci prima della fine, si ferma e torna giu'.
+const palco = $("#palco"), naso = $("#naso");
+let misurando = null;              // { f, target, v, premuto, ultimoT, ultimaTacca }
+const VEL = 9;                     // % al secondo (rallenta un po' vicino alla fine)
+
+function bollicina() {             // stelline e bolle che salgono dal mostro mentre carica
+  const b = document.createElement("i"); b.className = "bolla" + (Math.random() < .35 ? " stella" : "");
+  b.style.left = (38 + Math.random() * 24) + "%"; b.style.setProperty("--dx", (Math.random() * 80 - 40) + "px");
+  b.style.animationDuration = (0.9 + Math.random() * 0.8) + "s";
+  palco.appendChild(b); setTimeout(() => b.remove(), 1800);
 }
-async function misura() {
+function coriandoli() {
+  for (let i = 0; i < 26; i++) {
+    const c = document.createElement("i"); c.className = "coriandolo";
+    c.style.left = (50 + (Math.random() - .5) * 20) + "%"; c.style.background = ["#ffd84a", "#ff3d5a", "#52e08a", "#8a5cf0", "#ff9340", "#fff"][i % 6];
+    c.style.setProperty("--dx", (Math.random() - .5) * 320 + "px"); c.style.setProperty("--dy", -(120 + Math.random() * 220) + "px");
+    c.style.setProperty("--r", Math.random() * 720 + "deg");
+    palco.appendChild(c); setTimeout(() => c.remove(), 1600);
+  }
+}
+
+function inizia(e) {
+  e.preventDefault(); audio(); try { naso.setPointerCapture(e.pointerId); } catch (x) {}
   const f = trova(S.chi);
   if (!f) { scegliChi("Prima scegli chi si misura"); return; }
-  if (occupato) return; occupato = true; telefono.schermoAcceso(true);
-  const target = attuale(f);
-  $("#frase").textContent = "Misuro..."; $("#pct").textContent = "...";
-  palco.classList.add("trema"); agitato = 1; telefono.vibra(60);
-  const verso = suona(["verso" + livello(target)]);
-  await animaValore(0, 100, 2000, v => { mercurio(v); sopracciglia(v); });
-  await animaValore(100, target, 900, v => { mercurio(v); sopracciglia(v); });
-  await verso;
-  palco.classList.remove("trema"); palco.classList.add("salta"); setTimeout(() => palco.classList.remove("salta"), 520);
-  f.v = target; salva();
-  mostraRisultato(f); telefono.vibra(30);
-  await suona([seiAl(target), num(target), "per_cento"]);
-  occupato = false; telefono.schermoAcceso(false); disegnaFamiglia();
+  naso.classList.add("premuto"); telefono.vibra(20);
+  if (misurando && !misurando.finito) { misurando.premuto = true; tonoParte(); tonoA(misurando.v); return; }
+  misurando = { f, target: attuale(f), v: 0, premuto: true, ultimoT: performance.now(), ultimaTacca: 0, finito: false };
+  telefono.schermoAcceso(true); tonoParte();
+  $("#pct").textContent = "0%"; $("#frase").textContent = "Tieni premuto..."; $("#attesa").hidden = true;
+  requestAnimationFrame(passoMisura);
 }
-async function urla() {
-  const f = trova(S.chi);
-  if (!f) { scegliChi("Prima scegli chi urla"); return; }
-  if (occupato) return; occupato = true;
-  let flusso;
-  try { flusso = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }); }
-  catch (e) { occupato = false; $("#frase").textContent = "Serve il permesso del microfono per l'urlo."; return; }
-  $("#frase").textContent = "Pronto..."; $("#pct").textContent = "🎤";
-  await suona(["urla", "bip"]);
-  $("#frase").textContent = "URLA!"; palco.classList.add("trema");
-  const c = audio(), src = c.createMediaStreamSource(flusso), an = c.createAnalyser(); an.fftSize = 1024; src.connect(an);
-  const dati = new Float32Array(an.fftSize); let picco = 0; const onda = $("#onda"); onda.hidden = false;
-  const t0 = performance.now();
-  await new Promise(r => {
-    (function ascolta() {
-      an.getFloatTimeDomainData(dati); let s = 0; for (const x of dati) s += x * x;
-      const rms = Math.sqrt(s / dati.length); picco = Math.max(picco, rms);
-      const db = 20 * Math.log10(Math.max(rms, 1e-6)), liv = Math.max(0, Math.min(100, (db + 50) / 40 * 100));
-      onda.style.setProperty("--livello", liv + "%"); mercurio(liv, ""); agitato = Math.max(agitato, liv / 100);
-      if (performance.now() - t0 < 2000) requestAnimationFrame(ascolta); else r();
-    })();
-  });
-  flusso.getTracks().forEach(t => t.stop()); src.disconnect(); onda.hidden = true; palco.classList.remove("trema");
-  const db = 20 * Math.log10(Math.max(picco, 1e-6));
-  const punti = Math.max(0, Math.min(10, Math.round((db + 45) / 30 * 10)));   // come il firmware: -45 dB = 0, -15 dB = 10
-  daiPunti(f, punti); salva();
-  mercurio(f.v >= 0 ? f.v : 0, f.v >= 0 ? f.v + "%" : "--");
-  $("#pct").textContent = "+" + punti; $("#frase").textContent = punti >= 8 ? "Che urlo da MOSTRO!" : punti >= 4 ? "Bell'urlo!" : "Tutto qui? Più forte!";
-  mostraAttesa(f);
-  await suona(["urlo_da", num(punti), "punti"]);
-  occupato = false; disegnaFamiglia();
+function lascia() {
+  naso.classList.remove("premuto");
+  if (!misurando || misurando.finito || !misurando.premuto) return;
+  misurando.premuto = false; tonoFine(true); telefono.vibra(40);
+  $("#frase").textContent = "Hai mollato! Tieni premuto fino alla fine";
+}
+function passoMisura(t) {
+  const m = misurando; if (!m || m.finito) return;
+  const dt = Math.min(0.05, (t - m.ultimoT) / 1000); m.ultimoT = t;
+  if (m.premuto) {
+    const resta = m.target - m.v, vel = VEL * (resta < 6 ? 0.45 + resta / 11 : 1);
+    m.v = Math.min(m.target, m.v + vel * dt);
+    tonoA(m.v); agitato = Math.max(agitato, 0.15 + m.v / 160);
+    palco.style.setProperty("--forza", (0.4 + m.v / 60).toFixed(2));
+    palco.classList.add("trema", "carica");
+    if (Math.random() < dt * (3 + m.v / 10)) bollicina();
+    const tacca = Math.floor(m.v / 5); if (tacca > m.ultimaTacca) { m.ultimaTacca = tacca; telefono.vibra(12); }
+    if (m.v >= m.target - 0.01) { arrivato(m); return; }
+  } else {                                               // dito alzato: il mercurio ricade piano
+    m.v = Math.max(0, m.v - 18 * dt); m.ultimaTacca = Math.floor(m.v / 5);
+    palco.classList.remove("trema", "carica");
+    if (m.v <= 0) { misurando = null; telefono.schermoAcceso(false); mostraRisultato(m.f); $("#frase").textContent = "Tieni premuto il naso per misurarti"; mercurio(0, m.f.v >= 0 ? m.f.v + "%" : "--"); return; }
+  }
+  mercurio(m.v); sopracciglia(m.v); $("#pct").textContent = Math.floor(m.v) + "%";
+  requestAnimationFrame(passoMisura);
+}
+async function arrivato(m) {
+  m.finito = true; tonoFine(false); naso.classList.remove("premuto");
+  palco.classList.remove("trema", "carica"); palco.classList.add("salta"); setTimeout(() => palco.classList.remove("salta"), 520);
+  mercurio(m.target); sopracciglia(m.target);
+  const prima = m.f.v; m.f.v = m.target; salva();
+  festa(); coriandoli(); agitato = 1; telefono.vibra(120);
+  mostraRisultato(m.f);
+  const salito = prima >= 0 && m.target > prima ? ` Sei salito di ${m.target - prima}!` : "";
+  parla(`${m.f.n}, sei al ${m.target} per cento! ${FRASI[livello(m.target)]}${salito}`);
+  if (salito) $("#frase").textContent = FRASI[livello(m.target)] + " · +" + (m.target - prima) + "!";
+  await attendi(400); misurando = null; telefono.schermoAcceso(false); disegnaFamiglia();
 }
 function mostraRisultato(f) {
   $("#pct").textContent = f.v >= 0 ? f.v + "%" : "--%";
-  $("#frase").textContent = f.v >= 0 ? FRASI[livello(f.v)] : "Tocca il naso per misurarti";
+  $("#frase").textContent = f.v >= 0 ? FRASI[livello(f.v)] : "Tieni premuto il naso per misurarti";
   mostraAttesa(f);
 }
 function mostraAttesa(f) {
   const p = inAttesa(f), a = $("#attesa");
   a.hidden = !(p > 0 || (f.v < 0 && f.bonus > 0));
-  a.textContent = f.v < 0 ? "+" + f.bonus + " punti pronti" : "+" + p + " in attesa: premi il naso!";
+  a.textContent = f.v < 0 ? "+" + f.bonus + " punti pronti" : "+" + p + " in attesa: tieni premuto il naso!";
 }
-
-// il naso: tocco = misura, tenuto premuto = urlo
-const naso = $("#naso"); let timerNaso = null, lungo = false;
-naso.addEventListener("pointerdown", e => {
-  e.preventDefault(); audio(); naso.classList.add("premuto"); lungo = false; telefono.vibra(15);
-  timerNaso = setTimeout(() => { lungo = true; telefono.vibra(80); urla(); }, 650);
-});
-const lascia = () => { naso.classList.remove("premuto"); if (timerNaso) { clearTimeout(timerNaso); timerNaso = null; if (!lungo) misura(); } };
-naso.addEventListener("pointerup", lascia);
-naso.addEventListener("pointerleave", () => { naso.classList.remove("premuto"); if (timerNaso) { clearTimeout(timerNaso); timerNaso = null; } });
+naso.addEventListener("pointerdown", inizia);
+["pointerup", "pointercancel", "pointerleave"].forEach(ev => naso.addEventListener(ev, lascia));
 naso.addEventListener("contextmenu", e => e.preventDefault());
 
 // ------------------------------------------------------------------ foglio dal basso
@@ -248,6 +271,7 @@ function scegliChi(titolo) {
 function aggiornaChi() {
   const f = trova(S.chi);
   $("#chi-nome").textContent = f ? f.n : "Scegli";
+  if (misurando) return;
   if (f) { mercurio(f.v >= 0 ? f.v : 0, f.v >= 0 ? f.v + "%" : "--"); sopracciglia(f.v >= 0 ? f.v : 0); mostraRisultato(f); }
   else { mercurio(0, "--"); $("#pct").textContent = "--%"; $("#frase").textContent = "Scegli chi si misura"; $("#attesa").hidden = true; }
 }
@@ -333,7 +357,7 @@ function gioca(n, c) {
   const f = trova(nome) || crea(nome); daiPunti(f, punti);
   let g = null; if (puntiAltro) { g = trova(altro) || crea(altro); daiPunti(g, puntiAltro); }
   S.carte[n] = f.n; S.chi = f.n; salva();
-  suona(["bip"]); telefono.vibra(40);
+  bip(); telefono.vibra(40);
   apriFoglio(`<h2>${esc(f.n)} prende +${punti}${g ? ` e ${esc(g.n)} +${puntiAltro}` : ""}! 🎉</h2>
     <p>I punti salgono quando ${esc(f.n)} preme il naso del Mostrometro.</p>
     <button class="primario" id="cv-mis">Vai a misurarti</button><button class="secondario" id="cv-chiudi">Chiudi</button>`);
@@ -351,10 +375,10 @@ window.apriLinkCarta = t => { const l = leggiLink(t); if (l) apriCarta(l.n, l.k)
 $("#f-numero").onsubmit = e => { e.preventDefault(); const n = parseInt($("#numero").value, 10); $("#numero").value = ""; if (n >= 1 && n <= CARTE.length) apriCarta(n, null); };
 $("#serata").onclick = () => {
   apriFoglio(`<h2>Nuova serata?</h2><p>Tutte le carte tornano giocabili.</p>
-    <label class="spunta"><input type="checkbox" id="ns-punti">Azzera anche i punti e le misure di tutti</label>
+    <label class="spunta"><input type="checkbox" id="ns-punti" checked>Nuova partita: azzera i punti e tira a sorte la mostruosità di partenza (0–40%)</label>
     <button class="primario" id="ns-si">Nuova serata</button><button class="secondario" id="ns-no">Annulla</button>`);
   $("#ns-si").onclick = () => {
-    S.carte = {}; if ($("#ns-punti").checked) S.fam.forEach(f => { f.bonus = 0; f.v = -1; });
+    S.carte = {}; if ($("#ns-punti").checked) S.fam.forEach(f => { f.bonus = 0; f.v = -1; f.b = partenza(); });
     salva(); chiudiFoglio(); disegnaCarte(); disegnaFamiglia(); aggiornaChi();
   };
   $("#ns-no").onclick = chiudiFoglio;
@@ -402,4 +426,3 @@ window.indietro = () => {                                // tasto indietro di An
 // ------------------------------------------------------------------ avvio
 aggiornaChi(); disegnaFamiglia(); disegnaCarte(); sopracciglia(0);
 if (location.hash) window.apriLinkCarta(location.hash);
-setTimeout(() => ["verso0", "verso1", "verso2", "verso3", "verso4", "verso5", "sei_al", "sei_all", "per_cento", "bip"].forEach(n => carica(n).catch(() => {})), 300);

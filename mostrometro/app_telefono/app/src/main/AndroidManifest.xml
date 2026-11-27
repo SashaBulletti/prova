@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- microfono: per l'urlo; fotocamera: per leggere il QR delle carte -->
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- fotocamera: per leggere il QR delle carte -->
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
-    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+
+    <!-- per usare la voce del telefono (sintesi vocale) su Android 11 e successivi -->
+    <queries>
+        <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
+    </queries>
 
     <application
         android:label="Mostrometro"
