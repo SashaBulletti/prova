@@ -18,7 +18,7 @@ const FRASI = [
   ["Mostro super serio", "La tua mostruosità fa impallidire chi è nelle immediate vicinanze."], // 60-69
   ["Mostro GIGANTE", "Quando entri in una stanza, i mobili si spostano da soli."],              // 70-79
   ["Mostro leggendario", "Nei paesi vicini raccontano le tue mostruosità ai bambini prima di dormire."], // 80-89
-  ["SUPER MOSTRO!", "Papà aveva ragione fin dall'inizio."],                                    // 90-99
+  ["SUPER MOSTRO!", "I mostri delle favole vengono da te a prendere lezioni."],                                    // 90-99
   ["RE DEI MOSTRI!", "Cento per cento di mostruosità: inchinatevi tutti!"],                    // 100
 ];
 const livello = v => Math.max(0, Math.min(10, Math.floor(v / 10)));

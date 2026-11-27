@@ -7,8 +7,8 @@ android {
         applicationId "it.sasha.mostrometro"
         minSdk 26
         targetSdk 35
-        versionCode 4
-        versionName "1.3"
+        versionCode 5
+        versionName "1.4"
     }
     // Firma fissa (la chiave e' qui accanto), cosi' gli aggiornamenti si installano sopra la versione vecchia.
     signingConfigs {
