@@ -62,7 +62,9 @@ button{cursor:pointer}
 @keyframes coriandolo{from{transform:translate(0,0) rotate(0);opacity:1}to{transform:translate(var(--dx),var(--dy)) rotate(var(--r));opacity:0}}
 .risultato{text-align:center;padding:2px 0 0}
 .pct-grande{font-size:3rem;font-weight:700;line-height:1}
-.frase{color:var(--giallo);min-height:1.4em;margin-top:2px}
+.frase{color:var(--giallo);min-height:1.4em;margin-top:2px;font-weight:600;font-size:1.15rem}
+.spiega{color:var(--testo);font-size:.92rem;max-width:22rem;margin:0 auto;opacity:.9}
+.spiega:empty{display:none}
 .attesa{display:inline-block;margin-top:4px;background:var(--giallo);color:#2b1650;font-weight:700;border-radius:999px;padding:2px 12px;font-size:.9rem}
 .aiuto{color:var(--tenue);font-size:.82rem;margin-top:4px}
 

@@ -7,8 +7,21 @@
 const $ = s => document.querySelector(s);
 const CHIAVE = "mostrometro_telefono_v1";
 const MAX_FAM = 12, PUNTI_DA_SOLO = 2, PARTENZA_MAX = 40;
-const FRASI = ["Angelo? Mah...", "Mostrino da divano", "Mostro medio", "Mostro serio! Papà ha ragione", "Mostro GIGANTE", "SUPER MOSTRO!"];
-const livello = v => v < 10 ? 0 : v < 30 ? 1 : v < 50 ? 2 : v < 70 ? 3 : v < 90 ? 4 : 5;
+// una frase ogni 10%: titolo (in giallo) e spiegazione (sotto); la voce le dice tutte e due
+const FRASI = [
+  ["Buuuu!", "Una vergogna per noi mostri."],                                                   // 0-9
+  ["Mostrino da divano", "Puoi migliorare."],                                                  // 10-19
+  ["Mostro apprendista!", "Se ti impegni potrai diventare sempre più mostro."],                 // 20-29
+  ["Mostro studioso", "Si vede che ti applichi nello studio della mostritudine."],              // 30-39
+  ["Mostro diplomato", "Hai passato l'esame di mostritudine: adesso si comincia a fare sul serio."], // 40-49
+  ["Mostro serio", "Da qui in avanti non si scherza."],                                        // 50-59
+  ["Mostro super serio", "La tua mostruosità fa impallidire chi è nelle immediate vicinanze."], // 60-69
+  ["Mostro GIGANTE", "Quando entri in una stanza, i mobili si spostano da soli."],              // 70-79
+  ["Mostro leggendario", "Nei paesi vicini raccontano le tue mostruosità ai bambini prima di dormire."], // 80-89
+  ["SUPER MOSTRO!", "Papà aveva ragione fin dall'inizio."],                                    // 90-99
+  ["RE DEI MOSTRI!", "Cento per cento di mostruosità: inchinatevi tutti!"],                    // 100
+];
+const livello = v => Math.max(0, Math.min(10, Math.floor(v / 10)));
 const pulisci = s => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\x20-\x7e]/g, "")
   .replace(/[:;"\\<>&'%]/g, "").trim().slice(0, 14);
 const telefono = window.Telefono || { vibra() {}, schermoAcceso() {} };
@@ -183,7 +196,7 @@ function inizia(e) {
   if (misurando && !misurando.finito) { misurando.premuto = true; tonoParte(); tonoA(misurando.v); return; }
   misurando = { f, target: attuale(f), v: 0, premuto: true, ultimoT: performance.now(), ultimaTacca: 0, finito: false };
   telefono.schermoAcceso(true); tonoParte();
-  $("#pct").textContent = "0%"; $("#frase").textContent = "Tieni premuto..."; $("#attesa").hidden = true;
+  $("#pct").textContent = "0%"; $("#frase").textContent = "Tieni premuto..."; $("#spiega").textContent = ""; $("#attesa").hidden = true;
   requestAnimationFrame(passoMisura);
 }
 function lascia() {
@@ -220,13 +233,15 @@ async function arrivato(m) {
   festa(); coriandoli(); agitato = 1; telefono.vibra(120);
   mostraRisultato(m.f);
   const salito = prima >= 0 && m.target > prima ? ` Sei salito di ${m.target - prima}!` : "";
-  parla(`${m.f.n}, sei al ${m.target} per cento! ${FRASI[livello(m.target)]}${salito}`);
-  if (salito) $("#frase").textContent = FRASI[livello(m.target)] + " · +" + (m.target - prima) + "!";
+  const [tit, spieg] = FRASI[livello(m.target)];
+  parla(`${m.f.n}, sei al ${m.target} per cento! ${tit} ${spieg}${salito}`);
+  if (salito) $("#frase").textContent = tit + " · +" + (m.target - prima) + "!";
   await attendi(400); misurando = null; telefono.schermoAcceso(false); disegnaFamiglia();
 }
 function mostraRisultato(f) {
   $("#pct").textContent = f.v >= 0 ? f.v + "%" : "--%";
-  $("#frase").textContent = f.v >= 0 ? FRASI[livello(f.v)] : "Tieni premuto il naso per misurarti";
+  $("#frase").textContent = f.v >= 0 ? FRASI[livello(f.v)][0] : "Tieni premuto il naso per misurarti";
+  $("#spiega").textContent = f.v >= 0 ? FRASI[livello(f.v)][1] : "";
   mostraAttesa(f);
 }
 function mostraAttesa(f) {
@@ -275,7 +290,7 @@ function aggiornaChi() {
   $("#chi-nome").textContent = f ? f.n : "Scegli";
   if (misurando) return;
   if (f) { mercurio(f.v >= 0 ? f.v : 0, f.v >= 0 ? f.v + "%" : "--"); sopracciglia(f.v >= 0 ? f.v : 0); mostraRisultato(f); }
-  else { mercurio(0, "--"); $("#pct").textContent = "--%"; $("#frase").textContent = "Scegli chi si misura"; $("#attesa").hidden = true; }
+  else { mercurio(0, "--"); $("#pct").textContent = "--%"; $("#frase").textContent = "Scegli chi si misura"; $("#spiega").textContent = ""; $("#attesa").hidden = true; }
 }
 $("#chi").onclick = () => scegliChi();
 
