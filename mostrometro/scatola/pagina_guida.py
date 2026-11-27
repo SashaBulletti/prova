@@ -68,6 +68,23 @@ code{{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgrou
   </header>
 
   <section class="parte">
+    <div><div class="kicker">Si gioca col telefono</div><h2>La scatolina delle carte</h2>
+      <p class="intro">Senza il Mostrometro di plastica basta l'app sul telefono e una scatolina per le 100 carte. Si stampa a casa su <span class="misura">2 fogli A4</span> di cartoncino 200–250 g; chiusa misura circa <span class="misura">71 × 96 × 34 mm</span>.</p></div>
+    <div class="due">
+      <figure><img src="{img("scatolina.jpg")}" alt="I due fogli della scatolina: il fondo con le regole e il coperchio con la copertina, ognuno con le pareti doppie"><figcaption>Pagina 1: il fondo, con le regole sotto. Pagina 2: il coperchio.</figcaption></figure>
+      <div>
+        <ol class="passi">
+          <li>Stampa <code>scatola_carte.pdf</code>, pagine 1 e 2, al <b>100%</b> («dimensione reale»), su cartoncino A4.</li>
+          <li>Taglia lungo la linea nera, compresi i 4 piccoli tagli vicino alle alette.</li>
+          <li>Ripassa i tratteggi con una penna scarica e il righello, poi piega.</li>
+          <li>Incolla le alette dentro gli angoli, poi rimbocca dentro la parte alta di ogni parete e incollala.</li>
+        </ol>
+        <div class="box attenzione" style="margin-top:1rem">Ci stanno 100 carte su cartoncino da 250 g, senza bustine. La pagina 3 del PDF ha tutte le misure. La scatola grande più sotto serve quando costruirai il Mostrometro vero.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="parte">
     <div><div class="kicker">1 · Le carte</div><h2>Fronte e retro</h2></div>
     <div class="due">
       <div class="coppia">
@@ -154,6 +171,7 @@ code{{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;backgrou
     <div class="box file">
       <div><code>carte_da_stampare.pdf</code><span>24 pagine A4: fronti e retro alternati.</span></div>
       <div><code>retro_carte.pdf</code><span>1 pagina A4: solo i retro, se stampi i due lati separati.</span></div>
+      <div><code>scatola_carte.pdf</code><span>La scatolina delle sole carte: 2 fogli A4 da stampare a casa, più le misure.</span></div>
       <div><code>scatola_fustella.pdf</code><span>Pagine 1 e 2: coperchio e fondo da stampare su 50 × 70 cm. Pagina 3: il disegno con le misure.</span></div>
       <div><code>inserto_mostro.stl</code><span>Il vassoio del Mostrometro.</span></div>
       <div><code>inserto_carte.stl</code><span>Il vassoio delle carte.</span></div>

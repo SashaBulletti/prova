@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Mostrometro</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<!-- ================= MOSTRO ================= -->
+<section id="v-mostro" class="vista attiva">
+  <button id="chi" class="chi" type="button"><span class="chi-et">Chi si misura?</span><b id="chi-nome">Scegli</b><span class="freccia">▾</span></button>
+
+  <div id="palco" class="palco">
+    <svg id="mostro" viewBox="-80 -212 160 220" aria-label="Il Mostrometro: tocca il naso per misurarti">
+      <defs>
+        <radialGradient id="g-corpo" cx="35%" cy="28%" r="80%">
+          <stop offset="0" stop-color="#b08bff"/><stop offset=".55" stop-color="#8a5cf0"/><stop offset="1" stop-color="#6a3fd0"/>
+        </radialGradient>
+        <linearGradient id="g-corna" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#fff07a"/><stop offset="1" stop-color="#f2b705"/>
+        </linearGradient>
+        <radialGradient id="g-naso" cx="38%" cy="32%" r="70%">
+          <stop offset="0" stop-color="#fff3a0"/><stop offset=".5" stop-color="#ffd23f"/><stop offset="1" stop-color="#e0a800"/>
+        </radialGradient>
+        <linearGradient id="g-merc" x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0" stop-color="#52e08a"/><stop offset=".45" stop-color="#ffd84a"/><stop offset=".75" stop-color="#ff9340"/><stop offset="1" stop-color="#ff3d5a"/>
+        </linearGradient>
+        <radialGradient id="g-luce" cx="50%" cy="50%" r="50%">
+          <stop offset="0" stop-color="#5b36a8" stop-opacity=".9"/><stop offset=".6" stop-color="#3a2170" stop-opacity=".5"/><stop offset="1" stop-color="#1b1030" stop-opacity="0"/>
+        </radialGradient>
+        <pattern id="strati" width="4" height=".8" patternUnits="userSpaceOnUse"><rect width="4" height=".35" fill="#000" opacity=".06"/></pattern>
+        <clipPath id="clip-schermo"><rect x="-11.45" y="-132.2" width="22.9" height="84.4" rx="3"/></clipPath>
+        <clipPath id="clip-tubo"><rect x="-3.6" y="-118" width="7.2" height="64" rx="3.6"/><circle cx="0" cy="-55" r="6"/></clipPath>
+      </defs>
+
+      <circle cx="0" cy="-100" r="118" fill="url(#g-luce)"/>
+      <ellipse class="ombra" cx="0" cy="3" rx="62" ry="5"/>
+
+      <g id="corpo-tutto">
+        <!-- 1) contorno spesso di tutti i pezzi, 2) i pezzi pieni sopra: sembra un unico guscio stampato -->
+        <g class="contorno">
+          <polygon points="37,-170 11,-170 29,-203"/><polygon points="-37,-170 -11,-170 -29,-203"/>
+          <circle cx="59" cy="-89" r="12"/><circle cx="-59" cy="-89" r="12"/>
+          <path d="M13 -18H47V-5A5 5 0 0 1 42 0H18A5 5 0 0 1 13 -5Z"/><path d="M-13 -18H-47V-5A5 5 0 0 0 -42 0H-18A5 5 0 0 0 -13 -5Z"/>
+          <rect x="-55" y="-180" width="110" height="170" rx="40"/>
+        </g>
+        <g class="corna"><polygon points="37,-170 11,-170 29,-203"/><polygon points="-37,-170 -11,-170 -29,-203"/></g>
+        <g class="pelle">
+          <circle cx="59" cy="-89" r="12"/><circle cx="-59" cy="-89" r="12"/>
+          <path d="M13 -18H47V-5A5 5 0 0 1 42 0H18A5 5 0 0 1 13 -5Z"/><path d="M-13 -18H-47V-5A5 5 0 0 0 -42 0H-18A5 5 0 0 0 -13 -5Z"/>
+          <rect x="-55" y="-180" width="110" height="170" rx="40"/>
+        </g>
+        <rect x="-55" y="-180" width="110" height="170" rx="40" fill="url(#strati)"/>
+
+        <!-- guance rosa, come la mascotte -->
+        <ellipse cx="-41" cy="-131" rx="7" ry="4" class="guancia"/><ellipse cx="41" cy="-131" rx="7" ry="4" class="guancia"/>
+        <!-- sopracciglia: si arrabbiano quando la mostruosita' sale -->
+        <rect id="ciglio-sx" class="ciglio" x="-30" y="-165.2" width="16" height="1.6" rx=".8"/>
+        <rect id="ciglio-dx" class="ciglio" x="14" y="-165.2" width="16" height="1.6" rx=".8"/>
+
+        <!-- occhioni che si muovono -->
+        <g class="occhio"><circle cx="-22" cy="-147.5" r="12" class="bianco"/><g id="pupilla-sx"><circle cx="-22" cy="-147.5" r="6.4" class="pupilla"/><circle cx="-24" cy="-149.6" r="1.6" class="luce"/></g><circle cx="-22" cy="-147.5" r="12" class="vetro"/></g>
+        <g class="occhio"><circle cx="22" cy="-147.5" r="12" class="bianco"/><g id="pupilla-dx"><circle cx="22" cy="-147.5" r="6.4" class="pupilla"/><circle cx="20" cy="-149.6" r="1.6" class="luce"/></g><circle cx="22" cy="-147.5" r="12" class="vetro"/></g>
+
+        <!-- tacche ai lati dello schermo -->
+        <g id="tacche" class="tacche"></g>
+
+        <!-- lo schermo lungo, con il termometro -->
+        <rect x="-12.6" y="-133.4" width="25.2" height="86.8" rx="3.8" class="cornice"/>
+        <g clip-path="url(#clip-schermo)">
+          <rect x="-11.45" y="-132.2" width="22.9" height="84.4" class="vetro-schermo"/>
+          <text id="schermo-pct" x="0" y="-122.5" class="pct">--</text>
+          <rect x="-3.6" y="-118" width="7.2" height="64" rx="3.6" class="tubo"/>
+          <circle cx="0" cy="-55" r="6" class="tubo"/>
+          <g clip-path="url(#clip-tubo)">
+            <rect id="mercurio" x="-4" y="-61" width="8" height="0" fill="url(#g-merc)"/>
+            <circle id="bulbo" cx="0" cy="-55" r="6" fill="#52e08a"/>
+          </g>
+          <rect x="-1.2" y="-116" width="1.2" height="58" rx=".6" fill="#fff" opacity=".25"/>
+        </g>
+
+        <!-- il naso: il bottone arcade -->
+        <g id="naso" class="naso">
+          <circle cx="0" cy="-28" r="16.5" class="ghiera"/>
+          <circle id="naso-tappo" cx="0" cy="-28.6" r="13" fill="url(#g-naso)" class="tappo"/>
+          <ellipse cx="-4" cy="-33" rx="5" ry="2.6" fill="#fff" opacity=".55"/>
+        </g>
+      </g>
+    </svg>
+    <div id="onda" class="onda" hidden></div>
+  </div>
+
+  <div class="risultato">
+    <div id="pct" class="pct-grande">--%</div>
+    <div id="frase" class="frase">Tocca il naso per misurarti</div>
+    <div id="attesa" class="attesa" hidden></div>
+    <div class="aiuto">Tocca il naso: misura · tienilo premuto: <b>URLA!</b></div>
+  </div>
+</section>
+
+<!-- ================= FAMIGLIA ================= -->
+<section id="v-famiglia" class="vista">
+  <header class="testata"><img src="mascotte.jpg" alt=""><div><h1>La famiglia</h1><p>Tocca un nome per scegliere chi si misura.</p></div></header>
+  <div class="riquadro">
+    <form id="f-nuovo" class="aggiungi"><input id="nuovo" maxlength="14" placeholder="Nome nuovo" autocomplete="off"><button>Aggiungi</button></form>
+    <div id="msg-fam" class="msg"></div>
+  </div>
+  <div id="lista" class="lista"></div>
+  <div id="corona" class="nota-centro"></div>
+</section>
+
+<!-- ================= CARTE ================= -->
+<section id="v-carte" class="vista">
+  <header class="testata"><img src="mascotte.jpg" alt=""><div><h1>Le carte</h1><p>Fai l'azione davanti a tutti, poi scansiona il QR.</p></div></header>
+  <button id="scansiona" class="grande">📷 Scansiona una carta</button>
+  <form id="f-numero" class="aggiungi"><input id="numero" inputmode="numeric" maxlength="3" placeholder="…oppure scrivi il numero (es. 57)"><button>Apri</button></form>
+  <div class="riquadro">
+    <div class="riga-tit"><h2>Stasera</h2><span id="conto" class="conto"></span></div>
+    <div id="giocate" class="giocate"></div>
+    <button id="serata" class="secondario">Nuova serata</button>
+  </div>
+</section>
+
+<!-- barra in basso -->
+<nav class="barra">
+  <button data-v="mostro" class="attivo"><span>😈</span>Mostro</button>
+  <button data-v="famiglia"><span>👪</span>Famiglia</button>
+  <button data-v="carte"><span>🃏</span>Carte</button>
+</nav>
+
+<!-- foglio che sale dal basso (scelte, carte, conferme) -->
+<div id="velo" class="velo" hidden></div>
+<div id="foglio" class="foglio" hidden><div class="maniglia"></div><div id="foglio-dentro"></div></div>
+
+<!-- lettore QR a tutto schermo -->
+<div id="lettore" class="lettore" hidden>
+  <video id="video" playsinline muted></video>
+  <div class="mirino"><i></i><i></i><i></i><i></i></div>
+  <div class="lettore-testo">Inquadra il QR della carta</div>
+  <button id="chiudi-lettore" class="secondario lettore-chiudi">Annulla</button>
+</div>
+
+<script src="jsQR.js"></script>
+<script src="dati.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

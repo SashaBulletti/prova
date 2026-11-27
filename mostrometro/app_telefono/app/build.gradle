@@ -1,0 +1,32 @@
+plugins { id "com.android.application" }
+
+android {
+    namespace "it.sasha.mostrometro"
+    compileSdk 35
+    defaultConfig {
+        applicationId "it.sasha.mostrometro"
+        minSdk 26
+        targetSdk 35
+        versionCode 1
+        versionName "1.0"
+    }
+    // Firma fissa (la chiave e' qui accanto), cosi' gli aggiornamenti si installano sopra la versione vecchia.
+    signingConfigs {
+        casa {
+            storeFile file("mostrometro.keystore")
+            storePassword "mostrometro-casa"
+            keyAlias "mostrometro"
+            keyPassword "mostrometro-casa"
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.casa
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

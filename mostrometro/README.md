@@ -1,5 +1,10 @@
 # 👹 Mostrometro
 
+> **Si gioca anche senza costruire niente:** c'è l'app per Android in `app_telefono/`, con il Mostrometro disegnato
+> (occhioni che si muovono, termometro, voce, urlo con il microfono) e il lettore dei QR delle carte.
+> L'APK lo costruisce GitHub da solo: **Releases > mostrometro-app > mostrometro.apk**.
+> Per le carte basta la scatolina da stampare su A4: `scatola/scatola_carte.py`.
+
 Un mostro stampato in 3D, **a batteria**, che misura la percentuale di mostruosità.
 Premi il suo naso rosso: fa il suo verso, il mercurio sale lungo lo schermo e il mostro dice «sei al sessanta per cento».
 Tieni premuto il naso e urla: il microfono ascolta e ti dà dei punti. Dal telefono vedi la classifica di tutta la famiglia.
@@ -21,6 +26,8 @@ carte/azioni.py                      le 100 azioni del gioco (si cambiano qui)
 carte/genera_carte.py, stampa.py     impaginano le carte (fronte, retro, QR) e scrivono carte_dati.h per il programma
 carte/disegni/                       i 100 disegni delle carte, fatti con Higgsfield
 scatola/inserto.scad, scatola/stl/   l'inserto 3D che tiene fermi il Mostrometro e le carte nella scatola
+app_telefono/                        l'app per Android: web/ (la pagina), fai_assets.py (suoni, carte, disegni), app/ (Android)
+scatola/scatola_carte.py             la scatolina per le sole carte, 2 fogli A4
 scatola/fustella.py                  la scatola in un pezzo da stampare su 50 x 70 cm (grafica + taglio/piega + misure)
 scatola/guida_scatola.html           come costruire la scatola
 ```

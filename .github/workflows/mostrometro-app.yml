@@ -1,0 +1,35 @@
+name: App Mostrometro
+on:
+  push:
+    paths: ["mostrometro/app_telefono/**", ".github/workflows/mostrometro-app.yml"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mostrometro/app_telefono
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.14.3"
+      - run: gradle :app:assembleRelease --no-daemon
+      - run: cp app/build/outputs/apk/release/app-release.apk mostrometro.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mostrometro
+          path: mostrometro/app_telefono/mostrometro.apk
+      - name: Pubblica l'ultima versione
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete mostrometro-app --yes --cleanup-tag 2>/dev/null || true
+          gh release create mostrometro-app mostrometro.apk --target "$GITHUB_SHA" \
+            --title "Mostrometro per Android (ultima versione)" --notes "Costruita da ${GITHUB_SHA::7}. Scarica mostrometro.apk dal telefono e aprilo per installarlo."
