@@ -133,6 +133,18 @@ button{cursor:pointer}
 .carta-vista p{margin:4px 0 0;color:#4a3a66}
 .carta-vista .punti{display:inline-block;margin-top:8px;background:var(--c,#7a4fe0);color:#fff;font-weight:700;border-radius:10px;padding:2px 10px}
 
+/* ---------- partita con piu' telefoni ---------- */
+.due-bottoni{display:flex;gap:8px}.due-bottoni button{flex:1;margin-top:8px}
+.stato-partita{font-size:.85rem;color:var(--rosso)}.stato-partita.on{color:var(--verde)}
+.pallino{width:9px;height:9px;border-radius:50%;background:var(--rosso)}.pallino.on{background:var(--verde)}
+.qr-partita{background:#fff;border-radius:14px;padding:10px;width:min(72vw,280px);margin:0 auto}
+.qr-partita svg{display:block;width:100%;height:auto}
+.passi-invito{padding-left:1.2rem;color:var(--tenue)}.passi-invito li{margin:.4rem 0}.passi-invito b{color:var(--testo)}
+.volante{position:absolute;left:16px;right:16px;top:12px;z-index:30;background:var(--giallo);color:#2b1650;font-weight:700;border-radius:14px;padding:12px 14px;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.4);transform:translateY(-120%);transition:transform .35s cubic-bezier(.3,1.4,.5,1)}
+.volante.su{transform:none}.volante.via{transform:translateY(-120%)}
+.naso.invita .ghiera{animation:invita 1s ease-in-out infinite}
+@keyframes invita{0%,100%{fill:#2b1650}50%{fill:#ffd84a}}
+
 /* ---------- lettore QR ---------- */
 .lettore{position:absolute;inset:0;z-index:20;background:#000;display:flex;align-items:center;justify-content:center}
 .lettore video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}

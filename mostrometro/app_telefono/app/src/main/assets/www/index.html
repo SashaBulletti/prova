@@ -10,7 +10,7 @@
 
 <!-- ================= MOSTRO ================= -->
 <section id="v-mostro" class="vista attiva">
-  <button id="chi" class="chi" type="button"><span class="chi-et">Chi si misura?</span><b id="chi-nome">Scegli</b><span class="freccia">▾</span></button>
+  <button id="chi" class="chi" type="button"><span id="pallino" class="pallino" hidden></span><span class="chi-et">Chi si misura?</span><b id="chi-nome">Scegli</b><span class="freccia">▾</span></button>
 
   <div id="palco" class="palco">
     <svg id="mostro" viewBox="-80 -212 160 220" aria-label="Il Mostrometro: tieni premuto il naso per misurarti">
@@ -104,6 +104,7 @@
 <!-- ================= FAMIGLIA ================= -->
 <section id="v-famiglia" class="vista">
   <header class="testata"><img src="mascotte.jpg" alt=""><div><h1>La famiglia</h1><p>Tocca un nome per scegliere chi si misura.</p></div></header>
+  <div class="riquadro" id="partita"></div>
   <div class="riquadro">
     <form id="f-nuovo" class="aggiungi"><input id="nuovo" maxlength="14" placeholder="Nome nuovo" autocomplete="off"><button>Aggiungi</button></form>
     <div id="msg-fam" class="msg"></div>
@@ -131,6 +132,9 @@
   <button data-v="carte"><span>🃏</span>Carte</button>
 </nav>
 
+<!-- avviso che arriva dagli altri telefoni -->
+<div id="volante" class="volante" hidden></div>
+
 <!-- foglio che sale dal basso (scelte, carte, conferme) -->
 <div id="velo" class="velo" hidden></div>
 <div id="foglio" class="foglio" hidden><div class="maniglia"></div><div id="foglio-dentro"></div></div>
@@ -144,6 +148,7 @@
 </div>
 
 <script src="jsQR.js"></script>
+<script src="qrcode.js"></script>
 <script src="dati.js"></script>
 <script src="app.js"></script>
 </body>

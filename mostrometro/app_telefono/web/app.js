@@ -40,7 +40,6 @@ const trova = n => S.fam.find(f => f.n.toLowerCase() === (n || "").toLowerCase()
 const attuale = f => Math.min(100, f.b + f.bonus);
 const inAttesa = f => (f.v >= 0 && attuale(f) > f.v) ? attuale(f) - f.v : 0;
 const carteDi = n => Object.values(S.carte).filter(x => x.toLowerCase() === n.toLowerCase()).length;
-function crea(n) { const p = { n, b: partenza(), bonus: 0, v: -1 }; S.fam.push(p); return p; }
 function daiPunti(f, p) { f.bonus = Math.max(0, Math.min(100, f.bonus + p)); }
 const attendi = ms => new Promise(r => setTimeout(r, Math.max(0, ms)));
 
@@ -194,7 +193,7 @@ function inizia(e) {
   if (!f) { scegliChi("Prima scegli chi si misura"); return; }
   naso.classList.add("premuto"); telefono.vibra(20);
   if (misurando && !misurando.finito) { misurando.premuto = true; tonoParte(); tonoA(misurando.v); return; }
-  misurando = { f, target: attuale(f), v: 0, premuto: true, ultimoT: performance.now(), ultimaTacca: 0, finito: false };
+  misurando = { f, target: attuale(f), veloceFino: f.v >= 0 ? Math.min(f.v, attuale(f)) : 0, v: 0, premuto: true, ultimoT: performance.now(), ultimaTacca: 0, finito: false };
   telefono.schermoAcceso(true); tonoParte();
   $("#pct").textContent = "0%"; $("#frase").textContent = "Tieni premuto..."; $("#spiega").textContent = ""; $("#attesa").hidden = true;
   requestAnimationFrame(passoMisura);
@@ -209,7 +208,9 @@ function passoMisura(t) {
   const m = misurando; if (!m || m.finito) return;
   const dt = Math.min(0.05, (t - m.ultimoT) / 1000); m.ultimoT = t;
   if (m.premuto) {
-    const resta = m.target - m.v, vel = VEL * (resta < 6 ? 0.45 + resta / 11 : 1);
+    const resta = m.target - m.v;
+    const vel = m.v < m.veloceFino - 0.5 ? 45                // corre veloce fino a dove eri arrivato...
+      : VEL * (resta < 6 ? 0.45 + resta / 11 : 1);           // ...poi gli ultimi punti salgono piano
     m.v = Math.min(m.target, m.v + vel * dt);
     tonoA(m.v); agitato = Math.max(agitato, 0.15 + m.v / 160);
     palco.style.setProperty("--forza", (0.4 + m.v / 60).toFixed(2));
@@ -229,14 +230,14 @@ async function arrivato(m) {
   m.finito = true; tonoFine(false); naso.classList.remove("premuto");
   palco.classList.remove("trema", "carica"); palco.classList.add("salta"); setTimeout(() => palco.classList.remove("salta"), 520);
   mercurio(m.target); sopracciglia(m.target);
-  const prima = m.f.v; m.f.v = m.target; salva();
+  const prima = m.f.v; fai({ t: "mis", n: m.f.n, v: m.target });
   festa(); coriandoli(); agitato = 1; telefono.vibra(120);
   mostraRisultato(m.f);
   const salito = prima >= 0 && m.target > prima ? ` Sei salito di ${m.target - prima}!` : "";
   const [tit, spieg] = FRASI[livello(m.target)];
   parla(`${m.f.n}, sei al ${m.target} per cento! ${tit} ${spieg}${salito}`);
   if (salito) $("#frase").textContent = tit + " · +" + (m.target - prima) + "!";
-  await attendi(400); misurando = null; telefono.schermoAcceso(false); disegnaFamiglia();
+  await attendi(400); misurando = null; telefono.schermoAcceso(false); naso.classList.remove("invita"); disegnaFamiglia();
 }
 function mostraRisultato(f) {
   $("#pct").textContent = f.v >= 0 ? f.v + "%" : "--%";
@@ -281,8 +282,8 @@ function scegliChi(titolo) {
   collegaNomi("sc-chi", "chi-nuovo", n => {
     n = pulisci(n); if (!n) return;
     let f = trova(n);
-    if (!f) { if (S.fam.length >= MAX_FAM) { $("#sc-avv").textContent = "La famiglia è piena (12): togline uno in «Famiglia»."; return; } f = crea(n); }
-    S.chi = f.n; salva(); chiudiFoglio(); aggiornaChi(); disegnaFamiglia();
+    if (!f) { if (S.fam.length >= MAX_FAM) { $("#sc-avv").textContent = "La famiglia è piena (12): togline uno in «Famiglia»."; return; } fai({ t: "pers", n, b: partenza() }); f = trova(n); }
+    S.chi = f ? f.n : n; salva(); chiudiFoglio(); aggiornaChi(); disegnaFamiglia();
   });
 }
 function aggiornaChi() {
@@ -311,7 +312,7 @@ function disegnaFamiglia() {
     S.chi = el.dataset.n; salva(); aggiornaChi(); vai("mostro");
   });
   L.querySelectorAll("[data-togli]").forEach(b => b.onclick = () => conferma(`Togliere ${b.dataset.togli}?`, "Togli", () => {
-    S.fam = S.fam.filter(f => f.n !== b.dataset.togli); if (S.chi === b.dataset.togli) S.chi = ""; salva(); disegnaFamiglia(); aggiornaChi();
+    fai({ t: "via", n: b.dataset.togli });
   }));
   const mis = o.filter(f => f.v >= 0);
   $("#corona").textContent = mis.length ? `👑 Mostro della famiglia: ${mis[0].n} (${mis[0].v}%)` : "";
@@ -321,7 +322,7 @@ $("#f-nuovo").onsubmit = e => {
   if (!n) { m.textContent = "Scrivi prima un nome."; return; }
   if (trova(n)) { m.textContent = n + " c'è già."; return; }
   if (S.fam.length >= MAX_FAM) { m.textContent = "La famiglia è piena (12 persone): togline una con la ✕."; return; }
-  crea(n); if (!S.chi) S.chi = n; salva(); $("#nuovo").value = ""; m.textContent = n + " fa parte della famiglia!"; disegnaFamiglia(); aggiornaChi();
+  if (!S.chi) S.chi = n; fai({ t: "pers", n, b: partenza() }); $("#nuovo").value = ""; m.textContent = n + " fa parte della famiglia!";
 };
 function conferma(testo, si, fatto) {
   apriFoglio(`<h2>${esc(testo)}</h2><button class="primario" id="cf-si">${esc(si)}</button><button class="secondario" id="cf-no">Annulla</button>`);
@@ -371,23 +372,24 @@ function gioca(n, c) {
   }
   const nuovi = (trova(nome) ? 0 : 1) + (puntiAltro && !trova(altro) ? 1 : 0);
   if (S.fam.length + nuovi > MAX_FAM) { avv.textContent = "La famiglia è piena (12): togline uno in «Famiglia»."; return; }
-  const f = trova(nome) || crea(nome); daiPunti(f, punti);
-  let g = null; if (puntiAltro) { g = trova(altro) || crea(altro); daiPunti(g, puntiAltro); }
-  S.carte[n] = f.n; S.chi = f.n; salva();
-  bip(); telefono.vibra(40);
-  apriFoglio(`<h2>${esc(f.n)} prende +${punti}${g ? ` e ${esc(g.n)} +${puntiAltro}` : ""}! 🎉</h2>
-    <p>I punti salgono quando ${esc(f.n)} preme il naso del Mostrometro.</p>
-    <button class="primario" id="cv-mis">Vai a misurarti</button><button class="secondario" id="cv-chiudi">Chiudi</button>`);
-  $("#cv-mis").onclick = () => { chiudiFoglio(); vai("mostro"); };
-  $("#cv-chiudi").onclick = chiudiFoglio;
-  disegnaCarte(); disegnaFamiglia(); aggiornaChi();
+  const bott = $("#cv-ok"); bott.disabled = true; bott.textContent = S.partita ? "Invio..." : "ASSEGNA I PUNTI";
+  fai({ t: "carta", c: n, n: nome, p: punti, nb: partenza(), a: puntiAltro ? altro : "", pa: puntiAltro, ab: partenza() }).then(ok => {
+    if (ok === null) { bott.disabled = false; bott.textContent = "ASSEGNA I PUNTI"; avv.textContent = "Nessuna connessione: controlla internet e riprova."; return; }
+    if (!ok) { bott.disabled = false; bott.textContent = "ASSEGNA I PUNTI"; avv.textContent = S.carte[n] ? "Questa carta l'ha appena giocata " + S.carte[n] + "!" : "Non è stato possibile assegnare i punti."; return; }
+    const f = trova(nome); bip(); telefono.vibra(40);
+    S.chi = f.n; salva(); chiudiFoglio(); vai("mostro"); aggiornaChi();
+    naso.classList.add("invita");
+    volante(f.n + " +" + punti + (puntiAltro ? " e " + altro + " +" + puntiAltro : "") + "! Tieni premuto il naso 👃");
+  });
 }
 // i QR delle carte: http://192.168.4.1/c?n=57&k=UABV (anche #carta-57-UABV)
 function leggiLink(t) {
   try { const u = new URL(t); const n = u.searchParams.get("n"), k = u.searchParams.get("k"); if (n && k) return { n, k }; } catch (e) {}
-  const m = /carta-(\d+)-([A-Za-z]{4})/.exec(t || ""); return m ? { n: m[1], k: m[2] } : null;
+  const m = /carta-(\d+)-([A-Za-z]{4})/.exec(t || ""); if (m) return { n: m[1], k: m[2] };
+  const p = /partita-([A-Za-z0-9]{6})/.exec(t || ""); return p ? { partita: p[1] } : null;
 }
-window.apriLinkCarta = t => { const l = leggiLink(t); if (l) apriCarta(l.n, l.k); };
+function apriLink(l) { if (!l) return; if (l.partita) { if (l.partita.toUpperCase() !== S.partita) entraPartita(l.partita); } else apriCarta(l.n, l.k); }
+window.apriLinkCarta = t => apriLink(leggiLink(t));
 
 $("#f-numero").onsubmit = e => { e.preventDefault(); const n = parseInt($("#numero").value, 10); $("#numero").value = ""; if (n >= 1 && n <= CARTE.length) apriCarta(n, null); };
 $("#serata").onclick = () => {
@@ -395,15 +397,16 @@ $("#serata").onclick = () => {
     <label class="spunta"><input type="checkbox" id="ns-punti" checked>Nuova partita: azzera i punti e tira a sorte la mostruosità di partenza (0–40%)</label>
     <button class="primario" id="ns-si">Nuova serata</button><button class="secondario" id="ns-no">Annulla</button>`);
   $("#ns-si").onclick = () => {
-    S.carte = {}; if ($("#ns-punti").checked) S.fam.forEach(f => { f.bonus = 0; f.v = -1; f.b = partenza(); });
-    salva(); chiudiFoglio(); disegnaCarte(); disegnaFamiglia(); aggiornaChi();
+    const reset = $("#ns-punti").checked, basi = {}; S.fam.forEach(f => { basi[f.n] = partenza(); });
+    chiudiFoglio(); fai({ t: "serata", reset, basi });
   };
   $("#ns-no").onclick = chiudiFoglio;
 };
 
 // lettore QR con la fotocamera
 let flussoVideo = null, cercando = false;
-$("#scansiona").onclick = async () => {
+$("#scansiona").onclick = () => apriLettore();
+async function apriLettore() {
   try { flussoVideo = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }); }
   catch (e) { apriFoglio(`<h2>Fotocamera non disponibile</h2><p>Serve il permesso della fotocamera. Puoi anche scrivere il numero della carta.</p><button class="secondario" id="fc-ok">Chiudi</button>`); $("#fc-ok").onclick = chiudiFoglio; return; }
   const v = $("#video"); v.srcObject = flussoVideo; await v.play(); $("#lettore").hidden = false; cercando = true;
@@ -415,16 +418,169 @@ $("#scansiona").onclick = async () => {
       tela.width = tela.height = w;
       ctx.drawImage(v, (v.videoWidth - s) / 2, (v.videoHeight - s) / 2, s, s, 0, 0, w, w);
       const q = jsQR(ctx.getImageData(0, 0, w, w).data, w, w, { inversionAttempts: "dontInvert" });
-      if (q && q.data) { const l = leggiLink(q.data); if (l) { chiudiLettore(); telefono.vibra(50); apriCarta(l.n, l.k); return; } }
+      if (q && q.data) { const l = leggiLink(q.data); if (l) { chiudiLettore(); telefono.vibra(50); apriLink(l); return; } }
     }
     setTimeout(() => requestAnimationFrame(cerca), 120);
   })();
-};
+}
 function chiudiLettore() {
   if ($("#lettore").hidden) return false;
   cercando = false; if (flussoVideo) flussoVideo.getTracks().forEach(t => t.stop()); flussoVideo = null; $("#lettore").hidden = true; return true;
 }
 $("#chiudi-lettore").onclick = chiudiLettore;
+
+// ------------------------------------------------------------------ azioni e partita insieme (piu' telefoni)
+// Ogni cambiamento e' un "evento". Da soli: l'evento si applica subito. In una partita: l'evento passa da ntfy.sh
+// (servizio gratuito, senza account) e arriva a tutti i telefoni della partita, che lo applicano nello stesso modo.
+//   pers  {n, b}                 aggiunge una persona con la sua mostruosita' di partenza
+//   via   {n}                    toglie una persona
+//   mis   {n, v}                 n si e' misurato: ora e' a v%
+//   carta {c, n, p, nb, a, pa, ab} carta c fatta da n (+p); a (Mostro Supremo) prende +pa; nb/ab = partenza se nuovi
+//   serata {reset, basi}         carte di nuovo giocabili; con reset tutti ripartono da basi[nome]
+const NTFY = window.NTFY_PROVA || "https://ntfy.sh/";            // NTFY_PROVA: solo per le prove al computer
+const WEB = "https://raw.githack.com/SashaBulletti/prova/mostrometro-app/mostrometro/app_telefono/app/src/main/assets/www/index.html";
+const ALFA = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const casuale = (n, a = "abcdefghijkmnpqrstuvwxyz23456789") => Array.from(crypto.getRandomValues(new Uint8Array(n)), x => a[x % a.length]).join("");
+if (!S.io) { S.io = casuale(8); salva(); }               // questo telefono
+const codiceBello = c => c.slice(0, 3) + "-" + c.slice(3);
+
+function applica(ev) {                                   // uguale su tutti i telefoni
+  const f = trova(ev.n);
+  if (ev.t === "pers") { if (!f && S.fam.length < MAX_FAM) S.fam.push({ n: ev.n, b: ev.b, bonus: 0, v: -1 }); return true; }
+  if (ev.t === "via") { S.fam = S.fam.filter(x => x.n.toLowerCase() !== ev.n.toLowerCase()); if (S.chi.toLowerCase() === ev.n.toLowerCase()) S.chi = ""; return true; }
+  if (ev.t === "mis") { if (f) f.v = ev.v; return !!f; }
+  if (ev.t === "carta") {
+    if (S.carte[ev.c]) return false;                     // gia' giocata (anche da un altro telefono): non vale
+    const nuovi = (f ? 0 : 1) + (ev.a && !trova(ev.a) ? 1 : 0);
+    if (S.fam.length + nuovi > MAX_FAM) return false;
+    const p = f || (S.fam.push({ n: ev.n, b: ev.nb, bonus: 0, v: -1 }), S.fam[S.fam.length - 1]);
+    daiPunti(p, ev.p);
+    if (ev.a) { const g = trova(ev.a) || (S.fam.push({ n: ev.a, b: ev.ab, bonus: 0, v: -1 }), S.fam[S.fam.length - 1]); daiPunti(g, ev.pa); }
+    S.carte[ev.c] = p.n; return true;
+  }
+  if (ev.t === "serata") {
+    S.carte = {};
+    if (ev.reset) S.fam.forEach(x => { x.bonus = 0; x.v = -1; if (ev.basi && typeof ev.basi[x.n] === "number") x.b = ev.basi[x.n]; });
+    return true;
+  }
+  return false;
+}
+function ridisegna() { salva(); aggiornaChi(); disegnaFamiglia(); disegnaCarte(); disegnaPartita(); }
+
+const inAttesaCarta = {};                                // eventi "carta" mandati, che aspettano di tornare indietro
+function fai(ev) {
+  ev.i = casuale(10); ev.d = S.io;
+  if (!S.partita) { const ok = applica(ev); ridisegna(); return Promise.resolve(ok); }
+  if (ev.t === "carta") {                                // la carta vale solo quando torna dal servizio (chi arriva prima vince)
+    const p = new Promise(r => { inAttesaCarta[ev.i] = r; setTimeout(() => { if (inAttesaCarta[ev.i]) { delete inAttesaCarta[ev.i]; r(null); } }, 12000); });
+    manda(ev); return p;
+  }
+  applica(ev); S.visti.push(ev.i); ridisegna(); manda(ev); return Promise.resolve(true);
+}
+
+// ---- collegamento con ntfy.sh ----
+let fonte = null, collegato = false, codaInvio = [];
+const argomento = () => "mostrometro-" + S.partita.toLowerCase();
+function manda(ev) { codaInvio.push(ev); svuota(); }
+let svuotando = false;
+async function svuota() {
+  if (svuotando || !S.partita) return; svuotando = true;
+  while (codaInvio.length) {
+    try {
+      const r = await fetch(NTFY + argomento(), { method: "POST", body: JSON.stringify(codaInvio[0]) });
+      if (!r.ok) throw new Error(r.status);
+      codaInvio.shift();
+    } catch (e) { stato(false); await attendi(3000); }
+  }
+  svuotando = false;
+}
+function collega() {
+  if (fonte) fonte.close(); fonte = null;
+  if (!S.partita) return;
+  fonte = new EventSource(NTFY + argomento() + "/sse?since=all");
+  fonte.onopen = () => stato(true);
+  fonte.onerror = () => stato(false);
+  fonte.onmessage = e => {
+    let m, ev; try { m = JSON.parse(e.data); ev = JSON.parse(m.message); } catch (x) { return; }
+    if (!ev || !ev.i || S.visti.includes(ev.i)) return;
+    S.visti.push(ev.i);
+    const ok = applica(ev);
+    if (inAttesaCarta[ev.i]) { inAttesaCarta[ev.i](ok); delete inAttesaCarta[ev.i]; }
+    else if (ok && ev.d !== S.io && !caricando) avvisoDaAltri(ev);
+    clearTimeout(ridisegnaPresto); ridisegnaPresto = setTimeout(ridisegna, 60);
+  };
+}
+let ridisegnaPresto = null, caricando = false;
+function stato(on) { collegato = on; const p = $("#pallino"); if (p) { p.hidden = !S.partita; p.classList.toggle("on", on); } disegnaPartita(); }
+function avvisoDaAltri(ev) {
+  if (ev.t === "mis") volante(`${ev.n} è al ${ev.v}%! ${FRASI[livello(ev.v)][0]}`);
+  if (ev.t === "carta") volante(`${ev.n} ha fatto «${CARTE[ev.c - 1].t}» +${ev.p}`);
+  if (ev.t === "pers") volante(`${ev.n} è entrato nella partita`);
+}
+let timerVolante = null;
+function volante(testo) {
+  const v = $("#volante"); v.textContent = testo; v.hidden = false; v.classList.remove("via"); void v.offsetWidth; v.classList.add("su");
+  clearTimeout(timerVolante); timerVolante = setTimeout(() => { v.classList.remove("su"); v.classList.add("via"); setTimeout(() => v.hidden = true, 400); }, 3200);
+}
+
+function creaPartita() {
+  const nomi = S.fam.map(f => f.n);
+  S.partita = casuale(6, ALFA); S.visti = []; S.fam = []; S.carte = {}; salva();
+  caricando = false; collega();
+  nomi.forEach(n => fai({ t: "pers", n, b: partenza() }));
+  ridisegna(); mostraInvito();
+}
+function entraPartita(codice) {
+  codice = (codice || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (codice.length !== 6) return false;
+  if (S.partita === codice) { collega(); return true; }
+  S.partita = codice; S.visti = []; S.fam = []; S.carte = {}; S.chi = ""; salva();
+  caricando = true; setTimeout(() => { caricando = false; }, 2500);
+  collega(); ridisegna(); vai("famiglia");
+  volante("Sei entrato nella partita " + codiceBello(codice) + "! Aggiungi il tuo nome.");
+  return true;
+}
+function esciPartita() { S.partita = null; if (fonte) fonte.close(); fonte = null; codaInvio = []; stato(false); ridisegna(); }
+
+function qrSvg(testo) {
+  const q = qrcode(0, "M"); q.addData(testo); q.make();
+  return q.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+}
+function mostraInvito() {
+  const link = WEB + "#partita-" + S.partita;
+  apriFoglio(`<h2>Partita ${codiceBello(S.partita)}</h2>
+    <div class="qr-partita">${qrSvg(link)}</div>
+    <ol class="passi-invito">
+      <li><b>Chi ha Android:</b> installa l'app, apri <b>Famiglia → Entra</b> e inquadra questo QR (o scrivi il codice <b>${codiceBello(S.partita)}</b>).</li>
+      <li><b>Chi ha l'iPhone:</b> inquadra il QR con la fotocamera e apri il link: si gioca dal browser.</li>
+      <li>Ognuno aggiunge il suo nome. La classifica è la stessa su tutti i telefoni.</li>
+    </ol>
+    <button class="secondario" id="inv-ok">Fatto</button>`);
+  $("#inv-ok").onclick = chiudiFoglio;
+}
+function chiediEntra() {
+  apriFoglio(`<h2>Entra in una partita</h2>
+    <button class="primario" id="en-qr">📷 Inquadra il QR della partita</button>
+    <form class="aggiungi" id="en-f" style="margin-top:12px"><input id="en-cod" maxlength="7" placeholder="…oppure scrivi il codice (es. K7M-2QX)" autocomplete="off" style="text-transform:uppercase"><button>Entra</button></form>
+    <div id="en-avv" class="avviso"></div>`);
+  $("#en-qr").onclick = () => { chiudiFoglio(); apriLettore(); };
+  $("#en-f").onsubmit = e => { e.preventDefault(); if (entraPartita($("#en-cod").value)) chiudiFoglio(); else $("#en-avv").textContent = "Il codice ha 6 lettere e numeri, tipo K7M-2QX."; };
+}
+function disegnaPartita() {
+  const box = $("#partita"); if (!box) return;
+  if (!S.partita) {
+    box.innerHTML = `<div class="riga-tit"><h2>Gioca con più telefoni</h2></div>
+      <p class="msg">Ognuno con la sua app: la classifica si aggiorna su tutti i telefoni.</p>
+      <div class="due-bottoni"><button class="secondario" id="pa-crea">Crea una partita</button><button class="secondario" id="pa-entra">Entra</button></div>`;
+    $("#pa-crea").onclick = () => conferma("Creare una partita nuova? Si riparte tutti da 0–40%.", "Crea la partita", creaPartita);
+    $("#pa-entra").onclick = chiediEntra;
+  } else {
+    box.innerHTML = `<div class="riga-tit"><h2>Partita ${codiceBello(S.partita)}</h2><span class="stato-partita ${collegato ? "on" : ""}">${collegato ? "● collegato" : "● non collegato"}</span></div>
+      <div class="due-bottoni"><button class="secondario" id="pa-invita">Fai entrare gli altri</button><button class="secondario" id="pa-esci">Esci</button></div>`;
+    $("#pa-invita").onclick = mostraInvito;
+    $("#pa-esci").onclick = () => conferma("Uscire dalla partita? Sul telefono resta la classifica di adesso.", "Esci", esciPartita);
+  }
+}
 
 // ------------------------------------------------------------------ navigazione
 function vai(v) {
@@ -441,5 +597,7 @@ window.indietro = () => {                                // tasto indietro di An
 };
 
 // ------------------------------------------------------------------ avvio
-aggiornaChi(); disegnaFamiglia(); disegnaCarte(); sopracciglia(0);
+if (!Array.isArray(S.visti)) S.visti = [];
+aggiornaChi(); disegnaFamiglia(); disegnaCarte(); disegnaPartita(); sopracciglia(0);
+if (S.partita) { caricando = true; setTimeout(() => { caricando = false; }, 2500); collega(); }
 if (location.hash) window.apriLinkCarta(location.hash);
